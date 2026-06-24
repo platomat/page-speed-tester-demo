@@ -11,8 +11,10 @@ Typischer Einsatz: mehrere Websites oder Kundenprojekte überwachen, Metriken in
 - **Lighthouse** desktop + mobile pro URL (Performance, LCP, CLS, FCP, TBT, Speed Index)
 - **Mehrere Projekte** pro Instanz, jeweils mit eigenen URLs und Cron-Zeitplan
 - **Dashboard** mit Login, Charts, Berichtsliste und Detailansicht einzelner Lighthouse-JSONs
-- **Manueller Start** („Run test“), **Cron** pro Projekt, öffentlicher **Trigger-Link** (Access-Key) und **Share-Link** (nur Lesen)
+- **Manueller Start** („Run test“) und **Cron** pro Projekt
 - **Benutzer & Rechte:** Admins verwalten alles; normale User sehen nur zugewiesene Projekte
+- **Share-Link:** Schreibgeschützte Dashboard-Ansicht für Gäste — Metriken, Charts und Berichte eines Projekts ohne Login (eigener Share-Key, rotierbar in der Admin-UI)
+- **Trigger-URL:** Lighthouse-Lauf per Link oder curl auslösen — ohne Login, mit Access-Key pro Projekt (getrennt vom Share-Key; Rate-Limit: max. 1 Lauf alle 5 Minuten)
 - **Speicher:** Metriken in **D1**, vollständige Berichte in **R2** — nichts Kritisches im Git-Repo
 
 Lighthouse läuft **nicht** im Cloudflare Worker (dort kein Chrome). Der Worker steuert nur Auth, API, Cron und den Start des GitHub-Workflows.
@@ -75,12 +77,12 @@ Lokal entwickeln: `npm install` → `npm run dev` (Worker `http://localhost:8787
 ## Dokumentation
 
 
-| Datei | Inhalt |
-| ----- | ------ |
-| [docs/INSTALLATION.md](docs/INSTALLATION.md) | Einrichtung Cloudflare + GitHub, Env-Variablen, FAQ, Checkliste |
-| [docs/API.md](docs/API.md) | Worker-REST-Endpunkte (Auth, Projekte, Trigger, Share, intern für Actions) |
-| [schema.sql](schema.sql) | D1-Datenbankschema (neue Instanz) |
-| [docs/TODOs.md](docs/TODOs.md) | Geplante Verbesserungen im Repo |
+| Datei                                        | Inhalt                                                                     |
+| -------------------------------------------- | -------------------------------------------------------------------------- |
+| [docs/INSTALLATION.md](docs/INSTALLATION.md) | Einrichtung Cloudflare + GitHub, Env-Variablen, FAQ, Checkliste            |
+| [docs/API.md](docs/API.md)                   | Worker-REST-Endpunkte (Auth, Projekte, Trigger, Share, intern für Actions) |
+| [schema.sql](schema.sql)                     | D1-Datenbankschema (neue Instanz)                                          |
+| [docs/TODOs.md](docs/TODOs.md)               | Geplante Verbesserungen im Repo                                            |
 
 
 ---
@@ -93,7 +95,7 @@ Wenn du dieses **öffentliche** Repo forkest oder als Template nutzt, betreibst 
 
 - Der Workflow [.github/workflows/lighthouse.yml](.github/workflows/lighthouse.yml) liegt in **deinem** Repo. Läufe erscheinen unter **deinem** Tab **Actions** (bei öffentlichem Repo für alle mit Lesezugriff sichtbar).
 - **Welche URLs getestet werden**, steht in **deiner** D1-Datenbank — du legst Projekte und URLs im Dashboard (Admin) an. Ein Fork übernimmt **keine** Test-URLs aus einer fremden Installation; solange du nichts einträgst, gibt es nichts zu testen.
-- Unter **Settings → Secrets and variables → Actions** hinterlegst **du** die Zugangsdaten (`R2_*`, `WORKER_API_URL`, `WORKER_API_SECRET`). Damit schreibt der Workflow nur in **deinen** R2-Bucket und spricht nur **deine** Worker-API an — völlig getrennt von anderen Forks oder vom Original-Repo.
+- Unter **Settings → Secrets and variables → Actions** hinterlegst **du** die Zugangsdaten (`R2_`*, `WORKER_API_URL`, `WORKER_API_SECRET`). Damit schreibt der Workflow nur in **deinen** R2-Bucket und spricht nur **deine** Worker-API an — völlig getrennt von anderen Forks oder vom Original-Repo.
 - Der Worker braucht ein **GitHub PAT** (`GH_PAT`) mit Zugriff auf **dein** Repo sowie in den Instance settings **deinen** `gh_owner` / `gh_repo`.
 
 ### URLs in Logs und Artefakten
@@ -113,7 +115,6 @@ Wenn du dieses **öffentliche** Repo forkest oder als Template nutzt, betreibst 
 | ------------------ | ------------------------------------------------------------------------- |
 | Produktion / Kunde | **Template** oder Kopie → **privates** Repo, eigener CF-Account           |
 | Demo / Lernen      | Öffentlicher Fork OK — mit Test-URLs, keine Produktions-Secrets           |
-| Nur Code lesen     | Repo ansehen, **nicht** Actions mit echten Secrets im Public-Fork starten |
 
 
 ---
@@ -128,4 +129,4 @@ Wenn du dieses **öffentliche** Repo forkest oder als Template nutzt, betreibst 
 
 Quellcode steht unter der **[MIT-Lizenz](LICENSE)** (üblich für Open-Source-Software auf GitHub). Du darfst das Projekt nutzen, ändern und weitergeben — siehe [LICENSE](LICENSE) für die vollständigen Bedingungen.
 
-Footer-Link im Dashboard verweist auf [PlatoMat](https://platomat.com/). Beiträge willkommen — Issues und PRs gegen dieses Repo.
+Beiträge willkommen — Issues und PRs gegen dieses Repo.
