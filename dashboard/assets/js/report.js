@@ -64,6 +64,53 @@ function renderMetrics(audits) {
   }).join("");
 }
 
+function safeDataImageUrl(value) {
+  if (typeof value !== "string") return null;
+  if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(value)) return null;
+  return value;
+}
+
+function auditScreenshotUrl(audit) {
+  return safeDataImageUrl(audit?.details?.data);
+}
+
+function renderScreenshots(report) {
+  const items = [];
+  const viewportUrl = auditScreenshotUrl(report.audits?.["final-screenshot"]);
+  if (viewportUrl) {
+    items.push({ label: "Viewport", url: viewportUrl });
+  }
+
+  const fullPageAuditUrl = auditScreenshotUrl(report.audits?.["full-page-screenshot"]);
+  const rootShot = report.fullPageScreenshot;
+  const fullPageUrl =
+    fullPageAuditUrl ||
+    safeDataImageUrl(rootShot?.screenshot?.data) ||
+    safeDataImageUrl(rootShot?.data);
+
+  if (fullPageUrl) {
+    items.push({ label: "Full page", url: fullPageUrl });
+  }
+
+  if (!items.length) return "";
+
+  return `
+    <section class="report-section">
+      <h2>Screenshots</h2>
+      <div class="report-screenshots">
+        ${items
+          .map(
+            ({ label, url }) => `
+          <figure class="report-screenshot">
+            <figcaption>${escapeHtml(label)}</figcaption>
+            <img src="${url}" alt="${escapeHtml(label)} screenshot" loading="lazy" decoding="async" />
+          </figure>`
+          )
+          .join("")}
+      </div>
+    </section>`;
+}
+
 function renderOpportunities(opportunities) {
   if (!opportunities.length) {
     return '<p class="empty">No major opportunities flagged in this run.</p>';
@@ -194,6 +241,8 @@ function renderReport(report, reportKey) {
       <h2>Core Metrics</h2>
       <div class="latest-cards">${renderMetrics(audits)}</div>
     </section>
+
+    ${renderScreenshots(report)}
 
     <section class="report-section">
       <h2>Opportunities</h2>

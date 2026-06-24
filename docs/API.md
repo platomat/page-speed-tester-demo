@@ -42,8 +42,10 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, cookie domain |
+| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, cookie domain, `store_screenshots` |
 | `PATCH` | `/api/settings` | Admin | Instance settings aktualisieren |
+
+`store_screenshots` (boolean, Default `false`): Wenn `true`, speichert der Lighthouse-Upload Viewport- und Full-Page-Screenshots im JSON (R2). Größere Dateien und höherer Speicherverbrauch; Screenshots erscheinen in der Report-Detailansicht. Gilt für Läufe nach dem Speichern der Einstellung.
 
 ---
 

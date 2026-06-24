@@ -17,6 +17,8 @@ jobs:
   lighthouse:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      STORE_SCREENSHOTS: ${{ github.event.client_payload.store_screenshots == true && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
 

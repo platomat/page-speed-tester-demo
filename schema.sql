@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 INSERT OR IGNORE INTO settings (key, value) VALUES ('timezone', 'Europe/Berlin');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('cron_enabled', '1');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('store_screenshots', '0');
 
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

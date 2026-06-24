@@ -1,6 +1,5 @@
 import type { Env } from "./env";
 import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./access-key";
-import { slimLighthouseReport } from "./lighthouse-report";
 import { json } from "./http";
 
 export async function ensureShareToken(env: Env, projectId: string): Promise<string> {
@@ -191,7 +190,7 @@ export async function publicShareReportJson(
   }
 
   const body = await object.text();
-  const lighthouse = slimLighthouseReport(JSON.parse(body) as Record<string, unknown>);
+  const lighthouse = JSON.parse(body) as Record<string, unknown>;
   const run = await env.DB.prepare(
     `SELECT project_id, url_id, strategy, report_key, run_at
      FROM runs WHERE report_key = ?`

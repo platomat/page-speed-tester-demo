@@ -7,6 +7,7 @@ const CRON_ENABLED_KEY = "cron_enabled";
 const GH_OWNER_KEY = "gh_owner";
 const GH_REPO_KEY = "gh_repo";
 const COOKIE_DOMAIN_KEY = "cookie_domain";
+const STORE_SCREENSHOTS_KEY = "store_screenshots";
 const DEFAULT_TIMEZONE = "UTC";
 
 const GITHUB_SLUG_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/;
@@ -51,6 +52,15 @@ export async function getCronEnabled(env: Env): Promise<boolean> {
   return value === "1" || value === "true" || value === "yes";
 }
 
+export async function getStoreScreenshots(env: Env): Promise<boolean> {
+  const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`)
+    .bind(STORE_SCREENSHOTS_KEY)
+    .first<{ value: string }>();
+  const value = row?.value?.trim().toLowerCase();
+  if (!value) return false;
+  return value === "1" || value === "true" || value === "yes";
+}
+
 async function getSettingValue(env: Env, key: string): Promise<string> {
   const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`)
     .bind(key)
@@ -83,7 +93,15 @@ export async function getSettings(request: Request, env: Env): Promise<Response>
   const gh_owner = await getSettingValue(env, GH_OWNER_KEY);
   const gh_repo = await getSettingValue(env, GH_REPO_KEY);
   const cookie_domain = await getSettingValue(env, COOKIE_DOMAIN_KEY);
-  return json(request, env, { timezone, cron_enabled, gh_owner, gh_repo, cookie_domain });
+  const store_screenshots = await getStoreScreenshots(env);
+  return json(request, env, {
+    timezone,
+    cron_enabled,
+    gh_owner,
+    gh_repo,
+    cookie_domain,
+    store_screenshots,
+  });
 }
 
 async function setSetting(env: Env, key: string, value: string): Promise<void> {
@@ -141,6 +159,10 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
     updates[COOKIE_DOMAIN_KEY] = cookieDomain;
   }
 
+  if (body.store_screenshots !== undefined) {
+    updates[STORE_SCREENSHOTS_KEY] = body.store_screenshots ? "1" : "0";
+  }
+
   if (!Object.keys(updates).length) {
     return json(request, env, { error: "No settings to update" }, 400);
   }
@@ -154,5 +176,13 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
   const gh_owner = await getSettingValue(env, GH_OWNER_KEY);
   const gh_repo = await getSettingValue(env, GH_REPO_KEY);
   const cookie_domain = await getSettingValue(env, COOKIE_DOMAIN_KEY);
-  return json(request, env, { timezone, cron_enabled, gh_owner, gh_repo, cookie_domain });
+  const store_screenshots = await getStoreScreenshots(env);
+  return json(request, env, {
+    timezone,
+    cron_enabled,
+    gh_owner,
+    gh_repo,
+    cookie_domain,
+    store_screenshots,
+  });
 }

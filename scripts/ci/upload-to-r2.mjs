@@ -149,7 +149,9 @@ async function main() {
     }
 
     const raw = await readFile(join(REPORTS_DIR, file), "utf8");
-    const lighthouseJson = slimLighthouseReport(JSON.parse(raw));
+    const storeScreenshots =
+      process.env.STORE_SCREENSHOTS === "1" || process.env.STORE_SCREENSHOTS === "true";
+    const lighthouseJson = slimLighthouseReport(JSON.parse(raw), { storeScreenshots });
     const metrics = extractMetrics(lighthouseJson);
     const body = JSON.stringify(lighthouseJson);
 

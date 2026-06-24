@@ -4,7 +4,6 @@ import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./acce
 import { requireAdmin, requireUser } from "./auth";
 import { dispatchProject } from "./github";
 import { isValidCronExpression, normalizeCronExpression } from "./cron";
-import { slimLighthouseReport } from "./lighthouse-report";
 import { json } from "./http";
 import { ensureShareToken, normalizeShareToken } from "./share";
 import { slugifyId } from "./slug";
@@ -484,7 +483,7 @@ export async function getReportJson(
   const object = await env.REPORTS.get(reportKey);
   if (!object) return json(request, env, { error: "Report not found" }, 404);
   const body = await object.text();
-  const lighthouse = slimLighthouseReport(JSON.parse(body) as Record<string, unknown>);
+  const lighthouse = JSON.parse(body) as Record<string, unknown>;
   const run = await env.DB.prepare(
     `SELECT project_id, url_id, strategy, report_key, run_at
      FROM runs WHERE report_key = ?`

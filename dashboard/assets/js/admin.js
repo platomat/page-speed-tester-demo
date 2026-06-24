@@ -22,6 +22,7 @@ function collectSettingsFromForm() {
     gh_owner: document.getElementById("instance-gh-owner").value.trim(),
     gh_repo: document.getElementById("instance-gh-repo").value.trim(),
     cookie_domain: document.getElementById("instance-cookie-domain").value.trim(),
+    store_screenshots: document.getElementById("instance-store-screenshots").checked,
   };
 }
 
@@ -33,6 +34,7 @@ async function loadSettingsForm() {
   document.getElementById("instance-gh-owner").value = data.gh_owner ?? "";
   document.getElementById("instance-gh-repo").value = data.gh_repo ?? "";
   document.getElementById("instance-cookie-domain").value = data.cookie_domain ?? "";
+  document.getElementById("instance-store-screenshots").checked = Boolean(data.store_screenshots);
 }
 
 function showMessage(text, isError = false) {

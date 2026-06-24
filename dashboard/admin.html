@@ -193,6 +193,16 @@
               spellcheck="false"
               autocomplete="off"
             />
+            <label for="instance-store-screenshots">Report screenshots</label>
+            <label class="settings-checkbox">
+              <input type="checkbox" id="instance-store-screenshots" name="store_screenshots" />
+              Store viewport and full-page screenshots in Lighthouse JSON (R2)
+            </label>
+            <p class="settings-field-hint settings-field-hint--full">
+              Off by default — smaller reports and lower R2 usage. When enabled, JSON files are much
+              larger; R2 storage fills faster and may incur Cloudflare charges. Screenshots appear in
+              the report detail view for runs started after you save this setting.
+            </p>
             <label for="instance-timezone">Timezone</label>
             <input
               type="text"

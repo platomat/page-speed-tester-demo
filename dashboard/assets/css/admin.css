@@ -136,6 +136,17 @@
   cursor: pointer;
 }
 
+.settings-field-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.settings-field-hint--full {
+  grid-column: 1 / -1;
+}
+
 .settings-grid input:not([type="checkbox"]),
 .settings-grid select {
   font: inherit;

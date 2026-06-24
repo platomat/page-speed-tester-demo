@@ -293,6 +293,35 @@
   font-weight: 500;
 }
 
+.report-screenshots {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.report-screenshot {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.report-screenshot figcaption {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.report-screenshot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+  background: #0d1117;
+}
+
 .category-scores {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

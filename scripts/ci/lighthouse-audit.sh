@@ -27,12 +27,16 @@ warmup() {
 }
 
 run_once() {
+  local screenshot_args=(--disable-full-page-screenshot)
+  if [ "${STORE_SCREENSHOTS:-0}" = "1" ] || [ "${STORE_SCREENSHOTS:-}" = "true" ]; then
+    screenshot_args=()
+  fi
   timeout "$timeout_sec" lighthouse "$page_url" \
     --chrome-path="$chrome_path" \
     --chrome-flags="$CHROME_FLAGS" \
     --user-agent="$LH_USER_AGENT" \
     "${extra_args[@]}" \
-    --disable-full-page-screenshot \
+    "${screenshot_args[@]}" \
     --max-wait-for-fcp="$LH_MAX_WAIT_FCP" \
     --max-wait-for-load="$max_load" \
     --output=json \
