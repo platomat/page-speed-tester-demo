@@ -27,18 +27,18 @@ Lighthouse läuft **nicht** direkt in Cloudflare Workers (kein Chrome dort).
 ## Wo welche Umgebungsvariable hingehört
 
 
-| Variable                                    | Wo setzen                                                    | Wann                              | Zweck                                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------- |
-| **`D1_DATABASE_ID`**, **`KV_NAMESPACE_ID`** | **Workers → Git deploy → Build environment variables**       | Vor jedem Worker-Deploy           | Generiert `wrangler.toml` (Bindings)                                                     |
-| **`PST_API_URL`**                           | **Pages → Build environment variables**                      | Beim Pages-Deploy (Build-Schritt) | Worker-URL in `dashboard/config.js` (optional bei Custom Domain — Fallback `api.<host>`) |
-| `COOKIE_DOMAIN`                             | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | Session-Cookie für Dashboard + API (z. B. `.page-speed-tester.mydomain.tld`)             |
-| `DASHBOARD_ORIGIN`                          | optional Worker `[vars]`                                     | Worker-Laufzeit                   | Zusätzliche Dashboard-Origins für CORS (kommagetrennt, volle URLs)                       |
-| `GH_OWNER`, `GH_REPO`                       | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | GitHub `repository_dispatch`-Ziel                                                        |
-| `SESSION_SECRET`                            | **Worker → Secrets**                                         | Worker-Laufzeit                   | Session-Verschlüsselung                                                                  |
-| `GH_PAT`                                    | **Worker → Secrets**                                         | Worker-Laufzeit                   | GitHub API                                                                               |
-| `WORKER_API_SECRET`                         | **Worker → Secrets** + **GitHub Secrets**                    | Worker + Actions                  | Upload `/api/runs`, interne URL-API                                                      |
-| `WORKER_API_URL`                            | **GitHub Secrets** (optional lokal in `.env`)                | GitHub Actions                    | Worker-Basis-URL in CI                                                                   |
-| `R2_*`                                      | **GitHub Secrets** (optional lokal in `.env`)                | GitHub Actions                    | Upload nach R2                                                                           |
+| Variable                                    | Typ    | Wo setzen                                                    | Wann                              | Zweck                                                                                    |
+| ------------------------------------------- | ------ | ------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------- |
+| `**D1_DATABASE_ID`**, `**KV_NAMESPACE_ID**` | Text   | **Workers → Git deploy → Build environment variables**       | Vor jedem Worker-Deploy           | Generiert `wrangler.toml` (Bindings)                                                     |
+| `**PST_API_URL`**                           | Text   | **Pages → Build environment variables**                      | Beim Pages-Deploy (Build-Schritt) | Worker-URL in `dashboard/config.js` (optional bei Custom Domain — Fallback `api.<host>`) |
+| `COOKIE_DOMAIN`                             | Text   | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | Session-Cookie für Dashboard + API (z. B. `.page-speed-tester.mydomain.tld`)             |
+| `DASHBOARD_ORIGIN`                          | Text   | optional Worker `[vars]`                                     | Worker-Laufzeit                   | Zusätzliche Dashboard-Origins für CORS (kommagetrennt, volle URLs)                       |
+| `GH_OWNER`, `GH_REPO`                       | Text   | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | GitHub `repository_dispatch`-Ziel                                                        |
+| `SESSION_SECRET`                            | Secret | **Worker → Secrets**                                         | Worker-Laufzeit                   | Session-Verschlüsselung                                                                  |
+| `GH_PAT`                                    | Secret | **Worker → Secrets**                                         | Worker-Laufzeit                   | GitHub API                                                                               |
+| `WORKER_API_SECRET`                         | Secret | **Worker → Secrets** + **GitHub Secrets**                    | Worker + Actions                  | Upload `/api/runs`, interne URL-API                                                      |
+| `WORKER_API_URL`                            | Secret | **GitHub Secrets** (optional lokal in `.env`)                | GitHub Actions                    | Worker-Basis-URL in CI                                                                   |
+| `R2_`*                                      | Secret | **GitHub Secrets** (optional lokal in `.env`)                | GitHub Actions                    | Upload nach R2                                                                           |
 
 
 **Wichtig:** `PST_API_URL` ist **keine** Worker-Variable. Sie wird nur beim **Pages-Build** gelesen (`node scripts/dashboard/prepare-dashboard.mjs`) und landet als `window.PST_API_URL` im statischen Dashboard. Der Worker kennt sie nicht.
@@ -120,7 +120,7 @@ Empfohlen wird das **gesamte** Repository (Worker-Code, Dashboard, Actions) — 
 | 6       | **Admin → Instance settings:** GitHub owner + repository, cookie domain, timezone                                                                                                                                                 |
 
 
-In Schritt 6 trägt der Kunde **`meine-firma`** und **`page-speed-tester`** ein — genau das Repo, in dem der Workflow liegt und aus dem Worker/Pages deployt wurden.
+In Schritt 6 trägt der Kunde `**meine-firma`** und `**page-speed-tester**` ein — genau das Repo, in dem der Workflow liegt und aus dem Worker/Pages deployt wurden.
 
 #### Repo anlegen — welcher Weg?
 
@@ -274,18 +274,6 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 
 ### Schritt 4: KV Namespace (Worker)
 
-#### Rückfrage: Wo lege ich `RATE_LIMIT` an? Gibt es eine übergeordnete Projekt-Gruppe?
-
-**Antwort:** Nein. In Cloudflare KV gibt es nur **Namespaces** (Container) und darin **Keys** (werden vom Worker automatisch geschrieben).
-
-
-| Begriff                      | Was du machst                                                       |
-| ---------------------------- | ------------------------------------------------------------------- |
-| **Namespace-Name** (in CF)   | Einmal anlegen, z. B. `page-speed-tester-worker-kv`                 |
-| **Binding-Name** (am Worker) | `KV` — exakt so, wie im Code (`env.KV`)                             |
-| **Keys** (z. B. `last-run:…`, `run-status:…`) | Nicht manuell anlegen — der Worker schreibt sie |
-
-
 1. **Workers & Pages → KV → Create a namespace**
 2. Name: `page-speed-tester-worker-kv`
 3. **Namespace ID** notieren
@@ -296,7 +284,7 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 
 #### Git-Verbindung
 
-1. **Workers & Pages → Create → Workers → Connect to Git**
+1. **Build → Compute → Workers & Pages →Create application → Continue with Github**
 2. **Worker-Name** in Cloudflare: `page-speed-tester-api` (erscheint auch als `*.workers.dev`-Subdomain)
 3. Repo (z. B. `meine-firma/page-speed-tester`), Branch `main`
 4. Deploy command: `node scripts/generate-wrangler.mjs && npx wrangler deploy`
@@ -307,26 +295,26 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 Unter **Workers → dein Worker → Settings → Variables and secrets → Build** (nicht Runtime):
 
 
-| Variable          | Pflicht  | Beispiel / Quelle                                 |
-| ----------------- | -------- | ------------------------------------------------- |
-| `D1_DATABASE_ID`  | ✅        | D1 → `page-speed-tester-db` → Database ID                |
-| `KV_NAMESPACE_ID` | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID |
-| `WORKER_NAME`     | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
-| `CRON_EXPRESSION` | optional | `*/5 * * * *` |
+| Variable          | Typ  | Pflicht  | Beispiel / Quelle                                                                            |
+| ----------------- | ---- | -------- | -------------------------------------------------------------------------------------------- |
+| `D1_DATABASE_ID`  | Text | ✅        | D1 → `page-speed-tester-db` → Database ID                                                    |
+| `KV_NAMESPACE_ID` | Text | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID                                            |
+| `WORKER_NAME`     | Text | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
+| `CRON_EXPRESSION` | Text | optional | `*/5 * * * `*                                                                                |
 
 
-Das Script [`scripts/generate-wrangler.mjs`](../scripts/generate-wrangler.mjs) schreibt daraus `wrangler.toml` (gitignored, nicht committen). **Kein** manuelles Bearbeiten der Datei nötig — Fork auf GitHub, IDs nur in Cloudflare.
+Das Script `[scripts/generate-wrangler.mjs](../scripts/generate-wrangler.mjs)` schreibt daraus `wrangler.toml` (gitignored, nicht committen). **Kein** manuelles Bearbeiten der Datei nötig — Fork auf GitHub, IDs nur in Cloudflare.
 
 #### Worker Secrets (Runtime)
 
 Unter **Workers → Settings → Secrets** (verschlüsselt, bleiben über Deploys):
 
 
-| Secret              | Pflicht |
-| ------------------- | ------- |
-| `SESSION_SECRET`    | ✅       |
-| `GH_PAT`            | ✅       |
-| `WORKER_API_SECRET` | ✅       |
+| Secret              | Typ    | Pflicht |
+| ------------------- | ------ | ------- |
+| `SESSION_SECRET`    | Secret | ✅       |
+| `GH_PAT`            | Secret | ✅       |
+| `WORKER_API_SECRET` | Secret | ✅       |
 
 
 **Nicht** als Plain-Text Build-Variable — nur Secrets. Kein `[vars]` in `wrangler.toml` nötig; GitHub-Repo und Cookie-Domain → **Admin → Instance settings** (D1).
@@ -358,11 +346,11 @@ Commit + Push → Cloudflare baut neu.
 #### Secrets (Worker → Settings → Variables → Secrets)
 
 
-| Secret              | Inhalt                                       | Nie ins Git! |
-| ------------------- | -------------------------------------------- | ------------ |
-| `SESSION_SECRET`    | Langer Zufallsstring für Session-Cookies     | ✅            |
-| `GH_PAT`            | GitHub Personal Access Token                 | ✅            |
-| `WORKER_API_SECRET` | Zufallsstring für Upload-API + GitHub intern | ✅            |
+| Secret              | Typ    | Inhalt                                       | Nie ins Git! |
+| ------------------- | ------ | -------------------------------------------- | ------------ |
+| `SESSION_SECRET`    | Secret | Langer Zufallsstring für Session-Cookies     | ✅            |
+| `GH_PAT`            | Secret | GitHub Personal Access Token                 | ✅            |
+| `WORKER_API_SECRET` | Secret | Zufallsstring für Upload-API + GitHub intern | ✅            |
 
 
 `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` — in **Admin → Instance settings** (D1); optional als `[vars]`-Fallback in `wrangler.toml`. PAT nie ins Git.
@@ -389,9 +377,9 @@ GitHub Push Protection blockiert den Push. **Sofort:**
 
 #### Cron (projektbezogen)
 
-Der Worker läuft alle **15 Minuten** (`*/15 * * * *`) und prüft pro Projekt den konfigurierten Cron-Ausdruck (z. B. `0 6 * * *` = täglich 06:00 UTC). Fällige Projekte werden per `repository_dispatch` mit `project_id` gestartet.
+Der Worker läuft alle **15 Minuten** (`*/15 * * * `*) und prüft pro Projekt den konfigurierten Cron-Ausdruck (z. B. `0 6 * * *` = täglich 06:00 UTC). Fällige Projekte werden per `repository_dispatch` mit `project_id` gestartet.
 
-In [`wrangler.toml`](../wrangler.toml):
+In `[wrangler.toml](../wrangler.toml)`:
 
 ```toml
 [triggers]
@@ -445,10 +433,10 @@ Erwartung: `{"status":"ok","service":"page-speed-tester"}`
 **Build environment variable** — **Pages → Settings → Environment variables → Build** (nicht Worker, nicht Pages Runtime):
 
 
-| Variable      | Wann setzen?                                                                | Beispiel                                                      |
-| ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `PST_API_URL` | **Pflicht** bei `*.pages.dev` / `*.workers.dev`                             | `https://page-speed-tester-api.<account>.workers.dev`         |
-| `PST_API_URL` | **Optional** bei Custom Domain (Dashboard auf `page-speed-tester.kunde.de`) | leer → Browser nutzt `https://api.page-speed-tester.kunde.de` |
+| Variable      | Typ  | Wann setzen?                                                                | Beispiel                                                      |
+| ------------- | ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `PST_API_URL` | Text | **Pflicht** bei `*.pages.dev` / `*.workers.dev`                             | `https://page-speed-tester-api.<account>.workers.dev`         |
+| `PST_API_URL` | Text | **Optional** bei Custom Domain (Dashboard auf `page-speed-tester.kunde.de`) | leer → Browser nutzt `https://api.page-speed-tester.kunde.de` |
 
 
 1. Deploy → URL z. B. `https://page-speed-tester.mydomain.tld` (Pages) + Worker-Custom-Domain `https://api.page-speed-tester.mydomain.tld`
@@ -494,14 +482,14 @@ In Pages **Build-Env** `PST_API_URL` = volle Worker-URL (**Pflicht** — von Pag
 **GitHub → Repo → Settings → Secrets and variables → Actions → New repository secret**
 
 
-| Secret                 | Wert (mydomain.tld)                                |
-| ---------------------- | -------------------------------------------------- |
-| `R2_ACCESS_KEY_ID`     | aus Schritt 2                                      |
-| `R2_SECRET_ACCESS_KEY` | aus Schritt 2                                      |
-| `R2_BUCKET`            | `page-speed-reports`                               |
-| `R2_ENDPOINT`          | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-| `WORKER_API_URL`       | `https://api.page-speed-tester.mydomain.tld`       |
-| `WORKER_API_SECRET`    | gleicher Wert wie Worker-Secret                    |
+| Secret                 | Typ    | Wert (mydomain.tld)                                |
+| ---------------------- | ------ | -------------------------------------------------- |
+| `R2_ACCESS_KEY_ID`     | Secret | aus Schritt 2                                      |
+| `R2_SECRET_ACCESS_KEY` | Secret | aus Schritt 2                                      |
+| `R2_BUCKET`            | Text   | `page-speed-reports`                               |
+| `R2_ENDPOINT`          | Text   | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
+| `WORKER_API_URL`       | Secret | `https://api.page-speed-tester.mydomain.tld`       |
+| `WORKER_API_SECRET`    | Secret | gleicher Wert wie Worker-Secret                    |
 
 
 ---
@@ -669,13 +657,13 @@ Logs unter **Actions → fehlgeschlagener Run**.
 ### Wo Secrets **nicht** hingehören
 
 
-| Wert                                   | Erlaubt                                                     | Verboten                     |
-| -------------------------------------- | ----------------------------------------------------------- | ---------------------------- |
-| `GH_PAT`                               | Worker Secret                                               | `wrangler.toml`, Git         |
-| `SESSION_SECRET`                       | Worker Secret                                               | Git                          |
-| `WORKER_API_SECRET`                    | Worker Secret + GitHub Secret                               | öffentliche Vars             |
-| `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` | Admin (D1) oder optional `wrangler.toml` [vars]             | —                            |
-| D1/KV IDs                              | **Workers Build-Env** (`D1_DATABASE_ID`, `KV_NAMESPACE_ID`) | Git, Plain-Text Runtime-Vars |
+| Wert                                   | Typ    | Erlaubt                                                     | Verboten                     |
+| -------------------------------------- | ------ | ----------------------------------------------------------- | ---------------------------- |
+| `GH_PAT`                               | Secret | Worker Secret                                               | `wrangler.toml`, Git         |
+| `SESSION_SECRET`                       | Secret | Worker Secret                                               | Git                          |
+| `WORKER_API_SECRET`                    | Secret | Worker Secret + GitHub Secret                               | öffentliche Vars             |
+| `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` | Text   | Admin (D1) oder optional `wrangler.toml` [vars]             | —                            |
+| D1/KV IDs                              | Text   | **Workers Build-Env** (`D1_DATABASE_ID`, `KV_NAMESPACE_ID`) | Git, Plain-Text Runtime-Vars |
 
 
 ---
@@ -697,4 +685,4 @@ Logs unter **Actions → fehlgeschlagener Run**.
 
 ---
 
-Siehe auch [`README.md`](../README.md) für API-Referenz und Architektur.
+Siehe auch `[README.md](../README.md)` für API-Referenz und Architektur.
