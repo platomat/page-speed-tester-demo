@@ -63,11 +63,11 @@ In Cloudflare Pages: **Settings → Environment variables →** Typ **Build** (n
 | Variante                                            | URL                                                |
 | --------------------------------------------------- | -------------------------------------------------- |
 | Account-Endpoint (**empfohlen** für GitHub Actions) | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-| Custom Domain                                       | `https://bucket-page-speed-reports.mydomain.tld`   |
+| Custom Domain                                       | `https://bucket-page-speed-tester-reports.mydomain.tld`   |
 | Custom Domain (alternativ)                          | `https://bucket.page-speed-tester.mydomain.tld`    |
 
 
-Bucket-Name: `page-speed-reports`
+Bucket-Name: `page-speed-tester-reports`
 
 ---
 
@@ -286,15 +286,16 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 #### Git-Verbindung
 
 > **Hinweis — Repo erscheint nicht in der Auswahl?**  
-> Cloudflare sieht nur Repositories, die die GitHub-App **Cloudflare Workers and Pages** nutzen darf. Das gilt auch für **neue private Repos** (z. B. nach **Use this template**) — private/public allein reicht nicht.  
+> Cloudflare sieht nur Repositories, die die GitHub-App **Cloudflare Workers and Pages** nutzen darf. Zum Ändern:  
 > **GitHub → Account → Settings → Applications → Installed GitHub Apps → Cloudflare Workers and Pages → Repository access**  
 > → dein Repo hinzufügen (oder testweise *All repositories*). Speichern, danach in Cloudflare den Dialog neu laden.
 
 1. **Build → Compute → Workers & Pages →Create application → Continue with Github**
 2. **Worker-Name** in Cloudflare: `page-speed-tester-api` (erscheint auch als `*.workers.dev`-Subdomain)
-3. Repo (z. B. `meine-firma/page-speed-tester`), Branch `main`
-4. Deploy command: `node scripts/generate-wrangler.mjs && npx wrangler deploy`
-5. **Path / Root directory:** leer oder `/` (Repo-Root) — **nicht** `dashboard`
+3. **Repo** (z. B. `meine-firma/page-speed-tester`), **Branch** `main`
+4. **Deploy command:** `node scripts/generate-wrangler.mjs && npx wrangler deploy`
+5. **API token:** neuen generieren (Name z.B:: `api-token-page-speed-tester`) oder bestehenden wählen
+6. **Path / Root directory:** leer oder `/` (Repo-Root) — **nicht** `dashboard`
 
 #### Worker Build environment variables (Git deploy)
 
@@ -383,6 +384,8 @@ Erwartung: `{"status":"ok","service":"page-speed-tester"}`
 ### Schritt 6: Dashboard (Pages) — nicht Worker!
 
 #### Pages anlegen
+
+> **Repo fehlt in der Liste?** Gleicher Hinweis wie in Schritt 5 (**Git-Verbindung**): GitHub-App **Cloudflare Workers and Pages → Repository access**.
 
 1. **Workers & Pages → Create → Pages → Connect to Git**
   1. zu finden ganz unten: "Looking to deploy Pages? Get started"
@@ -509,8 +512,8 @@ Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo hab
 #### Timezone und Cron
 
 - **Instance timezone** gilt für alle Projekte (Tabellen, Charts, Cron-Auswertung).
-- **Cron pro Projekt** (Admin → Projects): 5 Felder, lokale Zeit der Instance timezone, z. B. `0 6 * * `* = täglich 06:00. **Leer** = nur manuelle Läufe für dieses Projekt.
-- Worker-Cron (`*/15 * * * `* in `wrangler.toml`) prüft alle 15 Minuten, welche Projekte fällig sind — **Scheduled runs** in Instance settings muss aktiv sein.
+- **Cron pro Projekt** (Admin → Projects): 5 Felder, lokale Zeit der Instance timezone, z. B. `0 6 * `* * = täglich 06:00. **Leer** = nur manuelle Läufe für dieses Projekt.
+- Worker-Cron (`*/15 * * `* * in `wrangler.toml`) prüft alle 15 Minuten, welche Projekte fällig sind — **Scheduled runs** in Instance settings muss aktiv sein.
 
 ---
 
@@ -692,7 +695,7 @@ Logs unter **Actions → fehlgeschlagener Run**.
 
 ## Checkliste
 
-- R2 Bucket `page-speed-reports` + API-Token
+- R2 Bucket `page-speed-tester-reports` + API-Token
 - D1 `page-speed-tester-db` + Schema aus `[schema.sql](../schema.sql)` (D1 Console oder `npm run db:migrate:remote`)
 - KV Namespace `page-speed-tester-worker-kv`
 - Worker `page-speed-tester-api` deployed, Bindings D1/R2/KV, Secrets (`SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET`)

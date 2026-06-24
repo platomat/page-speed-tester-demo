@@ -13,8 +13,8 @@
     "deploy:dashboard": "npm run dashboard:prepare && wrangler pages deploy .dashboard-dist --project-name=page-speed-tester-dashboard",
     "dev:dashboard": "npm run dashboard:prepare && wrangler pages dev .dashboard-dist",
     "postinstall": "node scripts/dashboard/prepare-dashboard.mjs",
-    "db:migrate": "npm run wrangler:generate && wrangler d1 execute page-speed-db --local --file=schema.sql",
-    "db:migrate:remote": "npm run wrangler:generate && wrangler d1 execute page-speed-db --remote --file=schema.sql",
+    "db:migrate": "npm run wrangler:generate && wrangler d1 execute page-speed-tester-db --local --file=schema.sql",
+    "db:migrate:remote": "npm run wrangler:generate && wrangler d1 execute page-speed-tester-db --remote --file=schema.sql",
     "hash-password": "node scripts/hash-password.mjs",
     "dev": "npm run wrangler:generate && wrangler dev"
   },

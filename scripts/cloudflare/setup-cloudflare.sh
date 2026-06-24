@@ -3,10 +3,10 @@
 set -euo pipefail
 
 echo "Creating D1 database..."
-wrangler d1 create page-speed-db || true
+wrangler d1 create page-speed-tester-db || true
 
 echo "Creating R2 bucket..."
-wrangler r2 bucket create page-speed-reports || true
+wrangler r2 bucket create page-speed-tester-reports || true
 
 echo "Creating KV namespace..."
 wrangler kv namespace create page-speed-tester-worker-kv || true

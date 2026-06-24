@@ -7,12 +7,12 @@ compatibility_date = "2024-06-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "page-speed-db"
+database_name = "page-speed-tester-db"
 database_id = "{{D1_DATABASE_ID}}"
 
 [[r2_buckets]]
 binding = "REPORTS"
-bucket_name = "page-speed-reports"
+bucket_name = "page-speed-tester-reports"
 
 [[kv_namespaces]]
 binding = "KV"
