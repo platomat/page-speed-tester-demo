@@ -309,7 +309,7 @@ Unter **Workers → dein Worker → Settings → Variables and secrets → Build
 
 | Variable          | Pflicht  | Beispiel / Quelle                                 |
 | ----------------- | -------- | ------------------------------------------------- |
-| `D1_DATABASE_ID`  | ✅        | D1 → `page-speed-db` → Database ID                |
+| `D1_DATABASE_ID`  | ✅        | D1 → `page-speed-tester-db` → Database ID                |
 | `KV_NAMESPACE_ID` | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID |
 | `WORKER_NAME`     | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
 | `CRON_EXPRESSION` | optional | `*/5 * * * *` |
@@ -683,7 +683,7 @@ Logs unter **Actions → fehlgeschlagener Run**.
 ## Checkliste
 
 - R2 Bucket `page-speed-reports` + API-Token
-- D1 `page-speed-db` + Schema aus `[schema.sql](../schema.sql)` (D1 Console oder `npm run db:migrate:remote`)
+- D1 `page-speed-tester-db` + Schema aus `[schema.sql](../schema.sql)` (D1 Console oder `npm run db:migrate:remote`)
 - KV Namespace `page-speed-tester-worker-kv`
 - Worker `page-speed-tester-api` deployed, Bindings D1/R2/KV, Secrets (`SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET`)
 - Workers Git deploy: Build-Env `D1_DATABASE_ID`, `KV_NAMESPACE_ID`; Secrets gesetzt; Build `node scripts/generate-wrangler.mjs && npx wrangler deploy`
