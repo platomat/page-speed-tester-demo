@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Page Speed Tester</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/common.css" />
+    <link rel="stylesheet" href="assets/css/admin.css" />
+  </head>
+  <body>
+    <header id="site-header" data-page="admin" data-subtitle="Admin — projects, URLs, and users"></header>
+
+    <p
+      id="admin-message"
+      class="admin-message hidden"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></p>
+
+    <main>
+      <section class="admin-section">
+        <h2>Projects</h2>
+        <p class="admin-section-hint">
+          Schedule automatic Lighthouse runs and manage access keys for triggering
+          tests without login. The <strong>Trigger URL</strong> uses the access key.
+        </p>
+        <table id="projects-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <p class="admin-add-toggle">
+          <button type="button" id="toggle-project-form" class="btn-secondary">+ Add project</button>
+        </p>
+        <div id="project-form-panel" class="admin-form-panel hidden">
+          <form id="project-form" class="admin-create-form">
+            <div class="admin-create-grid">
+              <label for="project-id">ID</label>
+              <input type="text" id="project-id" placeholder="Optional slug" />
+              <label for="project-name">Name</label>
+              <input type="text" id="project-name" placeholder="Project name" required />
+              <label for="project-access-key">Access key</label>
+              <input
+                type="text"
+                id="project-access-key"
+                placeholder="Optional, auto-generated"
+                maxlength="64"
+              />
+              <label for="project-cron">Cron</label>
+              <input
+                type="text"
+                id="project-cron"
+                placeholder="Empty = manual only, e.g. 0 6 * * *"
+                value=""
+                title="Cron schedule (instance timezone); leave empty for manual runs only"
+              />
+            </div>
+            <p class="cron-preview" id="project-cron-preview" data-cron-preview-for="project-cron"></p>
+            <p class="admin-cron-hint" id="cron-hint">
+              Leave cron <strong>empty</strong> for manual testing only. Otherwise use local time:
+              <code>minute</code> · <code>hour</code> · <code>day</code> · <code>month</code> · <code>weekday</code>
+              — e.g. <code>0 6 * * *</code> daily at 06:00,
+              <code>0 */6 * * *</code> every 6 hours,
+              <code>*/15 * * * *</code> every 15 minutes.
+              Use <code>*</code> for “any”.
+            </p>
+            <div class="admin-form-panel-actions">
+              <button type="submit">Create project</button>
+              <button type="button" class="btn-secondary" id="cancel-project-form">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <h2>URLs</h2>
+        <p class="admin-section-hint">
+          Pages to test within a project. Each enabled URL is audited on <strong>desktop</strong> and
+          <strong>mobile</strong> when a run is triggered or scheduled.
+        </p>
+        <label class="inline-label url-project-filter">
+          Project
+          <select id="url-project-select"></select>
+        </label>
+        <table id="urls-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>URL</th>
+              <th>Enabled</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="admin-add-toggle">
+          <button type="button" id="toggle-url-form" class="btn-secondary">+ Add URL</button>
+        </p>
+        <div id="url-form-panel" class="admin-form-panel hidden">
+          <p class="admin-form-panel-context">
+            Adding URL to <strong id="url-form-project-name">—</strong>
+          </p>
+          <form id="url-form" class="admin-create-form">
+            <div class="admin-create-grid">
+              <label for="url-id">ID</label>
+              <input type="text" id="url-id" placeholder="Optional — auto: {project}-{name}" />
+              <label for="url-name">Name</label>
+              <input type="text" id="url-name" placeholder="Display name" required />
+              <label for="url-url">URL</label>
+              <input type="url" id="url-url" placeholder="https://…" required />
+            </div>
+            <div class="admin-form-panel-actions">
+              <button type="submit">Create URL</button>
+              <button type="button" class="btn-secondary" id="cancel-url-form">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <h2>Users</h2>
+        <p class="admin-section-hint">
+          Create accounts and assign projects. <strong>Users</strong> see only assigned projects;
+          <strong>admins</strong> see all projects and this settings page.
+        </p>
+        <form id="user-form" class="inline-form">
+          <input type="email" id="user-email" placeholder="Email" required />
+          <input type="text" id="user-username" placeholder="Username" required />
+          <input type="password" id="user-password" placeholder="Password" required />
+          <select id="user-role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button type="submit">Add user</button>
+        </form>
+        <table id="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Projects</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="admin-section">
+        <h2>Instance settings</h2>
+        <p class="admin-section-hint">
+          Times in the dashboard and cron schedules use this timezone.
+          Disable scheduled runs globally while keeping manual triggers available.
+          The GitHub repository is where Lighthouse runs via Actions; set owner and repo
+          to <em>this instance’s</em> repo (the PAT secret must have access to it).
+          <strong>Cookie domain</strong> is the shared parent domain for dashboard and API
+          (e.g. <code>.kunde.de</code>); leave empty for <code>*.pages.dev</code> previews.
+        </p>
+        <form id="settings-form" class="settings-form">
+          <div class="settings-grid">
+            <label for="instance-cron-enabled">Scheduled runs</label>
+            <label class="settings-checkbox">
+              <input type="checkbox" id="instance-cron-enabled" name="cron_enabled" />
+              Enable automatic Lighthouse runs (project cron schedules)
+            </label>
+            <label for="instance-gh-owner">GitHub owner</label>
+            <input
+              type="text"
+              id="instance-gh-owner"
+              name="gh_owner"
+              placeholder="org-or-user"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <label for="instance-gh-repo">GitHub repository</label>
+            <input
+              type="text"
+              id="instance-gh-repo"
+              name="gh_repo"
+              placeholder="page-speed-tester"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <label for="instance-cookie-domain">Cookie domain</label>
+            <input
+              type="text"
+              id="instance-cookie-domain"
+              name="cookie_domain"
+              placeholder=".example.com"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <label for="instance-timezone">Timezone</label>
+            <input
+              type="text"
+              id="instance-timezone"
+              name="timezone"
+              list="timezone-options"
+              placeholder="Europe/Berlin"
+              required
+              spellcheck="false"
+            />
+          </div>
+          <datalist id="timezone-options">
+            <option value="UTC"></option>
+            <option value="Europe/Berlin"></option>
+            <option value="Europe/Vienna"></option>
+            <option value="Europe/Zurich"></option>
+            <option value="Europe/London"></option>
+            <option value="Europe/Paris"></option>
+            <option value="Europe/Amsterdam"></option>
+            <option value="America/New_York"></option>
+            <option value="America/Chicago"></option>
+            <option value="America/Los_Angeles"></option>
+            <option value="Asia/Tokyo"></option>
+            <option value="Asia/Singapore"></option>
+            <option value="Australia/Sydney"></option>
+          </datalist>
+          <div class="settings-form-actions">
+            <button type="submit">Save settings</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer id="site-footer" class="site-footer"></footer>
+
+    <script src="config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/cron-describe.js"></script>
+    <script src="assets/js/header.js"></script>
+    <script src="assets/js/footer.js"></script>
+    <script src="assets/js/admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,170 @@
+name: Lighthouse Page Speed Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: Project ID to test (admin fallback)
+        required: false
+        type: string
+  repository_dispatch:
+    types: [run-lighthouse]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v2
+        id: setup-chrome
+        with:
+          install-dependencies: true
+
+      - name: Install Lighthouse
+        run: npm install -g lighthouse@12.8.2
+
+      - name: Fetch project URLs
+        env:
+          WORKER_API_URL: ${{ secrets.WORKER_API_URL }}
+          WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET }}
+        run: |
+          PROJECT_ID="${{ github.event.client_payload.project_id || github.event.inputs.project_id }}"
+          URL_IDS='${{ toJson(github.event.client_payload.url_ids) }}'
+          if [ -z "$PROJECT_ID" ]; then
+            echo "project_id is required in repository_dispatch client_payload"
+            exit 1
+          fi
+          echo "PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
+          TRIGGER_SOURCE="${{ github.event.client_payload.trigger_source || 'manual' }}"
+          echo "TRIGGER_SOURCE=$TRIGGER_SOURCE" >> "$GITHUB_ENV"
+          curl -sf \
+            -H "Authorization: Bearer $WORKER_API_SECRET" \
+            "$WORKER_API_URL/api/internal/projects/$PROJECT_ID/urls" \
+            > project-urls.json
+          if [ "$URL_IDS" != "null" ] && [ "$URL_IDS" != "[]" ] && [ -n "$URL_IDS" ]; then
+            jq --argjson ids "$URL_IDS" \
+              '{project_id, urls: [.urls[] | select(.id as $i | $ids | index($i))]}' \
+              project-urls.json > project-urls.filtered.json
+            mv project-urls.filtered.json project-urls.json
+          fi
+          URL_COUNT=$(jq '.urls | length' project-urls.json)
+          if [ "$URL_COUNT" -eq 0 ]; then
+            echo "No URLs to test after filtering"
+            exit 1
+          fi
+          cat project-urls.json
+
+      - name: Register run started
+        env:
+          WORKER_API_URL: ${{ secrets.WORKER_API_URL }}
+          WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+        run: |
+          URL_IDS='${{ toJson(github.event.client_payload.url_ids) }}'
+          if [ "$URL_IDS" = "null" ]; then URL_IDS='[]'; fi
+          curl -sf -X POST \
+            -H "Authorization: Bearer $WORKER_API_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg project_id "$PROJECT_ID" \
+              --arg github_run_id "${{ github.run_id }}" \
+              --arg started_at "${{ github.run_started_at }}" \
+              --argjson url_ids "$URL_IDS" \
+              '{project_id:$project_id,github_run_id:$github_run_id,started_at:$started_at,url_ids:$url_ids}')" \
+            "$WORKER_API_URL/api/internal/runs/started" \
+            || echo "Warning: failed to register run started with Worker"
+
+      - name: Run Lighthouse audits
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: |
+          chmod +x scripts/ci/lighthouse-audit.sh
+          mkdir -p reports
+          RUN_STAMP=$(date -u +%Y-%m-%dT%H%M%SZ)
+          PROJECT_ID="$PROJECT_ID"
+          URL_COUNT=$(jq '.urls | length' project-urls.json)
+          LH_TIMEOUT_SEC=60
+          echo "Auditing $URL_COUNT URL(s), desktop + mobile each (trigger: ${TRIGGER_SOURCE:-manual})."
+          success=0
+          n=0
+          while IFS= read -r row; do
+            url_id=$(echo "$row" | jq -r '.id')
+            page_url=$(echo "$row" | jq -r '.url')
+            slug=$(node scripts/ci/url-slug.mjs "$page_url")
+            n=$((n + 1))
+            if [ "$n" -gt 1 ]; then
+              echo "Pausing 10s before next URL (avoid rate limits)…"
+              sleep 10
+            fi
+            echo "Testing $page_url (desktop)..."
+            if scripts/ci/lighthouse-audit.sh "$page_url" desktop \
+              "reports/${RUN_STAMP}-desktop-${slug}.json" \
+              "$CHROME_PATH" "$LH_TIMEOUT_SEC"; then
+              success=$((success + 1))
+            else
+              echo "Desktop run failed for $page_url"
+            fi
+            echo "Testing $page_url (mobile)..."
+            if scripts/ci/lighthouse-audit.sh "$page_url" mobile \
+              "reports/${RUN_STAMP}-mobile-${slug}.json" \
+              "$CHROME_PATH" "$LH_TIMEOUT_SEC"; then
+              success=$((success + 1))
+            else
+              echo "Mobile run failed for $page_url"
+            fi
+          done < <(jq -c '.urls[]' project-urls.json)
+          if [ "$success" -eq 0 ]; then
+            echo "No Lighthouse reports were generated."
+            exit 1
+          fi
+          echo "Generated $success report(s)."
+
+      - name: Upload reports to R2 and register metrics
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          WORKER_API_URL: ${{ secrets.WORKER_API_URL }}
+          WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          RUN_AT: ${{ github.run_started_at }}
+          TRIGGER_SOURCE: ${{ env.TRIGGER_SOURCE }}
+        run: node scripts/ci/upload-to-r2.mjs reports
+
+      - name: Upload reports artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: reports/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Register run completed
+        if: always()
+        env:
+          WORKER_API_URL: ${{ secrets.WORKER_API_URL }}
+          WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+        run: |
+          if [ -z "$PROJECT_ID" ]; then exit 0; fi
+          curl -sf -X POST \
+            -H "Authorization: Bearer $WORKER_API_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg project_id "$PROJECT_ID" '{project_id:$project_id}')" \
+            "$WORKER_API_URL/api/internal/runs/completed" \
+            || echo "Warning: failed to register run completed with Worker"

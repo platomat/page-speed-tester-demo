@@ -1,0 +1,13 @@
+---
+description: Sprache für Kommunikation, Docs und Code in diesem Projekt
+alwaysApply: true
+---
+
+# Sprache
+
+- **Kommunikation mit dem Nutzer:** Deutsch (DE)
+- **Dokumentation** (`docs/`, README, TODOs, Installationsanleitungen usw.): Deutsch (DE)
+- **Code** (Variablen, Funktionen, Strings in der App soweit nicht UI-Lokalisierung): Englisch (EN)
+- **Kommentare im Code:** Englisch (EN)
+
+Commit-Messages und PR-Beschreibungen folgen dem bestehenden Stil des Repos (in der Regel Englisch).

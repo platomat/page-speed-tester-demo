@@ -1,0 +1,14 @@
+node_modules/
+.wrangler/
+wrangler.toml
+dist/
+reports/
+docs/sessions/
+*.log
+.env
+.env.*
+!.env.example
+page-speed-tester.code-workspace
+.dashboard-dist/
+dashboard/config.js
+dashboard/build-id.txt

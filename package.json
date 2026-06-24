@@ -1,0 +1,28 @@
+{
+  "name": "page-speed-tester",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p worker/tsconfig.json",
+    "wrangler:generate": "node scripts/generate-wrangler.mjs",
+    "dashboard:prepare": "node scripts/dashboard/prepare-dashboard.mjs",
+    "dashboard:config": "npm run dashboard:prepare",
+    "deploy": "npm run wrangler:generate && wrangler deploy",
+    "deploy:dashboard": "npm run dashboard:prepare && wrangler pages deploy .dashboard-dist --project-name=page-speed-dashboard",
+    "dev:dashboard": "npm run dashboard:prepare && wrangler pages dev .dashboard-dist",
+    "postinstall": "node scripts/dashboard/prepare-dashboard.mjs",
+    "db:migrate": "npm run wrangler:generate && wrangler d1 execute page-speed-db --local --file=schema.sql",
+    "db:migrate:remote": "npm run wrangler:generate && wrangler d1 execute page-speed-db --remote --file=schema.sql",
+    "hash-password": "node scripts/hash-password.mjs",
+    "dev": "npm run wrangler:generate && wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250204.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.109.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.750.0"
+  }
+}

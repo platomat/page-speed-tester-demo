@@ -1,0 +1,305 @@
+.admin-section {
+  margin-bottom: 4rem;
+}
+
+.admin-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-section-hint {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.admin-cron-hint {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.admin-cron-hint code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8em;
+  color: var(--text);
+}
+
+.cron-preview {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+#projects-table .cron-preview {
+  margin: 0.35rem 0 0;
+  max-width: 16rem;
+}
+
+.admin-add-toggle {
+  margin: 1rem 0 0;
+}
+
+.admin-form-panel {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 36rem;
+}
+
+.admin-form-panel.hidden {
+  display: none;
+}
+
+.admin-form-panel-context {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.admin-create-grid {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+}
+
+.admin-create-grid label {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.admin-create-grid input,
+.admin-create-grid select {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-form-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.admin-form-panel .admin-cron-hint {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+
+.url-project-filter {
+  margin-bottom: 1rem;
+}
+
+.settings-form {
+  max-width: 36rem;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.settings-grid > label:not(.settings-checkbox) {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.settings-checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.settings-grid input:not([type="checkbox"]),
+.settings-grid select {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  width: 100%;
+  min-width: 0;
+}
+
+.settings-form-actions {
+  margin-top: 1.25rem;
+}
+
+.inline-form input,
+.inline-form select {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.inline-form input#project-access-key {
+  min-width: 20rem;
+  font-family: ui-monospace, monospace;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.inline-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.cron-input,
+.access-key-input,
+.name-input,
+.url-input {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  min-width: 8rem;
+}
+
+.url-input {
+  min-width: 14rem;
+}
+
+.project-name-input {
+  min-width: 10rem;
+}
+
+.access-key-cell {
+  min-width: 16rem;
+}
+
+.key-block + .key-block {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.key-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.access-key-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.access-key-input {
+  flex: 1;
+  min-width: 8rem;
+  font-family: ui-monospace, monospace;
+}
+
+.public-link {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.public-link:hover {
+  color: var(--accent);
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.actions-cell button + button {
+  margin-left: 0.35rem;
+}
+
+.project-assign {
+  min-width: 10rem;
+  font: inherit;
+  padding: 0.25rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.admin-message {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  max-width: min(calc(100vw - 2rem), 22rem);
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  border-radius: 8px;
+  margin: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  animation: admin-toast-in 0.2s ease-out;
+}
+
+@keyframes admin-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-message.success {
+  background: var(--surface);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: var(--good);
+}
+
+.admin-message.error {
+  background: var(--surface);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--bad);
+}

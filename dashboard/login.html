@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — Page Speed Tester</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/common.css" />
+  </head>
+  <body>
+    <main class="auth-page">
+      <div class="auth-card">
+        <img src="assets/img/favicon.svg" alt="" class="auth-favicon" width="60" height="60" />
+        <h1>Page Speed Tester</h1>
+        <p id="auth-subtitle" class="subtitle">Sign in</p>
+
+        <form id="login-form" class="auth-form">
+          <input
+            type="text"
+            id="login"
+            name="login"
+            placeholder="Email or username"
+            required
+            autocomplete="username"
+          />
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Password"
+            required
+            autocomplete="current-password"
+          />
+          <button type="submit">Sign in</button>
+        </form>
+
+        <form id="bootstrap-form" class="auth-form hidden">
+          <h2>Initial setup</h2>
+          <p class="subtitle">Create the first admin account.</p>
+          <input
+            type="email"
+            id="bootstrap-email"
+            placeholder="Email"
+            required
+            autocomplete="email"
+          />
+          <input
+            type="text"
+            id="bootstrap-username"
+            placeholder="Username"
+            required
+            autocomplete="username"
+          />
+          <input
+            type="password"
+            id="bootstrap-password"
+            placeholder="Password"
+            required
+            autocomplete="new-password"
+          />
+          <button type="submit">Create admin</button>
+        </form>
+
+        <p id="auth-error" class="error hidden"></p>
+      </div>
+    </main>
+
+    <footer id="site-footer" class="site-footer"></footer>
+
+    <script src="config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/footer.js"></script>
+    <script src="assets/js/login.js"></script>
+  </body>
+</html>

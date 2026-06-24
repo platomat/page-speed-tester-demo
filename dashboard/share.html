@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Speed Dashboard — Shared view</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <script src="assets/vendor/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/css/common.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+  </head>
+  <body>
+    <header id="site-header" data-page="share" data-auth="false" data-subtitle="Lighthouse metrics over time — desktop & mobile"></header>
+
+    <main>
+      <p class="controls-hint">
+        Read-only view — metrics and reports for this project.
+      </p>
+      <section class="controls">
+        <label for="scope-select">URL</label>
+        <select id="scope-select"></select>
+      </section>
+
+      <div id="run-status" class="status-hint hidden" role="status" aria-live="polite"></div>
+      <div id="project-scope-panel" class="status-hint hidden" role="status" aria-live="polite"></div>
+
+      <section id="latest" class="url-metrics-panel"></section>
+
+      <section class="charts url-metrics-panel hidden">
+        <div class="chart-row">
+          <div class="chart-card">
+            <h2>Performance Score <span class="chart-device">Desktop</span></h2>
+            <div class="chart-wrap"><canvas id="chart-performance-desktop"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h2>Performance Score <span class="chart-device">Mobile</span></h2>
+            <div class="chart-wrap"><canvas id="chart-performance-mobile"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h2>First Contentful Paint (ms) <span class="chart-device">Desktop</span></h2>
+            <div class="chart-wrap"><canvas id="chart-fcp-desktop"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h2>First Contentful Paint (ms) <span class="chart-device">Mobile</span></h2>
+            <div class="chart-wrap"><canvas id="chart-fcp-mobile"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h2>Largest Contentful Paint (ms) <span class="chart-device">Desktop</span></h2>
+            <div class="chart-wrap"><canvas id="chart-lcp-desktop"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h2>Largest Contentful Paint (ms) <span class="chart-device">Mobile</span></h2>
+            <div class="chart-wrap"><canvas id="chart-lcp-mobile"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h2>Total Blocking Time (ms) <span class="chart-device">Desktop</span></h2>
+            <div class="chart-wrap"><canvas id="chart-tbt-desktop"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h2>Total Blocking Time (ms) <span class="chart-device">Mobile</span></h2>
+            <div class="chart-wrap"><canvas id="chart-tbt-mobile"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h2>Cumulative Layout Shift <span class="chart-device">Desktop</span></h2>
+            <div class="chart-wrap"><canvas id="chart-cls-desktop"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h2>Cumulative Layout Shift <span class="chart-device">Mobile</span></h2>
+            <div class="chart-wrap"><canvas id="chart-cls-mobile"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <h2>Speed Index (ms) <span class="chart-device">Desktop</span></h2>
+            <div class="chart-wrap"><canvas id="chart-si-desktop"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h2>Speed Index (ms) <span class="chart-device">Mobile</span></h2>
+            <div class="chart-wrap"><canvas id="chart-si-mobile"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="reports-section url-metrics-panel hidden">
+        <h2>Reports</h2>
+        <table id="reports-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Trigger</th>
+              <th>Desktop</th>
+              <th>Mobile</th>
+              <th class="report-actions-col hidden"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer id="site-footer" class="site-footer"></footer>
+
+    <script src="config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/header.js"></script>
+    <script src="assets/js/footer.js"></script>
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>

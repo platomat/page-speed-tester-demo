@@ -1,0 +1,213 @@
+import type { Env } from "./env";
+import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./access-key";
+import { slimLighthouseReport } from "./lighthouse-report";
+import { json } from "./http";
+
+export async function ensureShareToken(env: Env, projectId: string): Promise<string> {
+  const row = await env.DB.prepare(`SELECT share_token FROM projects WHERE id = ?`)
+    .bind(projectId)
+    .first<{ share_token: string | null }>();
+  if (row?.share_token) return row.share_token;
+
+  const token = generateAccessKey();
+  await env.DB.prepare(`UPDATE projects SET share_token = ? WHERE id = ?`)
+    .bind(token, projectId)
+    .run();
+  return token;
+}
+
+async function resolveShareProject(
+  env: Env,
+  projectId: string,
+  token: string
+): Promise<{ id: string; name: string } | null> {
+  const project = await env.DB.prepare(
+    `SELECT id, name, share_token, enabled FROM projects WHERE id = ?`
+  )
+    .bind(projectId)
+    .first<{ id: string; name: string; share_token: string | null; enabled: number }>();
+
+  if (!project?.share_token || !constantTimeEqual(project.share_token, token)) {
+    return null;
+  }
+  if (!project.enabled) {
+    return null;
+  }
+  return { id: project.id, name: project.name };
+}
+
+function shareKeyFromRequest(request: Request): string | null {
+  const params = new URL(request.url).searchParams;
+  return (
+    params.get("share_key")?.trim() ||
+    params.get("key")?.trim() ||
+    params.get("share")?.trim() ||
+    null
+  );
+}
+
+export async function publicShareProject(
+  request: Request,
+  env: Env,
+  projectId: string
+): Promise<Response> {
+  const token = shareKeyFromRequest(request);
+  if (!token) {
+    return json(request, env, { error: "key query parameter required" }, 400);
+  }
+
+  const project = await resolveShareProject(env, projectId, token);
+  if (!project) {
+    return json(request, env, { error: "Invalid project or share key" }, 403);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT id, name, url FROM urls WHERE project_id = ? AND enabled = 1 ORDER BY name`
+  )
+    .bind(projectId)
+    .all<{ id: string; name: string; url: string }>();
+
+  return json(request, env, {
+    project,
+    urls: results ?? [],
+  });
+}
+
+export async function publicShareMetrics(
+  request: Request,
+  env: Env,
+  projectId: string
+): Promise<Response> {
+  const url = new URL(request.url);
+  const token = shareKeyFromRequest(request);
+  const urlId = url.searchParams.get("url_id")?.trim();
+  const strategy = url.searchParams.get("strategy") ?? "desktop";
+
+  if (!token) {
+    return json(request, env, { error: "key query parameter required" }, 400);
+  }
+  if (!urlId) {
+    return json(request, env, { error: "url_id required" }, 400);
+  }
+
+  const project = await resolveShareProject(env, projectId, token);
+  if (!project) {
+    return json(request, env, { error: "Invalid project or share key" }, 403);
+  }
+
+  const urlRow = await env.DB.prepare(
+    `SELECT id FROM urls WHERE project_id = ? AND id = ? AND enabled = 1`
+  )
+    .bind(projectId, urlId)
+    .first();
+  if (!urlRow) {
+    return json(request, env, { error: "URL not found" }, 404);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT r.id, r.project_id, r.url_id, u.name AS url_name, u.url, r.strategy, r.run_at,
+            r.performance, r.lcp_ms, r.cls, r.fcp_ms, r.tbt_ms, r.speed_index, r.report_key
+     FROM runs r
+     JOIN urls u ON u.id = r.url_id
+     WHERE r.project_id = ? AND r.url_id = ? AND r.strategy = ?
+     ORDER BY r.run_at ASC`
+  )
+    .bind(projectId, urlId, strategy)
+    .all();
+
+  return json(request, env, { project_id: projectId, url_id: urlId, strategy, runs: results ?? [] });
+}
+
+export async function publicShareReports(
+  request: Request,
+  env: Env,
+  projectId: string
+): Promise<Response> {
+  const url = new URL(request.url);
+  const token = shareKeyFromRequest(request);
+  const urlId = url.searchParams.get("url_id")?.trim();
+
+  if (!token) {
+    return json(request, env, { error: "key query parameter required" }, 400);
+  }
+  if (!urlId) {
+    return json(request, env, { error: "url_id required" }, 400);
+  }
+
+  const project = await resolveShareProject(env, projectId, token);
+  if (!project) {
+    return json(request, env, { error: "Invalid project or share key" }, 403);
+  }
+
+  const urlRow = await env.DB.prepare(
+    `SELECT id FROM urls WHERE project_id = ? AND id = ? AND enabled = 1`
+  )
+    .bind(projectId, urlId)
+    .first();
+  if (!urlRow) {
+    return json(request, env, { error: "URL not found" }, 404);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source
+     FROM runs WHERE project_id = ? AND url_id = ?
+     ORDER BY run_at DESC LIMIT 50`
+  )
+    .bind(projectId, urlId)
+    .all();
+
+  return json(request, env, { project_id: projectId, url_id: urlId, reports: results ?? [] });
+}
+
+export async function publicShareReportJson(
+  request: Request,
+  env: Env
+): Promise<Response> {
+  const url = new URL(request.url);
+  const token = shareKeyFromRequest(request);
+  const reportKey = url.searchParams.get("report_key")?.trim();
+
+  if (!token) {
+    return json(request, env, { error: "key query parameter required" }, 400);
+  }
+  if (!reportKey) {
+    return json(request, env, { error: "report_key required" }, 400);
+  }
+
+  const sub = reportKey.match(/^reports\/([^/]+)\/(.+)$/);
+  if (!sub) {
+    return json(request, env, { error: "Invalid report key" }, 400);
+  }
+
+  const projectId = sub[1];
+  const project = await resolveShareProject(env, projectId, token);
+  if (!project) {
+    return json(request, env, { error: "Invalid project or share key" }, 403);
+  }
+
+  const object = await env.REPORTS.get(reportKey);
+  if (!object) {
+    return json(request, env, { error: "Report not found" }, 404);
+  }
+
+  const body = await object.text();
+  const lighthouse = slimLighthouseReport(JSON.parse(body) as Record<string, unknown>);
+  const run = await env.DB.prepare(
+    `SELECT project_id, url_id, strategy, report_key, run_at
+     FROM runs WHERE report_key = ?`
+  )
+    .bind(reportKey)
+    .first<{
+      project_id: string;
+      url_id: string;
+      strategy: string;
+      report_key: string;
+      run_at: string;
+    }>();
+
+  return json(request, env, { lighthouse, run: run ?? null });
+}
+
+export function normalizeShareToken(value: string): string | null {
+  return normalizeAccessKey(value);
+}
