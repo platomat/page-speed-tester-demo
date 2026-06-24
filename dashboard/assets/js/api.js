@@ -24,6 +24,17 @@ function resolveApiUrl() {
 
 const API_URL = resolveApiUrl();
 
+const SESSION_TOKEN_KEY = "pst_session_token";
+
+function getSessionToken() {
+  return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+}
+
+function setSessionToken(token) {
+  if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+  else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+}
+
 let instanceTimezone = "UTC";
 let publicShareKey = null;
 
@@ -81,9 +92,13 @@ function getInstanceTimezone() {
 }
 
 async function api(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const token = getSessionToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const response = await fetch(`${API_URL}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers,
     ...options,
   });
   const text = await response.text();
@@ -94,11 +109,13 @@ async function api(path, options = {}) {
     data = { error: text };
   }
   if (!response.ok) {
+    if (response.status === 401) setSessionToken("");
     const err = new Error(data?.error || `API ${response.status}`);
     err.status = response.status;
     err.data = data;
     throw err;
   }
+  if (data?.session_token) setSessionToken(data.session_token);
   return data;
 }
 

@@ -46,8 +46,12 @@ async function initSiteHeader() {
     </div>`;
 
   document.getElementById("logout-btn")?.addEventListener("click", async () => {
-    await api("/api/auth/logout", { method: "POST" });
-    window.location.href = "login.html";
+    try {
+      await api("/api/auth/logout", { method: "POST" });
+    } finally {
+      sessionStorage.removeItem("pst_session_token");
+      window.location.href = "login.html";
+    }
   });
 
   return user;

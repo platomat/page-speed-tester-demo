@@ -41,6 +41,11 @@ function clearSessionCookie(domain?: string): string {
 }
 
 export function getSessionId(request: Request): string | null {
+  const auth = request.headers.get("Authorization");
+  if (auth?.startsWith("Bearer ")) {
+    const token = auth.slice(7).trim();
+    if (token) return token;
+  }
   const cookie = request.headers.get("Cookie") ?? "";
   const match = cookie.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
   return match ? match[1] : null;
@@ -145,7 +150,10 @@ export async function handleLogin(
   return json(
     request,
     env,
-    { user: { id: row.id, email: row.email, username: row.username, role: row.role } },
+    {
+      user: { id: row.id, email: row.email, username: row.username, role: row.role },
+      session_token: sessionId,
+    },
     200,
     { "Set-Cookie": sessionCookie(sessionId, domain) }
   );
