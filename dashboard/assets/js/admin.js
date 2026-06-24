@@ -21,9 +21,96 @@ function collectSettingsFromForm() {
     cron_enabled: document.getElementById("instance-cron-enabled").checked,
     gh_owner: document.getElementById("instance-gh-owner").value.trim(),
     gh_repo: document.getElementById("instance-gh-repo").value.trim(),
+    upstream_owner: document.getElementById("instance-upstream-owner").value.trim(),
+    upstream_repo: document.getElementById("instance-upstream-repo").value.trim(),
+    upstream_branch: document.getElementById("instance-upstream-branch").value.trim(),
     cookie_domain: document.getElementById("instance-cookie-domain").value.trim(),
     store_screenshots: document.getElementById("instance-store-screenshots").checked,
   };
+}
+
+function renderUpstreamStatus(data) {
+  const target = `${data.target.owner}/${data.target.repo}@${data.target.branch}`;
+  const upstream = `${data.upstream.owner}/${data.upstream.repo}@${data.upstream.branch}`;
+  const parts = [
+    `<p><strong>Your repo:</strong> <code>${escapeHtml(target)}</code></p>`,
+    `<p><strong>Upstream:</strong> <code>${escapeHtml(upstream)}</code>${data.is_fork ? " (fork)" : " (template / copy)"}</p>`,
+    `<p><strong>Status:</strong> ${escapeHtml(formatUpstreamStatusLabel(data))}</p>`,
+  ];
+  if (data.ahead_by > 0) {
+    parts.push(`<p>${data.ahead_by} local commit(s) ahead of upstream.</p>`);
+  }
+  if (data.behind_by > 0) {
+    parts.push(`<p>${data.behind_by} commit(s) behind upstream — sync will merge them.</p>`);
+  }
+  if (data.compare_url) {
+    parts.push(
+      `<p><a href="${escapeHtml(data.compare_url)}" target="_blank" rel="noopener">View compare on GitHub</a></p>`
+    );
+  }
+  return parts.join("");
+}
+
+function formatUpstreamStatusLabel(data) {
+  switch (data.status) {
+    case "identical":
+      return "Up to date";
+    case "ahead":
+      return "Ahead of upstream";
+    case "behind":
+      return "Behind upstream";
+    case "diverged":
+      return "Diverged (local and upstream changes)";
+    default:
+      return data.status;
+  }
+}
+
+async function loadUpstreamStatus() {
+  const statusEl = document.getElementById("upstream-status");
+  const syncBtn = document.getElementById("upstream-sync-btn");
+  if (!statusEl || !syncBtn) return;
+
+  statusEl.textContent = "Loading upstream status…";
+  syncBtn.disabled = true;
+
+  try {
+    const data = await api("/api/github/upstream-status");
+    statusEl.innerHTML = renderUpstreamStatus(data);
+    syncBtn.disabled = !data.can_sync;
+  } catch (err) {
+    statusEl.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+    syncBtn.disabled = true;
+  }
+}
+
+async function syncUpstreamFromAdmin() {
+  const syncBtn = document.getElementById("upstream-sync-btn");
+  if (!syncBtn || syncBtn.disabled) return;
+
+  syncBtn.disabled = true;
+  syncBtn.textContent = "Syncing…";
+
+  try {
+    const data = await api("/api/github/sync-upstream", { method: "POST" });
+    showMessage(data.message || "Upstream synced");
+    if (data.compare) {
+      document.getElementById("upstream-status").innerHTML = renderUpstreamStatus(data.compare);
+      syncBtn.disabled = !data.compare.can_sync;
+    } else {
+      await loadUpstreamStatus();
+    }
+  } catch (err) {
+    showMessage(err.message, true);
+    if (err.data?.compare) {
+      document.getElementById("upstream-status").innerHTML = renderUpstreamStatus(err.data.compare);
+      syncBtn.disabled = !err.data.compare.can_sync;
+    } else {
+      await loadUpstreamStatus();
+    }
+  } finally {
+    syncBtn.textContent = "Sync from upstream";
+  }
 }
 
 async function loadSettingsForm() {
@@ -33,6 +120,9 @@ async function loadSettingsForm() {
   document.getElementById("instance-cron-enabled").checked = data.cron_enabled !== false;
   document.getElementById("instance-gh-owner").value = data.gh_owner ?? "";
   document.getElementById("instance-gh-repo").value = data.gh_repo ?? "";
+  document.getElementById("instance-upstream-owner").value = data.upstream_owner ?? "platomat";
+  document.getElementById("instance-upstream-repo").value = data.upstream_repo ?? "page-speed-tester-demo";
+  document.getElementById("instance-upstream-branch").value = data.upstream_branch ?? "main";
   document.getElementById("instance-cookie-domain").value = data.cookie_domain ?? "";
   document.getElementById("instance-store-screenshots").checked = Boolean(data.store_screenshots);
 }
@@ -222,6 +312,7 @@ async function init() {
 
   await loadSettingsForm();
   updateCronHint();
+  await loadUpstreamStatus();
   bindCronPreview(
     document.getElementById("project-cron"),
     document.getElementById("project-cron-preview")
@@ -239,9 +330,17 @@ async function init() {
       updateCronHint();
       refreshAllCronPreviews();
       showMessage("Settings saved");
+      await loadUpstreamStatus();
     } catch (err) {
       showMessage(err.message, true);
     }
+  });
+
+  document.getElementById("upstream-sync-btn")?.addEventListener("click", () => {
+    syncUpstreamFromAdmin().catch((err) => showMessage(err.message, true));
+  });
+  document.getElementById("upstream-refresh-btn")?.addEventListener("click", () => {
+    loadUpstreamStatus().catch((err) => showMessage(err.message, true));
   });
 
   document.getElementById("toggle-project-form").addEventListener("click", () => {

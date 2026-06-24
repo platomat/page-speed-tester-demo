@@ -8,7 +8,7 @@ Das Dashboard (Pages) ruft dieselben Pfade per `fetch` auf — Basis-URL siehe [
 | Methode | Header / Cookie | Verwendung |
 | ------- | ----------------- | ---------- |
 | **Session** | Cookie `pst_session` (HttpOnly) oder `Authorization: Bearer <session_token>` | Dashboard-Login; Token kommt in der Login-Antwort (`session_token`) und wird im Browser in `sessionStorage` gehalten (nötig bei `*.pages.dev` ↔ `*.workers.dev`) |
-| **Admin** | Session + Rolle `admin` | User-Verwaltung, Instance settings, Projekt anlegen |
+| **Admin** | Session + Rolle `admin` | User-Verwaltung, Instance settings, Upstream-Sync, Projekt anlegen |
 | **Bearer** | `Authorization: Bearer <WORKER_API_SECRET>` | GitHub Actions, interne Upload-/URL-Endpunkte |
 | **Access key** | Query `?key=` | Öffentlicher Trigger ohne Login |
 | **Share key** | Query `?share_key=` oder `?key=` (Share-Routen) | Schreibgeschütztes Dashboard / Berichte für Gäste |
@@ -42,10 +42,21 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, cookie domain, `store_screenshots` |
+| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, upstream owner/repo/branch, cookie domain, `store_screenshots` |
 | `PATCH` | `/api/settings` | Admin | Instance settings aktualisieren |
 
 `store_screenshots` (boolean, Default `false`): Wenn `true`, speichert der Lighthouse-Upload Viewport- und Full-Page-Screenshots im JSON (R2). Größere Dateien und höherer Speicherverbrauch; Screenshots erscheinen in der Report-Detailansicht. Gilt für Läufe nach dem Speichern der Einstellung.
+
+Upstream-Felder (optional, Defaults `platomat` / `page-speed-tester-demo` / `main`): Quelle für **Upstream sync** im Admin.
+
+---
+
+## GitHub / Upstream sync
+
+| Methode | Pfad | Auth | Beschreibung |
+| ------- | ---- | ---- | ------------ |
+| `GET` | `/api/github/upstream-status` | Admin | Vergleich deines Repos mit dem Upstream (ahead/behind/diverged) |
+| `POST` | `/api/github/sync-upstream` | Admin | Upstream in dein Repo mergen (Fork: GitHub merge-upstream; Template: cross-repo merge). Rate-Limit 1×/Minute. Erfordert Worker-Secret `GH_PAT` mit **Contents: Read and write** auf deinem Repo. |
 
 ---
 

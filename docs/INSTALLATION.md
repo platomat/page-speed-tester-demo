@@ -515,6 +515,18 @@ Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo hab
 - **Cron pro Projekt** (Admin → Projects): 5 Felder, lokale Zeit der Instance timezone, z. B. `0 6 * `* * = täglich 06:00. **Leer** = nur manuelle Läufe für dieses Projekt.
 - Worker-Cron (`*/15 * * `* * in `wrangler.toml`) prüft alle 15 Minuten, welche Projekte fällig sind — **Scheduled runs** in Instance settings muss aktiv sein.
 
+#### Upstream sync (Template-Updates)
+
+Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/behind/diverged) und Button **Sync from upstream** — merged Änderungen aus dem Upstream-Repo in **dein** GitHub-Repo (ohne lokales `git fetch`/`merge`).
+
+| Feld | Default | Zweck |
+| ---- | ------- | ----- |
+| **Upstream owner** | `platomat` | GitHub-Owner des Template-/Upstream-Repos |
+| **Upstream repository** | `page-speed-tester-demo` | Upstream-Repo-Name |
+| **Upstream branch** | `main` | Branch zum Vergleichen und Mergen |
+
+**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** auf deinem Repo. Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
+
 ---
 
 ### Schritt 9: Projekte und URLs konfigurieren

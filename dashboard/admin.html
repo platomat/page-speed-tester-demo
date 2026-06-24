@@ -184,6 +184,33 @@
               spellcheck="false"
               autocomplete="off"
             />
+            <label for="instance-upstream-owner">Upstream owner</label>
+            <input
+              type="text"
+              id="instance-upstream-owner"
+              name="upstream_owner"
+              placeholder="platomat"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <label for="instance-upstream-repo">Upstream repository</label>
+            <input
+              type="text"
+              id="instance-upstream-repo"
+              name="upstream_repo"
+              placeholder="page-speed-tester-demo"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <label for="instance-upstream-branch">Upstream branch</label>
+            <input
+              type="text"
+              id="instance-upstream-branch"
+              name="upstream_branch"
+              placeholder="main"
+              spellcheck="false"
+              autocomplete="off"
+            />
             <label for="instance-cookie-domain">Cookie domain</label>
             <input
               type="text"
@@ -233,6 +260,25 @@
             <button type="submit">Save settings</button>
           </div>
         </form>
+      </section>
+
+      <section class="admin-section">
+        <h2>Upstream sync</h2>
+        <p class="admin-section-hint">
+          Merge updates from the upstream template into <strong>your</strong> GitHub repository
+          (the owner/repo above). Works for repos created via <strong>Use this template</strong>
+          or as a fork. Requires <code>GH_PAT</code> with <strong>Contents: Read and write</strong>
+          on your repo; the upstream repo must be readable (public upstream is fine).
+          Cloudflare redeploys Worker/Pages after a successful push to <code>main</code>.
+          On merge conflicts, resolve manually on GitHub or with git.
+        </p>
+        <div id="upstream-status" class="upstream-status" role="status" aria-live="polite">
+          Loading upstream status…
+        </div>
+        <div class="upstream-sync-actions">
+          <button type="button" id="upstream-sync-btn" disabled>Sync from upstream</button>
+          <button type="button" id="upstream-refresh-btn" class="btn-secondary">Refresh status</button>
+        </div>
       </section>
     </main>
 

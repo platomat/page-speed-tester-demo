@@ -48,6 +48,7 @@ import {
   unassignUserProject,
 } from "./users";
 import { getSettings, updateSettings } from "./settings";
+import { getUpstreamStatus, syncUpstream } from "./github-sync";
 
 async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -104,6 +105,13 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   }
   if (path === "/api/settings" && method === "PATCH") {
     return updateSettings(request, env);
+  }
+
+  if (path === "/api/github/upstream-status" && method === "GET") {
+    return getUpstreamStatus(request, env);
+  }
+  if (path === "/api/github/sync-upstream" && method === "POST") {
+    return syncUpstream(request, env);
   }
 
   const user = await getCurrentUser(request, env);

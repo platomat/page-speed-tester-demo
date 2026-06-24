@@ -8,9 +8,16 @@ const GH_OWNER_KEY = "gh_owner";
 const GH_REPO_KEY = "gh_repo";
 const COOKIE_DOMAIN_KEY = "cookie_domain";
 const STORE_SCREENSHOTS_KEY = "store_screenshots";
+const UPSTREAM_OWNER_KEY = "upstream_owner";
+const UPSTREAM_REPO_KEY = "upstream_repo";
+const UPSTREAM_BRANCH_KEY = "upstream_branch";
 const DEFAULT_TIMEZONE = "UTC";
+export const DEFAULT_UPSTREAM_OWNER = "platomat";
+export const DEFAULT_UPSTREAM_REPO = "page-speed-tester-demo";
+export const DEFAULT_UPSTREAM_BRANCH = "main";
 
 const GITHUB_SLUG_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/;
+const GITHUB_BRANCH_RE = /^[a-zA-Z0-9._/-]+$/;
 const COOKIE_DOMAIN_RE =
   /^\.?[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/i;
 
@@ -18,6 +25,11 @@ export function isValidCookieDomain(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return true;
   return trimmed.length <= 253 && COOKIE_DOMAIN_RE.test(trimmed);
+}
+
+export function isValidGitHubBranch(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= 255 && GITHUB_BRANCH_RE.test(trimmed);
 }
 
 export function isValidGitHubSlug(value: string): boolean {
@@ -78,6 +90,18 @@ export async function getGitHubTarget(
   return { owner, repo };
 }
 
+/** Upstream template/fork source for sync (D1 settings with code defaults). */
+export async function getUpstreamTarget(
+  env: Env
+): Promise<{ owner: string; repo: string; branch: string }> {
+  const owner =
+    (await getSettingValue(env, UPSTREAM_OWNER_KEY)) || DEFAULT_UPSTREAM_OWNER;
+  const repo = (await getSettingValue(env, UPSTREAM_REPO_KEY)) || DEFAULT_UPSTREAM_REPO;
+  const branchRaw = (await getSettingValue(env, UPSTREAM_BRANCH_KEY)) || DEFAULT_UPSTREAM_BRANCH;
+  const branch = isValidGitHubBranch(branchRaw) ? branchRaw : DEFAULT_UPSTREAM_BRANCH;
+  return { owner, repo, branch };
+}
+
 /** Session cookie Domain attribute (D1 settings, optional wrangler [vars] fallback). */
 export async function getCookieDomain(env: Env): Promise<string | undefined> {
   const domain =
@@ -88,20 +112,28 @@ export async function getCookieDomain(env: Env): Promise<string | undefined> {
 export async function getSettings(request: Request, env: Env): Promise<Response> {
   const user = await requireUser(request, env);
   if (user instanceof Response) return user;
+  return json(request, env, await buildSettingsPayload(env));
+}
+
+async function buildSettingsPayload(env: Env) {
   const timezone = await getTimezone(env);
   const cron_enabled = await getCronEnabled(env);
   const gh_owner = await getSettingValue(env, GH_OWNER_KEY);
   const gh_repo = await getSettingValue(env, GH_REPO_KEY);
   const cookie_domain = await getSettingValue(env, COOKIE_DOMAIN_KEY);
   const store_screenshots = await getStoreScreenshots(env);
-  return json(request, env, {
+  const upstream = await getUpstreamTarget(env);
+  return {
     timezone,
     cron_enabled,
     gh_owner,
     gh_repo,
     cookie_domain,
     store_screenshots,
-  });
+    upstream_owner: upstream.owner,
+    upstream_repo: upstream.repo,
+    upstream_branch: upstream.branch,
+  };
 }
 
 async function setSetting(env: Env, key: string, value: string): Promise<void> {
@@ -163,6 +195,29 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
     updates[STORE_SCREENSHOTS_KEY] = body.store_screenshots ? "1" : "0";
   }
 
+  if (
+    body.upstream_owner !== undefined ||
+    body.upstream_repo !== undefined ||
+    body.upstream_branch !== undefined
+  ) {
+    const upstreamOwner = String(body.upstream_owner ?? "").trim() || DEFAULT_UPSTREAM_OWNER;
+    const upstreamRepo = String(body.upstream_repo ?? "").trim() || DEFAULT_UPSTREAM_REPO;
+    const upstreamBranch =
+      String(body.upstream_branch ?? "").trim() || DEFAULT_UPSTREAM_BRANCH;
+    if (!isValidGitHubSlug(upstreamOwner)) {
+      return json(request, env, { error: "Invalid upstream GitHub owner" }, 400);
+    }
+    if (!isValidGitHubSlug(upstreamRepo)) {
+      return json(request, env, { error: "Invalid upstream GitHub repository name" }, 400);
+    }
+    if (!isValidGitHubBranch(upstreamBranch)) {
+      return json(request, env, { error: "Invalid upstream branch name" }, 400);
+    }
+    updates[UPSTREAM_OWNER_KEY] = upstreamOwner;
+    updates[UPSTREAM_REPO_KEY] = upstreamRepo;
+    updates[UPSTREAM_BRANCH_KEY] = upstreamBranch;
+  }
+
   if (!Object.keys(updates).length) {
     return json(request, env, { error: "No settings to update" }, 400);
   }
@@ -171,18 +226,5 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
     await setSetting(env, key, value);
   }
 
-  const timezone = await getTimezone(env);
-  const cron_enabled = await getCronEnabled(env);
-  const gh_owner = await getSettingValue(env, GH_OWNER_KEY);
-  const gh_repo = await getSettingValue(env, GH_REPO_KEY);
-  const cookie_domain = await getSettingValue(env, COOKIE_DOMAIN_KEY);
-  const store_screenshots = await getStoreScreenshots(env);
-  return json(request, env, {
-    timezone,
-    cron_enabled,
-    gh_owner,
-    gh_repo,
-    cookie_domain,
-    store_screenshots,
-  });
+  return json(request, env, await buildSettingsPayload(env));
 }
