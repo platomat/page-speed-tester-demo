@@ -117,7 +117,7 @@ Empfohlen wird das **gesamte** Repository (Worker-Code, Dashboard, Actions) — 
 | 3       | **Cloudflare Pages:** **dasselbe** Repo verbinden, Dashboard bauen/deployen                                                                                                                                                       |
 | 4       | **GitHub Secrets** im Kunden-Repo (`WORKER_API_URL`, `WORKER_API_SECRET`, `R2_`*)                                                                                                                                                 |
 | 5       | **Worker Secret** `GH_PAT` — PAT mit Zugriff auf **dieses** Repo                                                                                                                                                                  |
-| 6       | **Admin → Instance settings** (Schritt 8): GitHub owner + repository, timezone, ggf. cookie domain |
+| 6       | **Admin → Instance settings** (Schritt 8): GitHub owner + repository, timezone, ggf. cookie domain                                                                                                                                |
 
 
 In Schritt 8 trägt der Kunde `**meine-firma`** und `**page-speed-tester`** ein — genau das Repo, in dem der Workflow liegt und aus dem Worker/Pages deployt wurden.
@@ -238,6 +238,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 INSERT OR IGNORE INTO settings (key, value) VALUES ('timezone', 'Europe/Berlin');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('cron_enabled', '1');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('store_screenshots', '0');
 
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -283,6 +284,11 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 ### Schritt 5: Worker (API + Trigger)
 
 #### Git-Verbindung
+
+> **Hinweis — Repo erscheint nicht in der Auswahl?**  
+> Cloudflare sieht nur Repositories, die die GitHub-App **Cloudflare Workers and Pages** nutzen darf. Das gilt auch für **neue private Repos** (z. B. nach **Use this template**) — private/public allein reicht nicht.  
+> **GitHub → Account → Settings → Applications → Installed GitHub Apps → Cloudflare Workers and Pages → Repository access**  
+> → dein Repo hinzufügen (oder testweise *All repositories*). Speichern, danach in Cloudflare den Dialog neu laden.
 
 1. **Build → Compute → Workers & Pages →Create application → Continue with Github**
 2. **Worker-Name** in Cloudflare: `page-speed-tester-api` (erscheint auch als `*.workers.dev`-Subdomain)
@@ -467,39 +473,44 @@ Diese Werte liegen in **D1** (`settings`-Tabelle) — **nicht** in `wrangler.tom
 **Vor dem ersten „Run now“** mindestens **GitHub owner** und **GitHub repository** setzen und **Save settings** klicken.
 
 
-| Feld | Pflicht | Beispiel | Zweck |
-| ---- | ------- | -------- | ----- |
-| **GitHub owner** | ✅ für Lighthouse-Läufe | `meine-firma` | GitHub-Organisation oder Benutzername — Ziel für `repository_dispatch` |
-| **GitHub repository** | ✅ für Lighthouse-Läufe | `page-speed-tester` | Repo mit `.github/workflows/lighthouse.yml` — **dasselbe Repo**, aus dem Worker und Pages deployen |
-| **Cookie domain** | Custom Domain: empfohlen · `*.pages.dev`: leer | `.page-speed-tester.kunde.de` | Gemeinsame Parent-Domain für Dashboard **und** API (Session-Cookie). Punkt am Anfang (`.kunde.de` = alle Subdomains). Bei `*.pages.dev` **leer lassen** — Login nutzt dann `session_token` im Browser (`sessionStorage`), nicht das Cookie |
-| **Timezone** | ✅ | `Europe/Berlin` | Anzeige von Datum/Uhrzeit im Dashboard; **Cron pro Projekt** wird in dieser Zeitzone ausgewertet (IANA, z. B. `UTC`, `America/New_York`) |
-| **Scheduled runs** | optional | aktiviert | Globaler Schalter: Cron-Läufe aller Projekte ein/aus. Aus = nur manueller Trigger („Run now“, Trigger-URL). Pro Projekt zusätzlich eigenes Cron-Feld (leer = nur manuell) |
+| Feld                  | Pflicht                                        | Beispiel                      | Zweck                                                                                                                                                                                                                                      |
+| --------------------- | ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **GitHub owner**      | ✅ für Lighthouse-Läufe                         | `meine-firma`                 | GitHub-Organisation oder Benutzername — Ziel für `repository_dispatch`                                                                                                                                                                     |
+| **GitHub repository** | ✅ für Lighthouse-Läufe                         | `page-speed-tester`           | Repo mit `.github/workflows/lighthouse.yml` — **dasselbe Repo**, aus dem Worker und Pages deployen                                                                                                                                         |
+| **Cookie domain**     | Custom Domain: empfohlen · `*.pages.dev`: leer | `.page-speed-tester.kunde.de` | Gemeinsame Parent-Domain für Dashboard **und** API (Session-Cookie). Punkt am Anfang (`.kunde.de` = alle Subdomains). Bei `*.pages.dev` **leer lassen** — Login nutzt dann `session_token` im Browser (`sessionStorage`), nicht das Cookie |
+| **Timezone**          | ✅                                              | `Europe/Berlin`               | Anzeige von Datum/Uhrzeit im Dashboard; **Cron pro Projekt** wird in dieser Zeitzone ausgewertet (IANA, z. B. `UTC`, `America/New_York`)                                                                                                   |
+| **Scheduled runs**    | optional                                       | aktiviert                     | Globaler Schalter: Cron-Läufe aller Projekte ein/aus. Aus = nur manueller Trigger („Run now“, Trigger-URL). Pro Projekt zusätzlich eigenes Cron-Feld (leer = nur manuell)                                                                  |
+
 
 #### GitHub owner / repository — was eintragen?
 
 Genau das Repo, in dem der Lighthouse-Workflow liegt und das du mit Cloudflare verbunden hast:
 
-| Deployment | **GitHub owner** | **GitHub repository** |
-| ---------- | ---------------- | --------------------- |
-| Kunde aus Template | `meine-firma` | `page-speed-tester` |
-| Demo-Staging | `dein-user` | `page-speed-tester-demo` |
 
-Der Worker-Secret **`GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo haben (Fine-grained: **Contents: Read and write**).  
+| Deployment         | **GitHub owner** | **GitHub repository**    |
+| ------------------ | ---------------- | ------------------------ |
+| Kunde aus Template | `meine-firma`    | `page-speed-tester`      |
+| Demo-Staging       | `dein-user`      | `page-speed-tester-demo` |
+
+
+Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo haben (Fine-grained: **Contents: Read and write**).  
 `WORKER_API_URL` / `WORKER_API_SECRET` in GitHub Secrets zeigen auf die Worker-API — das ist unabhängig von owner/repo, aber Actions und Worker müssen zum **selben** GitHub-Repo passen wie hier in den Instance settings.
 
 #### Cookie domain — wann was?
 
-| Setup | **Cookie domain** | Hinweis |
-| ----- | ----------------- | ------- |
+
+| Setup                                                                                       | **Cookie domain**             | Hinweis                                                                                         |
+| ------------------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
 | Custom Domain: Dashboard `page-speed-tester.kunde.de`, API `api.page-speed-tester.kunde.de` | `.page-speed-tester.kunde.de` | Parent-Domain von beiden Hosts; nicht `.kunde.de`, wenn Dashboard nur auf einer Subdomain liegt |
-| Nur `*.pages.dev` / `*.workers.dev` | *leer* | Cross-Site-Cookies funktionieren nicht zuverlässig; Auth per Bearer-Token nach Login |
-| Lokal (`npm run dev`) | *leer* | API unter `localhost:8787` |
+| Nur `*.pages.dev` / `*.workers.dev`                                                         | *leer*                        | Cross-Site-Cookies funktionieren nicht zuverlässig; Auth per Bearer-Token nach Login            |
+| Lokal (`npm run dev`)                                                                       | *leer*                        | API unter `localhost:8787`                                                                      |
+
 
 #### Timezone und Cron
 
 - **Instance timezone** gilt für alle Projekte (Tabellen, Charts, Cron-Auswertung).
-- **Cron pro Projekt** (Admin → Projects): 5 Felder, lokale Zeit der Instance timezone, z. B. `0 6 * * *` = täglich 06:00. **Leer** = nur manuelle Läufe für dieses Projekt.
-- Worker-Cron (`*/15 * * * *` in `wrangler.toml`) prüft alle 15 Minuten, welche Projekte fällig sind — **Scheduled runs** in Instance settings muss aktiv sein.
+- **Cron pro Projekt** (Admin → Projects): 5 Felder, lokale Zeit der Instance timezone, z. B. `0 6 * * `* = täglich 06:00. **Leer** = nur manuelle Läufe für dieses Projekt.
+- Worker-Cron (`*/15 * * * `* in `wrangler.toml`) prüft alle 15 Minuten, welche Projekte fällig sind — **Scheduled runs** in Instance settings muss aktiv sein.
 
 ---
 
