@@ -451,7 +451,7 @@ In Pages **Build-Env** `PST_API_URL` = volle Worker-URL (**Pflicht** — von Pag
 | ---------------------- | ------ | -------------------------------------------------- |
 | `R2_ACCESS_KEY_ID`     | Secret | aus Schritt 2                                      |
 | `R2_SECRET_ACCESS_KEY` | Secret | aus Schritt 2                                      |
-| `R2_BUCKET`            | Text   | `page-speed-reports`                               |
+| `R2_BUCKET`            | Text   | `page-speed-tester-reports`                        |
 | `R2_ENDPOINT`          | Text   | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
 | `WORKER_API_URL`       | Secret | `https://api.page-speed-tester.mydomain.tld`       |
 | `WORKER_API_SECRET`    | Secret | gleicher Wert wie Worker-Secret                    |
@@ -481,7 +481,8 @@ GitHub Actions holt URLs zur Laufzeit von `GET /api/internal/projects/{id}/urls`
 **Option A — Dashboard (empfohlen)**
 
 1. [https://page-speed-tester.mydomain.tld](https://page-speed-tester.mydomain.tld) → Login / Bootstrap
-2. Projekt und URL wählen → **Run now**
+2. Admin → Projekt erstellen, URLs eingügen
+3. Dashboard →URL wählen → **Run now**
 
 **Option B — GitHub manuell**
 
