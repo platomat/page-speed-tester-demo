@@ -9,7 +9,7 @@ echo "Creating R2 bucket..."
 wrangler r2 bucket create page-speed-reports || true
 
 echo "Creating KV namespace..."
-wrangler kv namespace create page-speed-rate-limit || true
+wrangler kv namespace create page-speed-tester-worker-kv || true
 
 echo ""
 echo "Add to Cloudflare Workers Build env (Git deploy) or local .env:"

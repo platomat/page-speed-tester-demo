@@ -4,7 +4,7 @@
  * Used locally (reads .env) and on Cloudflare Workers Git deploy (Build env vars).
  *
  * Required: D1_DATABASE_ID, KV_NAMESPACE_ID
- * Optional: WORKER_NAME (default page-speed-tester), CRON_EXPRESSION (default every 5 min)
+ * Optional: WORKER_NAME (default page-speed-tester-api), CRON_EXPRESSION (default every 5 min)
  */
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -64,7 +64,7 @@ function substitute(template, vars) {
 await loadDotEnv();
 
 const vars = {
-  WORKER_NAME: process.env.WORKER_NAME?.trim() || "page-speed-tester",
+  WORKER_NAME: process.env.WORKER_NAME?.trim() || "page-speed-tester-api",
   D1_DATABASE_ID: requireEnv("D1_DATABASE_ID"),
   KV_NAMESPACE_ID: requireEnv("KV_NAMESPACE_ID"),
   CRON_EXPRESSION: process.env.CRON_EXPRESSION?.trim() || "*/5 * * * *",

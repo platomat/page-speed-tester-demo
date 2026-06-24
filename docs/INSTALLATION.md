@@ -1,6 +1,6 @@
 # Installation: Cloudflare + GitHub
 
-Schritt-für-Schritt-Anleitung für die Einrichtung des Page-Speed-Testers — **nur mit Cloudflare-Dashboard und GitHub**, ohne lokale CLI zwingend nötig. Enthält häufige Rückfragen aus der Praxis.
+Schritt-für-Schritt-Anleitung für die Einrichtung des Page-Speed-Testers — **nur mit Cloudflare-Dashboard und GitHub**, ohne lokale CLI zwingend nötig.
 
 Referenz-Installation: **mydomain.tld** (Stand: Juni 2026)
 
@@ -8,15 +8,17 @@ Referenz-Installation: **mydomain.tld** (Stand: Juni 2026)
 
 ## Übersicht: Wer macht was?
 
-| Komponente | Wo | Aufgabe |
-|------------|-----|---------|
-| **Lighthouse** | GitHub Actions | Führt Page-Speed-Tests aus (braucht Chrome) |
-| **Worker** | Cloudflare | API, Auth, Sessions, Cron → startet GitHub pro Projekt |
-| **R2** | Cloudflare | Speichert Lighthouse-JSON-Berichte |
-| **D1** | Cloudflare | SQLite-Metriken für Dashboard-Charts |
-| **KV** | Cloudflare | Rate-Limit beim manuellen Trigger |
-| **Pages** | Cloudflare | Statisches Dashboard (HTML/JS) |
-| **GitHub Secrets** | GitHub | Upload von Actions → R2 + Worker-API |
+
+| Komponente         | Wo             | Aufgabe                                                |
+| ------------------ | -------------- | ------------------------------------------------------ |
+| **Lighthouse**     | GitHub Actions | Führt Page-Speed-Tests aus (braucht Chrome)            |
+| **Worker**         | Cloudflare     | API, Auth, Sessions, Cron → startet GitHub pro Projekt |
+| **R2**             | Cloudflare     | Speichert Lighthouse-JSON-Berichte                     |
+| **D1**             | Cloudflare     | SQLite-Metriken für Dashboard-Charts                   |
+| **KV**             | Cloudflare     | Rate-Limit beim manuellen Trigger                      |
+| **Pages**          | Cloudflare     | Statisches Dashboard (HTML/JS)                         |
+| **GitHub Secrets** | GitHub         | Upload von Actions → R2 + Worker-API                   |
+
 
 Lighthouse läuft **nicht** direkt in Cloudflare Workers (kein Chrome dort).
 
@@ -24,18 +26,20 @@ Lighthouse läuft **nicht** direkt in Cloudflare Workers (kein Chrome dort).
 
 ## Wo welche Umgebungsvariable hingehört
 
-| Variable | Wo setzen | Wann | Zweck |
-|----------|-----------|------|--------|
-| **`D1_DATABASE_ID`**, **`KV_NAMESPACE_ID`** | **Workers → Git deploy → Build environment variables** | Vor jedem Worker-Deploy | Generiert `wrangler.toml` (Bindings) |
-| **`PST_API_URL`** | **Pages → Build environment variables** | Beim Pages-Deploy (Build-Schritt) | Worker-URL in `dashboard/config.js` (optional bei Custom Domain — Fallback `api.<host>`) |
-| `COOKIE_DOMAIN` | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit | Session-Cookie für Dashboard + API (z. B. `.page-speed-tester.mydomain.tld`) |
-| `DASHBOARD_ORIGIN` | optional Worker `[vars]` | Worker-Laufzeit | Zusätzliche Dashboard-Origins für CORS (kommagetrennt, volle URLs) |
-| `GH_OWNER`, `GH_REPO` | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit | GitHub `repository_dispatch`-Ziel |
-| `SESSION_SECRET` | **Worker → Secrets** | Worker-Laufzeit | Session-Verschlüsselung |
-| `GH_PAT` | **Worker → Secrets** | Worker-Laufzeit | GitHub API |
-| `WORKER_API_SECRET` | **Worker → Secrets** + **GitHub Secrets** | Worker + Actions | Upload `/api/runs`, interne URL-API |
-| `WORKER_API_URL` | **GitHub Secrets** (optional lokal in `.env`) | GitHub Actions | Worker-Basis-URL in CI |
-| `R2_*` | **GitHub Secrets** (optional lokal in `.env`) | GitHub Actions | Upload nach R2 |
+
+| Variable                                    | Wo setzen                                                    | Wann                              | Zweck                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------- |
+| **`D1_DATABASE_ID`**, **`KV_NAMESPACE_ID`** | **Workers → Git deploy → Build environment variables**       | Vor jedem Worker-Deploy           | Generiert `wrangler.toml` (Bindings)                                                     |
+| **`PST_API_URL`**                           | **Pages → Build environment variables**                      | Beim Pages-Deploy (Build-Schritt) | Worker-URL in `dashboard/config.js` (optional bei Custom Domain — Fallback `api.<host>`) |
+| `COOKIE_DOMAIN`                             | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | Session-Cookie für Dashboard + API (z. B. `.page-speed-tester.mydomain.tld`)             |
+| `DASHBOARD_ORIGIN`                          | optional Worker `[vars]`                                     | Worker-Laufzeit                   | Zusätzliche Dashboard-Origins für CORS (kommagetrennt, volle URLs)                       |
+| `GH_OWNER`, `GH_REPO`                       | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | GitHub `repository_dispatch`-Ziel                                                        |
+| `SESSION_SECRET`                            | **Worker → Secrets**                                         | Worker-Laufzeit                   | Session-Verschlüsselung                                                                  |
+| `GH_PAT`                                    | **Worker → Secrets**                                         | Worker-Laufzeit                   | GitHub API                                                                               |
+| `WORKER_API_SECRET`                         | **Worker → Secrets** + **GitHub Secrets**                    | Worker + Actions                  | Upload `/api/runs`, interne URL-API                                                      |
+| `WORKER_API_URL`                            | **GitHub Secrets** (optional lokal in `.env`)                | GitHub Actions                    | Worker-Basis-URL in CI                                                                   |
+| `R2_*`                                      | **GitHub Secrets** (optional lokal in `.env`)                | GitHub Actions                    | Upload nach R2                                                                           |
+
 
 **Wichtig:** `PST_API_URL` ist **keine** Worker-Variable. Sie wird nur beim **Pages-Build** gelesen (`node scripts/dashboard/prepare-dashboard.mjs`) und landet als `window.PST_API_URL` im statischen Dashboard. Der Worker kennt sie nicht.
 
@@ -45,19 +49,23 @@ In Cloudflare Pages: **Settings → Environment variables →** Typ **Build** (n
 
 ## Live-URLs (mydomain.tld)
 
-| Dienst | URL |
-|--------|-----|
-| **Dashboard (Pages)** | https://page-speed-tester.mydomain.tld |
-| **Worker API** | https://api.page-speed-tester.mydomain.tld |
-| Health-Check | `GET /health` auf der **API**-URL |
+
+| Dienst                | URL                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| **Dashboard (Pages)** | [https://page-speed-tester.mydomain.tld](https://page-speed-tester.mydomain.tld)         |
+| **Worker API**        | [https://api.page-speed-tester.mydomain.tld](https://api.page-speed-tester.mydomain.tld) |
+| Health-Check          | `GET /health` auf der **API**-URL                                                        |
+
 
 ### R2 Endpoints (für GitHub Secret `R2_ENDPOINT`)
 
-| Variante | URL |
-|----------|-----|
+
+| Variante                                            | URL                                                |
+| --------------------------------------------------- | -------------------------------------------------- |
 | Account-Endpoint (**empfohlen** für GitHub Actions) | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-| Custom Domain | `https://bucket-page-speed-reports.mydomain.tld` |
-| Custom Domain (alternativ) | `https://bucket.page-speed-tester.mydomain.tld` |
+| Custom Domain                                       | `https://bucket-page-speed-reports.mydomain.tld`   |
+| Custom Domain (alternativ)                          | `https://bucket.page-speed-tester.mydomain.tld`    |
+
 
 Bucket-Name: `page-speed-reports`
 
@@ -89,34 +97,40 @@ Dashboard / Cron  →  Cloudflare Worker (Kunde)
 
 Der Worker ruft **nicht** Lighthouse selbst auf. Er sendet nur an GitHub: „Starte Workflow in Repo X“. GitHub Actions braucht deshalb die Dateien aus diesem Repository — mindestens:
 
-| Pfad | Zweck |
-|------|--------|
-| `.github/workflows/lighthouse.yml` | Workflow (wird getriggert) |
-| `scripts/ci/lighthouse-audit.sh` | Lighthouse-Aufruf |
-| `package.json` + `package-lock.json` | `npm ci` im Workflow |
+
+| Pfad                                 | Zweck                      |
+| ------------------------------------ | -------------------------- |
+| `.github/workflows/lighthouse.yml`   | Workflow (wird getriggert) |
+| `scripts/ci/lighthouse-audit.sh`     | Lighthouse-Aufruf          |
+| `package.json` + `package-lock.json` | `npm ci` im Workflow       |
+
 
 Empfohlen wird das **gesamte** Repository (Worker-Code, Dashboard, Actions) — nicht nur ein Minimal-Subset.
 
 #### Was legt der Kunde konkret an?
 
-| Schritt | Aktion |
-|---------|--------|
-| 1 | **GitHub-Repo** mit Projektcode anlegen — z. B. Template/Fork vom öffentlichen Upstream [`page-speed-tester-demo`](PUBLIC-UPSTREAM.md#benennung-github-ordner-cloudflare) → eigenes privates Repo `meine-firma/page-speed-tester` |
-| 2 | **Cloudflare:** D1, R2, KV anlegen; **Build-Env** `D1_DATABASE_ID` + `KV_NAMESPACE_ID`; Worker Secrets; deployen |
-| 3 | **Cloudflare Pages:** **dasselbe** Repo verbinden, Dashboard bauen/deployen |
-| 4 | **GitHub Secrets** im Kunden-Repo (`WORKER_API_URL`, `WORKER_API_SECRET`, `R2_*`) |
-| 5 | **Worker Secret** `GH_PAT` — PAT mit Zugriff auf **dieses** Repo |
-| 6 | **Admin → Instance settings:** GitHub owner + repository, cookie domain, timezone |
+
+| Schritt | Aktion                                                                                                                                                                                                                            |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1       | **GitHub-Repo** mit Projektcode anlegen — z. B. Template/Fork vom öffentlichen Upstream `[page-speed-tester-demo](PUBLIC-UPSTREAM.md#benennung-github-ordner-cloudflare)` → eigenes privates Repo `meine-firma/page-speed-tester` |
+| 2       | **Cloudflare:** D1, R2, KV anlegen; **Build-Env** `D1_DATABASE_ID` + `KV_NAMESPACE_ID`; Worker Secrets; deployen                                                                                                                  |
+| 3       | **Cloudflare Pages:** **dasselbe** Repo verbinden, Dashboard bauen/deployen                                                                                                                                                       |
+| 4       | **GitHub Secrets** im Kunden-Repo (`WORKER_API_URL`, `WORKER_API_SECRET`, `R2_*`)                                                                                                                                                 |
+| 5       | **Worker Secret** `GH_PAT` — PAT mit Zugriff auf **dieses** Repo                                                                                                                                                                  |
+| 6       | **Admin → Instance settings:** GitHub owner + repository, cookie domain, timezone                                                                                                                                                 |
+
 
 In Schritt 6 trägt der Kunde **`meine-firma`** und **`page-speed-tester`** ein — genau das Repo, in dem der Workflow liegt und aus dem Worker/Pages deployt wurden.
 
 #### Repo anlegen — welcher Weg?
 
-| Weg | Beschreibung |
-|-----|----------------|
-| **GitHub Template** (empfohlen) | Upstream [`page-speed-tester-demo`](PUBLIC-UPSTREAM.md) als Template → Kunde: **Use this template** → eigenes privates Repo (kein Pflicht-Fork, volle Kopie) |
-| **Clone + Push** | Repo klonen, als neues Repo unter Kunden-Org pushen |
-| **ZIP / Import** | Archiv entpacken, in neues Repo committen |
+
+| Weg                             | Beschreibung                                                                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **GitHub Template** (empfohlen) | Upstream `[page-speed-tester-demo](PUBLIC-UPSTREAM.md)` als Template → Kunde: **Use this template** → eigenes privates Repo (kein Pflicht-Fork, volle Kopie) |
+| **Clone + Push**                | Repo klonen, als neues Repo unter Kunden-Org pushen                                                                                                          |
+| **ZIP / Import**                | Archiv entpacken, in neues Repo committen                                                                                                                    |
+
 
 **Nicht ausreichend:** leeres Repo, nur Workflow-Datei ohne `package-lock.json`, oder ein Repo ohne Verbindung zu den Cloudflare-Ressourcen des Kunden.
 
@@ -139,7 +153,7 @@ Workers Paid wird empfohlen (Cron, D1, längere Laufzeit). Free-Tier reicht zum 
 ### Schritt 2: R2 Bucket (JSON-Berichte)
 
 1. **Storage & databases → R2 Object Storage → Create bucket**
-2. Name: `page-speed-reports`
+2. Name: `page-speed-tester-reports`
 3. Storage Class: Standard
 
 **API-Token für GitHub Actions:**
@@ -147,10 +161,10 @@ Workers Paid wird empfohlen (Cron, D1, längere Laufzeit). Free-Tier reicht zum 
 1. **R2 → Manage R2 API Tokens → Create API token**
 2. Permission: **Object Read & Write** auf diesen Bucket
 3. Notieren:
-   - Access Key ID
-   - Secret Access Key
-   - Endpoint: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`  
-     (Account ID steht in der Cloudflare-Sidebar)
+  - Access Key ID
+  - Secret Access Key
+  - Endpoint: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`  
+  (Account ID steht in der Cloudflare-Sidebar)
 
 Diese Werte kommen später in **GitHub Secrets** (Teil 2).
 
@@ -158,22 +172,15 @@ Diese Werte kommen später in **GitHub Secrets** (Teil 2).
 
 ### Schritt 3: D1 Datenbank (Metriken)
 
-#### Rückfrage: D1 SQLite oder Hyperdrive?
-
-| Angebot in CF | Für dieses Projekt? |
-|---------------|---------------------|
-| **D1 SQL Database** | ✅ Ja — unser Schema ist SQLite |
-| **Hyperdrive** | ❌ Nein — nur Proxy zu externem Postgres/MySQL |
-
 #### Anlegen
 
 1. **Storage & databases → D1 SQL Database → Create**
-2. Name: `page-speed-db`
+2. Name: `page-speed-tester-db`
 3. **Database ID** notieren (UUID für `wrangler.toml`)
 
 #### Schema ausführen
 
-Die Datenbank muss **leer** sein (neue Installation). In der D1 Console (**Storage & databases → D1 → `page-speed-db` → Console**) den gesamten Inhalt von [`schema.sql`](../schema.sql) einfügen und ausführen:
+Die Datenbank muss **leer** sein (neue Installation). In der D1 Console (**Storage & databases → D1 → `page-speed-tester-db` → Console**) den gesamten Inhalt von `[schema.sql](../schema.sql)` einfügen und ausführen:
 
 ```sql
 CREATE TABLE IF NOT EXISTS projects (
@@ -229,7 +236,7 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO settings (key, value) VALUES ('timezone', 'UTC');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('timezone', 'Europe/Berlin');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('cron_enabled', '1');
 
 CREATE TABLE IF NOT EXISTS runs (
@@ -265,20 +272,22 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 
 ---
 
-### Schritt 4: KV Namespace (Rate-Limit)
+### Schritt 4: KV Namespace (Worker)
 
 #### Rückfrage: Wo lege ich `RATE_LIMIT` an? Gibt es eine übergeordnete Projekt-Gruppe?
 
 **Antwort:** Nein. In Cloudflare KV gibt es nur **Namespaces** (Container) und darin **Keys** (werden vom Worker automatisch geschrieben).
 
-| Begriff | Was du machst |
-|---------|----------------|
-| **Namespace-Name** (in CF) | Einmal anlegen, z. B. `page-speed-rate-limit` |
-| **Binding-Name** (am Worker) | `KV` — exakt so, wie im Code (`env.KV`) |
-| **Keys** (z. B. `last-run`) | Nicht manuell anlegen — der Worker schreibt sie beim ersten Trigger |
+
+| Begriff                      | Was du machst                                                       |
+| ---------------------------- | ------------------------------------------------------------------- |
+| **Namespace-Name** (in CF)   | Einmal anlegen, z. B. `page-speed-tester-worker-kv`                 |
+| **Binding-Name** (am Worker) | `KV` — exakt so, wie im Code (`env.KV`)                             |
+| **Keys** (z. B. `last-run:…`, `run-status:…`) | Nicht manuell anlegen — der Worker schreibt sie |
+
 
 1. **Workers & Pages → KV → Create a namespace**
-2. Name: `page-speed-rate-limit` (spezifischer als nur `RATE_LIMIT`)
+2. Name: `page-speed-tester-worker-kv`
 3. **Namespace ID** notieren
 
 ---
@@ -288,32 +297,37 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 #### Git-Verbindung
 
 1. **Workers & Pages → Create → Workers → Connect to Git**
-2. Repo `page-speed-tester`, Branch `main`
-3. Deploy command: `node scripts/generate-wrangler.mjs && npx wrangler deploy`
-4. **Path / Root directory:** leer oder `/` (Repo-Root) — **nicht** `dashboard`
+2. **Worker-Name** in Cloudflare: `page-speed-tester-api` (erscheint auch als `*.workers.dev`-Subdomain)
+3. Repo (z. B. `meine-firma/page-speed-tester`), Branch `main`
+4. Deploy command: `node scripts/generate-wrangler.mjs && npx wrangler deploy`
+5. **Path / Root directory:** leer oder `/` (Repo-Root) — **nicht** `dashboard`
 
 #### Worker Build environment variables (Git deploy)
 
 Unter **Workers → dein Worker → Settings → Variables and secrets → Build** (nicht Runtime):
 
-| Variable | Pflicht | Beispiel / Quelle |
-|----------|---------|-------------------|
-| `D1_DATABASE_ID` | ✅ | D1 → `page-speed-db` → Database ID |
-| `KV_NAMESPACE_ID` | ✅ | KV → `page-speed-rate-limit` → Namespace ID |
-| `WORKER_NAME` | optional | `page-speed-tester` oder `page-speed-tester-demo` |
+
+| Variable          | Pflicht  | Beispiel / Quelle                                 |
+| ----------------- | -------- | ------------------------------------------------- |
+| `D1_DATABASE_ID`  | ✅        | D1 → `page-speed-db` → Database ID                |
+| `KV_NAMESPACE_ID` | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID |
+| `WORKER_NAME`     | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
 | `CRON_EXPRESSION` | optional | `*/5 * * * *` |
 
-Das Script [`scripts/generate-wrangler.mjs`](../scripts/generate-wrangler.mjs) schreibt daraus **`wrangler.toml`** (gitignored, nicht committen). **Kein** manuelles Bearbeiten der Datei nötig — Fork auf GitHub, IDs nur in Cloudflare.
+
+Das Script [`scripts/generate-wrangler.mjs`](../scripts/generate-wrangler.mjs) schreibt daraus `wrangler.toml` (gitignored, nicht committen). **Kein** manuelles Bearbeiten der Datei nötig — Fork auf GitHub, IDs nur in Cloudflare.
 
 #### Worker Secrets (Runtime)
 
 Unter **Workers → Settings → Secrets** (verschlüsselt, bleiben über Deploys):
 
-| Secret | Pflicht |
-|--------|---------|
-| `SESSION_SECRET` | ✅ |
-| `GH_PAT` | ✅ |
-| `WORKER_API_SECRET` | ✅ |
+
+| Secret              | Pflicht |
+| ------------------- | ------- |
+| `SESSION_SECRET`    | ✅       |
+| `GH_PAT`            | ✅       |
+| `WORKER_API_SECRET` | ✅       |
+
 
 **Nicht** als Plain-Text Build-Variable — nur Secrets. Kein `[vars]` in `wrangler.toml` nötig; GitHub-Repo und Cookie-Domain → **Admin → Instance settings** (D1).
 
@@ -333,19 +347,23 @@ Commit + Push → Cloudflare baut neu.
 
 #### Bindings (Worker → Settings)
 
-| Binding-Typ | Name in CF | Variable name |
-|-------------|------------|---------------|
-| D1 | `page-speed-db` | `DB` |
-| R2 | `page-speed-reports` | `REPORTS` |
-| KV | `page-speed-rate-limit` | `KV` |
+
+| Binding-Typ | Name in CF                    | Variable name |
+| ----------- | ----------------------------- | ------------- |
+| D1          | `page-speed-tester-db`        | `DB`          |
+| R2          | `page-speed-tester-reports`   | `REPORTS`     |
+| KV          | `page-speed-tester-worker-kv` | `KV`          |
+
 
 #### Secrets (Worker → Settings → Variables → Secrets)
 
-| Secret | Inhalt | Nie ins Git! |
-|--------|--------|--------------|
-| `SESSION_SECRET` | Langer Zufallsstring für Session-Cookies | ✅ |
-| `GH_PAT` | GitHub Personal Access Token | ✅ |
-| `WORKER_API_SECRET` | Zufallsstring für Upload-API + GitHub intern | ✅ |
+
+| Secret              | Inhalt                                       | Nie ins Git! |
+| ------------------- | -------------------------------------------- | ------------ |
+| `SESSION_SECRET`    | Langer Zufallsstring für Session-Cookies     | ✅            |
+| `GH_PAT`            | GitHub Personal Access Token                 | ✅            |
+| `WORKER_API_SECRET` | Zufallsstring für Upload-API + GitHub intern | ✅            |
+
 
 `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` — in **Admin → Instance settings** (D1); optional als `[vars]`-Fallback in `wrangler.toml`. PAT nie ins Git.
 
@@ -359,7 +377,7 @@ Commit + Push → Cloudflare baut neu.
 
 **Alternative Classic PAT:** Scope `repo` (privat) oder `public_repo` (öffentlich) — breitere Rechte als nötig.
 
-Nicht nötig: `workflow`, `actions:write`, `admin:*`
+Nicht nötig: `workflow`, `actions:write`, `admin:`*
 
 #### Rückfrage: PAT versehentlich in `wrangler.toml` / Git?
 
@@ -398,35 +416,42 @@ Erwartung: `{"status":"ok","service":"page-speed-tester"}`
 
 **Antwort:** Das sind **Worker**-Einstellungen. Das Dashboard ist **statisches HTML** → separates **Pages**-Projekt.
 
-| | Worker (Schritt 5) | Dashboard (Schritt 6) |
-|--|-------------------|------------------------|
-| Typ | Workers | **Pages** |
-| Ordner | Repo-Root | `dashboard/` |
+
+|        | Worker (Schritt 5)    | Dashboard (Schritt 6)                   |
+| ------ | --------------------- | --------------------------------------- |
+| Typ    | Workers               | **Pages**                               |
+| Ordner | Repo-Root             | `dashboard/`                            |
 | Deploy | `npx wrangler deploy` | Build + statische Dateien (siehe unten) |
-| Path | `/` | **nicht** als Worker-Root |
+| Path   | `/`                   | **nicht** als Worker-Root               |
+
 
 #### Pages anlegen
 
 1. **Workers & Pages → Create → Pages → Connect to Git**
-2. Repo + Branch `main`
-3. Einstellungen:
+2. **Project name:** `page-speed-tester-dashboard`
+3. Repo + Branch `main`
+4. Einstellungen:
 
-| Feld | Wert |
-|------|------|
-| Project name | `page-speed-tester-dashboard` |
-| Framework preset | **None** |
-| Build command | `node scripts/dashboard/prepare-dashboard.mjs` |
-| Build output directory | `.dashboard-dist` |
-| Root directory | leer |
+
+| Feld                   | Wert                                           |
+| ---------------------- | ---------------------------------------------- |
+| Project name           | `page-speed-tester-dashboard`                  |
+| Framework preset       | **None**                                       |
+| Build command          | `node scripts/dashboard/prepare-dashboard.mjs` |
+| Build output directory | `.dashboard-dist`                              |
+| Root directory         | leer                                           |
+
 
 **Build environment variable** — **Pages → Settings → Environment variables → Build** (nicht Worker, nicht Pages Runtime):
 
-| Variable | Wann setzen? | Beispiel |
-|----------|--------------|----------|
-| `PST_API_URL` | **Pflicht** bei `*.pages.dev` / `*.workers.dev` | `https://page-speed-tester.acme.workers.dev` |
+
+| Variable      | Wann setzen?                                                                | Beispiel                                                      |
+| ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `PST_API_URL` | **Pflicht** bei `*.pages.dev` / `*.workers.dev`                             | `https://page-speed-tester-api.<account>.workers.dev`         |
 | `PST_API_URL` | **Optional** bei Custom Domain (Dashboard auf `page-speed-tester.kunde.de`) | leer → Browser nutzt `https://api.page-speed-tester.kunde.de` |
 
-4. Deploy → URL z. B. `https://page-speed-tester.mydomain.tld` (Pages) + Worker-Custom-Domain `https://api.page-speed-tester.mydomain.tld`
+
+1. Deploy → URL z. B. `https://page-speed-tester.mydomain.tld` (Pages) + Worker-Custom-Domain `https://api.page-speed-tester.mydomain.tld`
 
 #### Worker-API-URL im Dashboard
 
@@ -434,10 +459,12 @@ Erwartung: `{"status":"ok","service":"page-speed-tester"}`
 
 **Variante A — Custom Domain (empfohlen für Produktion)**
 
-| Dienst | URL |
-|--------|-----|
-| **Dashboard (Pages)** | `https://page-speed-tester.kunde.de` |
-| **Worker API** | `https://api.page-speed-tester.kunde.de` |
+
+| Dienst                | URL                                      |
+| --------------------- | ---------------------------------------- |
+| **Dashboard (Pages)** | `https://page-speed-tester.kunde.de`     |
+| **Worker API**        | `https://api.page-speed-tester.kunde.de` |
+
 
 Cloudflare: Custom Domain auf **Pages** = Dashboard-Host; Custom Domain auf **Worker** = `api.`-Subdomain.
 
@@ -446,10 +473,12 @@ Cloudflare: Custom Domain auf **Pages** = Dashboard-Host; Custom Domain auf **Wo
 
 **Variante B — Cloudflare-Standarddomains (ohne Custom Domain)**
 
-| Dienst | URL |
-|--------|-----|
+
+| Dienst     | URL                                               |
+| ---------- | ------------------------------------------------- |
 | Worker API | `https://page-speed-tester.<account>.workers.dev` |
-| Dashboard | `https://page-speed-tester-dashboard.pages.dev` |
+| Dashboard  | `https://page-speed-tester-dashboard.pages.dev`   |
+
 
 In Pages **Build-Env** `PST_API_URL` = volle Worker-URL (**Pflicht** — von Pages-Host nicht ableitbar).  
 **Cookie domain** in Admin **leer lassen** (Cookie nur API-Domain; CORS erlaubt `*.pages.dev`).
@@ -464,14 +493,16 @@ In Pages **Build-Env** `PST_API_URL` = volle Worker-URL (**Pflicht** — von Pag
 
 **GitHub → Repo → Settings → Secrets and variables → Actions → New repository secret**
 
-| Secret | Wert (mydomain.tld) |
-|--------|----------------------|
-| `R2_ACCESS_KEY_ID` | aus Schritt 2 |
-| `R2_SECRET_ACCESS_KEY` | aus Schritt 2 |
-| `R2_BUCKET` | `page-speed-reports` |
-| `R2_ENDPOINT` | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-| `WORKER_API_URL` | `https://api.page-speed-tester.mydomain.tld` |
-| `WORKER_API_SECRET` | gleicher Wert wie Worker-Secret |
+
+| Secret                 | Wert (mydomain.tld)                                |
+| ---------------------- | -------------------------------------------------- |
+| `R2_ACCESS_KEY_ID`     | aus Schritt 2                                      |
+| `R2_SECRET_ACCESS_KEY` | aus Schritt 2                                      |
+| `R2_BUCKET`            | `page-speed-reports`                               |
+| `R2_ENDPOINT`          | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
+| `WORKER_API_URL`       | `https://api.page-speed-tester.mydomain.tld`       |
+| `WORKER_API_SECRET`    | gleicher Wert wie Worker-Secret                    |
+
 
 ---
 
@@ -483,8 +514,8 @@ URLs werden im Dashboard unter **Admin** angelegt (oder per API) — nicht im Re
 2. **Admin** → Projekt anlegen (Name, Cron-Ausdruck)
 3. URLs pro Projekt hinzufügen
 4. Pro Projekt zwei Schlüssel in der Spalte **Keys & links**:
-   - **Trigger** — startet Lighthouse-Läufe (API-URL, kein Login)
-   - **Share** — schreibgeschützte Dashboard-Ansicht für Gäste (`share.html`)
+  - **Trigger** — startet Lighthouse-Läufe (API-URL, kein Login)
+  - **Share** — schreibgeschützte Dashboard-Ansicht für Gäste (`share.html`)
 
 Alternativ per API (`POST /api/projects`, `POST /api/projects/:id/urls`) — nur als **admin** eingeloggt.
 
@@ -496,7 +527,7 @@ GitHub Actions holt URLs zur Laufzeit von `GET /api/internal/projects/{id}/urls`
 
 **Option A — Dashboard (empfohlen)**
 
-1. https://page-speed-tester.mydomain.tld → Login / Bootstrap
+1. [https://page-speed-tester.mydomain.tld](https://page-speed-tester.mydomain.tld) → Login / Bootstrap
 2. Projekt und URL wählen → **Run now**
 
 **Option B — GitHub manuell**
@@ -545,11 +576,13 @@ Bestehende Datenbanken: einmalig `ALTER TABLE projects ADD COLUMN share_token TE
 
 ## Berichtsdateien (R2)
 
-| Teil | Format |
-|------|--------|
-| R2-Pfad | `reports/{project_id}/2026-06-23T143052Z-desktop-example-com.json` |
-| Muster | `reports/{project_id}/{yyyy-mm-dd}T{HHMMSS}Z-{desktop\|mobile}-{url-slug}.json` (UTC) |
+
+| Teil     | Format                                                                                                                     |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| R2-Pfad  | `reports/{project_id}/2026-06-23T143052Z-desktop-example-com.json`                                                         |
+| Muster   | `reports/{project_id}/{yyyy-mm-dd}T{HHMMSS}Z-{desktop                                                                      |
 | JSON-URL | `/api/reports/{project_id}/{filename}` (Login erforderlich) oder `/api/public/share/report?key=…&report_key=…` (Share-Key) |
+
 
 **Hinweis:** Device steht **vor** dem Domain-Slug. Uhrzeit im Dateinamen, damit mehrere Läufe pro Tag eindeutig sind.
 
@@ -570,7 +603,7 @@ npm run dev
 
 Ja. Zwei getrennte Einträge unter **Workers & Pages**:
 
-1. `page-speed-tester` (Worker)
+1. `page-speed-tester-api` (Worker)
 2. `page-speed-tester-dashboard` (Pages)
 
 ### Was passiert beim Trigger?
@@ -635,31 +668,33 @@ Logs unter **Actions → fehlgeschlagener Run**.
 
 ### Wo Secrets **nicht** hingehören
 
-| Wert | Erlaubt | Verboten |
-|------|---------|----------|
-| `GH_PAT` | Worker Secret | `wrangler.toml`, Git |
-| `SESSION_SECRET` | Worker Secret | Git |
-| `WORKER_API_SECRET` | Worker Secret + GitHub Secret | öffentliche Vars |
-| `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` | Admin (D1) oder optional `wrangler.toml` [vars] | — |
-| D1/KV IDs | **Workers Build-Env** (`D1_DATABASE_ID`, `KV_NAMESPACE_ID`) | Git, Plain-Text Runtime-Vars |
+
+| Wert                                   | Erlaubt                                                     | Verboten                     |
+| -------------------------------------- | ----------------------------------------------------------- | ---------------------------- |
+| `GH_PAT`                               | Worker Secret                                               | `wrangler.toml`, Git         |
+| `SESSION_SECRET`                       | Worker Secret                                               | Git                          |
+| `WORKER_API_SECRET`                    | Worker Secret + GitHub Secret                               | öffentliche Vars             |
+| `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` | Admin (D1) oder optional `wrangler.toml` [vars]             | —                            |
+| D1/KV IDs                              | **Workers Build-Env** (`D1_DATABASE_ID`, `KV_NAMESPACE_ID`) | Git, Plain-Text Runtime-Vars |
+
 
 ---
 
 ## Checkliste
 
-- [ ] R2 Bucket `page-speed-reports` + API-Token
-- [ ] D1 `page-speed-db` + Schema aus [`schema.sql`](../schema.sql) (D1 Console oder `npm run db:migrate:remote`)
-- [ ] KV Namespace `page-speed-rate-limit`
-- [ ] Worker deployed, Bindings D1/R2/KV, Secrets (`SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET`)
-- [ ] Workers Git deploy: Build-Env `D1_DATABASE_ID`, `KV_NAMESPACE_ID`; Secrets gesetzt; Build `node scripts/generate-wrangler.mjs && npx wrangler deploy`
-- [ ] Admin → Instance settings: timezone, GitHub owner/repo, cookie domain (falls Custom Domain)
-- [ ] Pages Dashboard deployed (`PST_API_URL` als **Pages Build-Env**, nicht Worker)
-- [ ] GitHub Secrets (6 Stück)
-- [ ] Admin-Account angelegt, mindestens ein Projekt mit URLs
-- [ ] `/health` OK
-- [ ] Erster Workflow-Lauf erfolgreich
-- [ ] Dashboard zeigt Metriken nach Login
+- R2 Bucket `page-speed-reports` + API-Token
+- D1 `page-speed-db` + Schema aus `[schema.sql](../schema.sql)` (D1 Console oder `npm run db:migrate:remote`)
+- KV Namespace `page-speed-tester-worker-kv`
+- Worker `page-speed-tester-api` deployed, Bindings D1/R2/KV, Secrets (`SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET`)
+- Workers Git deploy: Build-Env `D1_DATABASE_ID`, `KV_NAMESPACE_ID`; Secrets gesetzt; Build `node scripts/generate-wrangler.mjs && npx wrangler deploy`
+- Admin → Instance settings: timezone, GitHub owner/repo, cookie domain (falls Custom Domain)
+- Pages `page-speed-tester-dashboard` deployed (`PST_API_URL` als **Pages Build-Env**, nicht Worker)
+- GitHub Secrets (6 Stück)
+- Admin-Account angelegt, mindestens ein Projekt mit URLs
+- `/health` OK
+- Erster Workflow-Lauf erfolgreich
+- Dashboard zeigt Metriken nach Login
 
 ---
 
-Siehe auch [`README.md`](../README.md) für API-Referenz und Architektur sowie [`PUBLIC-UPSTREAM.md`](PUBLIC-UPSTREAM.md) für Public-Demo (`page-speed-tester-demo`) vs. private Prod-Instanz (`page-speed-tester`).
+Siehe auch [`README.md`](../README.md) für API-Referenz und Architektur.

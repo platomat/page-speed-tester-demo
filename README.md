@@ -20,8 +20,6 @@ Für GitHub Secret `R2_ENDPOINT` (S3-kompatibel) — einer der folgenden:
 | Endpoint                                        | URL                                                                 |
 | ----------------------------------------------- | ------------------------------------------------------------------- |
 | Account-Endpoint (empfohlen für GitHub Actions) | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-| Custom Domain                                   | `https://bucket-page-speed-reports.mydomain.tld`                   |
-| Custom Domain (alternativ)                      | `https://bucket.page-speed-tester.mydomain.tld`                    |
 
 
 Bucket-Name: `page-speed-reports`
@@ -48,7 +46,7 @@ Mehrere **Projekte** pro Instanz; URLs und Cron pro Projekt in D1. Benutzer sehe
 
 **Nicht** ein leeres GitHub-Repo: Der Worker triggert per `repository_dispatch` ein Repo, in dem der Lighthouse-Workflow und die CI-Skripte liegen (idealerweise **dieses komplette Projekt**).
 
-1. Kunde erstellt Repo aus **Template** des öffentlichen Upstreams [`page-speed-tester-demo`](docs/PUBLIC-UPSTREAM.md) → z. B. privates `firma/page-speed-tester`
+1. Kunde erstellt Repo aus **Template** dieses öffentlichen Upstreams → z. B. privates `firma/page-speed-tester`
 2. Deploy: Worker + Pages in **eigenem** Cloudflare-Account (aus demselben Repo)
 3. GitHub Actions Secrets + Worker `GH_PAT` für dieses Repo
 4. **Admin → Instance settings:** GitHub owner/repository = dieses Repo
@@ -73,7 +71,7 @@ npm install
 
 wrangler d1 create page-speed-db
 wrangler r2 bucket create page-speed-reports
-wrangler kv namespace create page-speed-rate-limit
+wrangler kv namespace create page-speed-tester-worker-kv
 # IDs in .env, dann:
 npm run db:migrate:remote
 npm run deploy
