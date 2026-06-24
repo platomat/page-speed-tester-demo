@@ -1,181 +1,131 @@
 # Page Speed Tester
 
-Automatischer Lighthouse Page-Speed-Tester mit **GitHub Actions** (Tests), **Cloudflare R2** (JSON-Berichte), **D1** (Metriken) und **Pages** (Dashboard).
+Self-hosted **Lighthouse**-Monitoring: Du betreibst eine eigene Instanz auf **Cloudflare** (API, Speicher, Dashboard) und startest die eigentlichen Tests per **GitHub Actions** in **deinem** Repository. Kein zentraler SaaS-Dienst — jede Installation gehört dir.
 
-## Deployment (mydomain.tld)
+Typischer Einsatz: mehrere Websites oder Kundenprojekte überwachen, Metriken in Charts vergleichen, Berichte als JSON ablegen, Läufe per Cron oder per Klick auslösen.
+
+---
+
+## Was das Projekt kann
+
+- **Lighthouse** desktop + mobile pro URL (Performance, LCP, CLS, FCP, TBT, Speed Index)
+- **Mehrere Projekte** pro Instanz, jeweils mit eigenen URLs und Cron-Zeitplan
+- **Dashboard** mit Login, Charts, Berichtsliste und Detailansicht einzelner Lighthouse-JSONs
+- **Manueller Start** („Run test“), **Cron** pro Projekt, öffentlicher **Trigger-Link** (Access-Key) und **Share-Link** (nur Lesen)
+- **Benutzer & Rechte:** Admins verwalten alles; normale User sehen nur zugewiesene Projekte
+- **Speicher:** Metriken in **D1**, vollständige Berichte in **R2** — nichts Kritisches im Git-Repo
+
+Lighthouse läuft **nicht** im Cloudflare Worker (dort kein Chrome). Der Worker steuert nur Auth, API, Cron und den Start des GitHub-Workflows.
+
+---
+
+## Drei Teile — ein System
+
+Alles steckt in **einem GitHub-Repository** (dieses hier), wird aber an **drei Stellen** betrieben:
 
 
-| Dienst                | URL                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Dashboard (Pages)** | [https://page-speed-tester.mydomain.tld](https://page-speed-tester.mydomain.tld)                     |
-| **Worker API**        | [https://api.page-speed-tester.mydomain.tld](https://api.page-speed-tester.mydomain.tld)             |
-| **Health-Check**      | [https://api.page-speed-tester.mydomain.tld/health](https://api.page-speed-tester.mydomain.tld/health) |
+| Teil           | Wo                    | Ordner / Artefakt                   | Aufgabe                                                                       |
+| -------------- | --------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| **API**        | Cloudflare **Worker** | `worker/`                           | REST-API, Login, Projekte/URLs, Cron → `repository_dispatch`, Metriken aus D1 |
+| **Dashboard**  | Cloudflare **Pages**  | `dashboard/`                        | Statische UI; spricht die API an                                              |
+| **Tests (CI)** | **GitHub Actions**    | `.github/workflows/`, `scripts/ci/` | Lighthouse + Upload nach R2/D1                                                |
 
-
-### R2 Bucket Endpoints
-
-Für GitHub Secret `R2_ENDPOINT` (S3-kompatibel) — einer der folgenden:
-
-
-| Endpoint                                        | URL                                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------- |
-| Account-Endpoint (empfohlen für GitHub Actions) | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-
-
-Bucket-Name: `page-speed-reports`
-
-### Login & Dashboard
-
-Öffne [https://page-speed-tester.mydomain.tld](https://page-speed-tester.mydomain.tld) — beim ersten Besuch Admin-Account anlegen, dann Projekt/URL wählen, Charts ansehen und **Run now** starten.
-
-## Architektur
 
 ```
-Cron / Dashboard „Run now“ → Worker (Cloudflare, pro Instanz)
-  → repository_dispatch → GitHub Actions (im Kunden-Repo)
-  → Lighthouse CLI
-                          ↓
-                  R2 (JSON) + D1 (Metriken)
-                          ↓
-              Dashboard (Pages, Session-Login)
+Dashboard / Cron / Trigger-URL
+        │
+        ▼
+   Worker (API)  ──repository_dispatch──►  GitHub Actions
+        │                                        │
+        │                                        ▼
+        │                                 Lighthouse (Chrome)
+        ▼                                        │
+   D1 (Metriken) ◄──────────────────────── R2 (JSON-Berichte)
+        │
+        ▼
+   Dashboard (Charts & Berichte)
 ```
 
-Mehrere **Projekte** pro Instanz; URLs und Cron pro Projekt in D1. Benutzer sehen nur zugewiesene Projekte (Rolle `user`); Admins verwalten alles.
+**Wichtig:** Worker und Pages deployen aus **demselben Repo**, aber als **zwei getrennte Cloudflare-Projekte** (`page-speed-tester-api` und `page-speed-tester-dashboard`). Der Workflow läuft im **GitHub-Tab Actions** dieses Repos — nicht auf Cloudflare.
 
-### Self-Hosting — ein Repo pro Kunde
+---
 
-**Nicht** ein leeres GitHub-Repo: Der Worker triggert per `repository_dispatch` ein Repo, in dem der Lighthouse-Workflow und die CI-Skripte liegen (idealerweise **dieses komplette Projekt**).
+## Für wen ist das?
 
-1. Kunde erstellt Repo aus **Template** dieses öffentlichen Upstreams → z. B. privates `firma/page-speed-tester`
-2. Deploy: Worker + Pages in **eigenem** Cloudflare-Account (aus demselben Repo)
-3. GitHub Actions Secrets + Worker `GH_PAT` für dieses Repo
-4. **Admin → Instance settings:** GitHub owner/repository = dieses Repo
+- Du willst **Page Speed selbst hosten** (eigener Account, eigene Domains, eigene Daten).
+- Du brauchst **kein leeres GitHub-Repo**: Der Worker triggert ein Repo, in dem **dieser komplette Code** inkl. Workflow liegt.
+- Du forkest oder nutzt das Repo als **Template** → du bekommst eine **eigenständige Instanz**. Deine Daten liegen in deinem Cloudflare-Account; niemand anderes sieht deine URLs, Berichte oder Secrets.
 
-Details: [`docs/INSTALLATION.md`](docs/INSTALLATION.md) → Abschnitt **Praxis — ein GitHub-Repo pro Kunde**.
+---
 
-## Voraussetzungen
+## Schnellstart (wo es lang geht)
 
-- Cloudflare Account (Workers Paid empfohlen, ~$5/Mo)
-- **Eigenes GitHub-Repository mit diesem Projektcode** (Workflow + Skripte — kein leeres Repo)
-- Node.js 24+
+1. Repo anlegen (**Use this template** oder Fork/Kopie) → z. B. `deine-org/page-speed-tester`
+2. Cloudflare: D1, R2, KV, Worker, Pages — alles in **deinem** Account
+3. GitHub: **Actions Secrets** für R2 und Worker-API
+4. Dashboard: **Admin → Instance settings** — GitHub owner/repo auf **dein** Repo setzen
+5. Projekte und URLs im Admin anlegen → **Run test**
 
-**Ausführliche Einrichtung (Cloudflare Dashboard + GitHub, inkl. FAQ):** [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+Schritt-für-Schritt (nur Dashboard + GitHub, ohne Pflicht-CLI): **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
 
-## Einrichtung (Kurz)
+Lokal entwickeln: `npm install` → `npm run dev` (Worker `http://localhost:8787`). Details in der Installationsanleitung.
 
-### 1. Cloudflare-Ressourcen anlegen
+---
 
-```bash
-npm install
-# D1_DATABASE_ID + KV_NAMESPACE_ID in .env (see .env.example)
-
-wrangler d1 create page-speed-db
-wrangler r2 bucket create page-speed-reports
-wrangler kv namespace create page-speed-tester-worker-kv
-# IDs in .env, dann:
-npm run db:migrate:remote
-npm run deploy
-```
-
-### 2. R2 API-Token für GitHub Actions
-
-Im Cloudflare Dashboard: **R2 → Manage R2 API Tokens → Create API Token** mit Read/Write auf den Bucket.
-
-### 3. Worker Secrets (Cloudflare Dashboard oder CLI)
-
-Bei **Git-Deploy:** Secrets unter **Workers → Settings → Secrets** setzen (nicht Build-Env). Lokal optional:
-
-```bash
-wrangler secret put SESSION_SECRET    # z.B. openssl rand -hex 32
-wrangler secret put GH_PAT              # GitHub PAT mit repo scope
-wrangler secret put WORKER_API_SECRET   # z.B. openssl rand -hex 32
-```
-
-In `wrangler.toml` stehen nur Bindings und Cron — die Datei wird aus [`wrangler.toml.template`](wrangler.toml.template) + **`D1_DATABASE_ID`** / **`KV_NAMESPACE_ID`** generiert (`npm run wrangler:generate`). Keine Secrets in der Datei.
-
-Unter **Admin → Instance settings:** GitHub owner/repository, cookie domain (z. B. `.deine-domain.net`, leer für Pages-Preview), timezone.
-
-### 4. GitHub Secrets
-
-Im Repository unter **Settings → Secrets → Actions** (Laufzeit der GitHub Actions, nicht Worker, nicht Pages):
+## Dokumentation
 
 
-| Secret                 | Beschreibung                                                                       |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `R2_ACCESS_KEY_ID`     | R2 API Token Access Key                                                            |
-| `R2_SECRET_ACCESS_KEY` | R2 API Token Secret                                                                |
-| `R2_BUCKET`            | `page-speed-reports`                                                               |
-| `R2_ENDPOINT`          | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
-| `WORKER_API_URL`       | `https://api.page-speed-tester.mydomain.tld`                                       |
-| `WORKER_API_SECRET`    | Gleicher Wert wie Worker Secret                                                    |
+| Datei | Inhalt |
+| ----- | ------ |
+| [docs/INSTALLATION.md](docs/INSTALLATION.md) | Einrichtung Cloudflare + GitHub, Env-Variablen, FAQ, Checkliste |
+| [docs/API.md](docs/API.md) | Worker-REST-Endpunkte (Auth, Projekte, Trigger, Share, intern für Actions) |
+| [schema.sql](schema.sql) | D1-Datenbankschema (neue Instanz) |
+| [docs/TODOs.md](docs/TODOs.md) | Geplante Verbesserungen im Repo |
 
 
-### 5. Projekte & URLs
+---
 
-Im Dashboard unter **Admin** anlegen (oder per API).
+## ❗❗❗Öffentlicher Fork oder Template — was du wissen musst❗❗❗
 
-### 6. Deploy
+Wenn du dieses **öffentliche** Repo forkest oder als Template nutzt, betreibst du **deine** Installation. Der Upstream sieht deine Läufe, URLs und Cloudflare-Daten **nicht** — aber ein paar Konsequenzen sind wichtig:
 
-```bash
-# Worker deployen
-npm run deploy
+### GitHub Actions
 
-# Dashboard deployen (PST_API_URL aus lokaler .env, falls gesetzt)
-npm run deploy:dashboard
-```
+- Der Workflow [.github/workflows/lighthouse.yml](.github/workflows/lighthouse.yml) liegt in **deinem** Repo. Läufe erscheinen unter **deinem** Tab **Actions** (bei öffentlichem Repo für alle mit Lesezugriff sichtbar).
+- **Welche URLs getestet werden**, steht in **deiner** D1-Datenbank — du legst Projekte und URLs im Dashboard (Admin) an. Ein Fork übernimmt **keine** Test-URLs aus einer fremden Installation; solange du nichts einträgst, gibt es nichts zu testen.
+- Unter **Settings → Secrets and variables → Actions** hinterlegst **du** die Zugangsdaten (`R2_*`, `WORKER_API_URL`, `WORKER_API_SECRET`). Damit schreibt der Workflow nur in **deinen** R2-Bucket und spricht nur **deine** Worker-API an — völlig getrennt von anderen Forks oder vom Original-Repo.
+- Der Worker braucht ein **GitHub PAT** (`GH_PAT`) mit Zugriff auf **dein** Repo sowie in den Instance settings **deinen** `gh_owner` / `gh_repo`.
 
-### Umgebungsvariablen — Kurzüberblick
+### URLs in Logs und Artefakten
 
-| Variable | Wo | Typ |
-| -------- | -- | --- |
-| `D1_DATABASE_ID`, `KV_NAMESPACE_ID` | **Workers → Build env** (Git deploy) | Build |
-| `PST_API_URL` | **Cloudflare Pages → Build env** | Build (nicht Worker, nicht Pages Runtime) |
-| `COOKIE_DOMAIN`, `GH_OWNER`, `GH_REPO` | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit |
-| `DASHBOARD_ORIGIN` | optional Worker `[vars]` | Worker-Laufzeit |
-| `SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET` | **Worker Secrets** | Worker-Laufzeit |
-| `WORKER_API_URL`, `WORKER_API_SECRET`, `R2_*` | **GitHub Secrets** | Actions-Laufzeit |
+- In Action-Logs und Report-Dateinamen erscheinen die **von dir konfigurierten Seiten-URLs** (z. B. `https://kunde.example/…`). Bei einem **öffentlichen** Fork können Mitleser mit Repo-Zugriff die Actions-Historie sehen — also keine geheimen Ziel-URLs in ein öffentliches Repo legen, wenn das für dich problematisch ist. **Privates Repo** + private Instanz ist der übliche Weg für Kundenprojekte.
+- Lighthouse-JSON landet in **deinem** R2-Bucket; Metriken in **deiner** D1 — nicht im Git-Commit.
 
-`PST_API_URL` wird beim Pages-Build in `dashboard/config.js` geschrieben. **Custom Domain:** optional — Fallback im Browser: `https://api.<dashboard-host>`. **Pflicht** bei `*.pages.dev` / `*.workers.dev`. Worker-Custom-Domain: **`api.`**-Subdomain; Dashboard auf kürzerer Pages-/Custom-Domain.
+### Cloudflare & Domains
 
-## Nutzung
+- Worker- und Pages-URLs (`*.workers.dev`, `*.pages.dev` oder eigene Domains) sind **deine**. Das Dashboard braucht beim Pages-Build ggf. `PST_API_URL` auf **deine** Worker-URL (siehe Installation).
+- Rate-Limit manueller Trigger: max. **1 Lauf alle 5 Minuten** pro Projekt (KV im Worker).
 
-### Manueller Test
+### Empfehlung
 
-Im Dashboard: Projekt wählen → **Run test**. Oder `POST /api/projects/{id}/trigger` (Session-Cookie, Admin oder zugewiesener User).
 
-**Ohne Login** (Projekt-Access-Key):
+| Ziel               | Vorgehen                                                                  |
+| ------------------ | ------------------------------------------------------------------------- |
+| Produktion / Kunde | **Template** oder Kopie → **privates** Repo, eigener CF-Account           |
+| Demo / Lernen      | Öffentlicher Fork OK — mit Test-URLs, keine Produktions-Secrets           |
+| Nur Code lesen     | Repo ansehen, **nicht** Actions mit echten Secrets im Public-Fork starten |
 
-```text
-GET /api/public/trigger/{project_id}?key={access_key}
-```
 
-Optional nur eine URL: `&url_id={url_id}`. Den Key legst du in der Admin-UI pro Projekt fest (auto-generiert oder manuell, max. 64 Zeichen). Später kann derselbe Key auch für Gast-Zugriff auf das Dashboard dienen.
+---
 
-GitHub Actions Fallback: Workflow manuell starten mit Input `project_id`.
+## Technik in einem Satz
 
-Rate-Limit: max. 1 Lauf alle 15 Minuten pro Projekt (KV).
+**Node.js 24+**, TypeScript-Worker (Wrangler), statisches Dashboard, GitHub Actions mit Lighthouse 12 — Deploy über Cloudflare Git-Integration; `wrangler.toml` wird beim Build aus `[wrangler.toml.template](wrangler.toml.template)` generiert (nicht committen).
 
-### Cron
+---
 
-Worker-Cron alle **15 Minuten** prüft pro Projekt den konfigurierten Ausdruck (z. B. `0 6 * * *` = täglich 06:00 UTC).
+## Lizenz & Mitwirken
 
-### Dashboard
+Quellcode steht unter der **[MIT-Lizenz](LICENSE)** (üblich für Open-Source-Software auf GitHub). Du darfst das Projekt nutzen, ändern und weitergeben — siehe [LICENSE](LICENSE) für die vollständigen Bedingungen.
 
-Login erforderlich. Admins sehen **Admin**-Link für Projekte, URLs, User und Zuweisungen.
-
-**API-Referenz:** [`docs/API.md`](docs/API.md)
-
-## Lokale Entwicklung
-
-```bash
-npm run dev
-# Worker auf http://localhost:8787
-```
-
-D1 lokal: `npm run db:migrate` · remote: `npm run db:migrate:remote` (führt [`schema.sql`](schema.sql) aus)
-
-## Berichtsformat
-
-R2-Pfad: `reports/{project_id}/2026-06-23T143052Z-desktop-example-com.json`
-
-Dateiname: `{yyyy-mm-dd}T{HHMMSS}Z-{desktop|mobile}-{url-slug}.json` (UTC, eindeutig pro Lauf)
+Footer-Link im Dashboard verweist auf [PlatoMat](https://platomat.com/). Beiträge willkommen — Issues und PRs gegen dieses Repo.
