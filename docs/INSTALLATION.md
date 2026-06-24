@@ -117,10 +117,10 @@ Empfohlen wird das **gesamte** Repository (Worker-Code, Dashboard, Actions) — 
 | 3       | **Cloudflare Pages:** **dasselbe** Repo verbinden, Dashboard bauen/deployen                                                                                                                                                       |
 | 4       | **GitHub Secrets** im Kunden-Repo (`WORKER_API_URL`, `WORKER_API_SECRET`, `R2_`*)                                                                                                                                                 |
 | 5       | **Worker Secret** `GH_PAT` — PAT mit Zugriff auf **dieses** Repo                                                                                                                                                                  |
-| 6       | **Admin → Instance settings:** GitHub owner + repository, cookie domain, timezone                                                                                                                                                 |
+| 6       | **Admin → Instance settings** (Schritt 8): GitHub owner + repository, timezone, ggf. cookie domain |
 
 
-In Schritt 6 trägt der Kunde `**meine-firma`** und `**page-speed-tester`** ein — genau das Repo, in dem der Workflow liegt und aus dem Worker/Pages deployt wurden.
+In Schritt 8 trägt der Kunde `**meine-firma`** und `**page-speed-tester`** ein — genau das Repo, in dem der Workflow liegt und aus dem Worker/Pages deployt wurden.
 
 #### Repo anlegen — welcher Weg?
 
@@ -459,14 +459,59 @@ In Pages **Build-Env** `PST_API_URL` = volle Worker-URL (**Pflicht** — von Pag
 
 ---
 
-### Schritt 8: Projekte und URLs konfigurieren
+### Schritt 8: Admin — Instance settings (Dashboard)
 
-URLs werden im Dashboard unter **Admin** angelegt (oder per API) — nicht im Repo.
+Nach dem ersten Login: **Dashboard → Zahnrad (Admin) → Instance settings** (unten auf der Admin-Seite).  
+Diese Werte liegen in **D1** (`settings`-Tabelle) — **nicht** in `wrangler.toml`, GitHub Secrets oder Cloudflare Build-Env.
+
+**Vor dem ersten „Run now“** mindestens **GitHub owner** und **GitHub repository** setzen und **Save settings** klicken.
+
+
+| Feld | Pflicht | Beispiel | Zweck |
+| ---- | ------- | -------- | ----- |
+| **GitHub owner** | ✅ für Lighthouse-Läufe | `meine-firma` | GitHub-Organisation oder Benutzername — Ziel für `repository_dispatch` |
+| **GitHub repository** | ✅ für Lighthouse-Läufe | `page-speed-tester` | Repo mit `.github/workflows/lighthouse.yml` — **dasselbe Repo**, aus dem Worker und Pages deployen |
+| **Cookie domain** | Custom Domain: empfohlen · `*.pages.dev`: leer | `.page-speed-tester.kunde.de` | Gemeinsame Parent-Domain für Dashboard **und** API (Session-Cookie). Punkt am Anfang (`.kunde.de` = alle Subdomains). Bei `*.pages.dev` **leer lassen** — Login nutzt dann `session_token` im Browser (`sessionStorage`), nicht das Cookie |
+| **Timezone** | ✅ | `Europe/Berlin` | Anzeige von Datum/Uhrzeit im Dashboard; **Cron pro Projekt** wird in dieser Zeitzone ausgewertet (IANA, z. B. `UTC`, `America/New_York`) |
+| **Scheduled runs** | optional | aktiviert | Globaler Schalter: Cron-Läufe aller Projekte ein/aus. Aus = nur manueller Trigger („Run now“, Trigger-URL). Pro Projekt zusätzlich eigenes Cron-Feld (leer = nur manuell) |
+
+#### GitHub owner / repository — was eintragen?
+
+Genau das Repo, in dem der Lighthouse-Workflow liegt und das du mit Cloudflare verbunden hast:
+
+| Deployment | **GitHub owner** | **GitHub repository** |
+| ---------- | ---------------- | --------------------- |
+| Kunde aus Template | `meine-firma` | `page-speed-tester` |
+| Demo-Staging | `dein-user` | `page-speed-tester-demo` |
+
+Der Worker-Secret **`GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo haben (Fine-grained: **Contents: Read and write**).  
+`WORKER_API_URL` / `WORKER_API_SECRET` in GitHub Secrets zeigen auf die Worker-API — das ist unabhängig von owner/repo, aber Actions und Worker müssen zum **selben** GitHub-Repo passen wie hier in den Instance settings.
+
+#### Cookie domain — wann was?
+
+| Setup | **Cookie domain** | Hinweis |
+| ----- | ----------------- | ------- |
+| Custom Domain: Dashboard `page-speed-tester.kunde.de`, API `api.page-speed-tester.kunde.de` | `.page-speed-tester.kunde.de` | Parent-Domain von beiden Hosts; nicht `.kunde.de`, wenn Dashboard nur auf einer Subdomain liegt |
+| Nur `*.pages.dev` / `*.workers.dev` | *leer* | Cross-Site-Cookies funktionieren nicht zuverlässig; Auth per Bearer-Token nach Login |
+| Lokal (`npm run dev`) | *leer* | API unter `localhost:8787` |
+
+#### Timezone und Cron
+
+- **Instance timezone** gilt für alle Projekte (Tabellen, Charts, Cron-Auswertung).
+- **Cron pro Projekt** (Admin → Projects): 5 Felder, lokale Zeit der Instance timezone, z. B. `0 6 * * *` = täglich 06:00. **Leer** = nur manuelle Läufe für dieses Projekt.
+- Worker-Cron (`*/15 * * * *` in `wrangler.toml`) prüft alle 15 Minuten, welche Projekte fällig sind — **Scheduled runs** in Instance settings muss aktiv sein.
+
+---
+
+### Schritt 9: Projekte und URLs konfigurieren
+
+URLs werden im Dashboard unter **Admin** angelegt (oder per API) — nicht im Repo. **Instance settings** (Schritt 8) sollten vor dem ersten Test gesetzt sein.
 
 1. Dashboard öffnen → **Login** (beim ersten Start: Admin-Account anlegen)
-2. **Admin** → Projekt anlegen (Name, Cron-Ausdruck)
-3. URLs pro Projekt hinzufügen
-4. Pro Projekt zwei Schlüssel in der Spalte **Keys & links**:
+2. **Admin** → **Instance settings** speichern (GitHub owner/repo, ggf. cookie domain, timezone)
+3. **Admin** → Projekt anlegen (Name, Cron-Ausdruck)
+4. URLs pro Projekt hinzufügen
+5. Pro Projekt zwei Schlüssel in der Spalte **Keys & links**:
   - **Trigger** — startet Lighthouse-Läufe (API-URL, kein Login)
   - **Share** — schreibgeschützte Dashboard-Ansicht für Gäste (`share.html`)
 
@@ -476,7 +521,7 @@ GitHub Actions holt URLs zur Laufzeit von `GET /api/internal/projects/{id}/urls`
 
 ---
 
-### Schritt 9: Erster Test
+### Schritt 10: Erster Test
 
 **Option A — Dashboard (empfohlen)**
 
@@ -641,10 +686,10 @@ Logs unter **Actions → fehlgeschlagener Run**.
 - KV Namespace `page-speed-tester-worker-kv`
 - Worker `page-speed-tester-api` deployed, Bindings D1/R2/KV, Secrets (`SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET`)
 - Workers Git deploy: Build-Env `D1_DATABASE_ID`, `KV_NAMESPACE_ID`; Secrets gesetzt; Build `node scripts/generate-wrangler.mjs && npx wrangler deploy`
-- Admin → Instance settings: timezone, GitHub owner/repo, cookie domain (falls Custom Domain)
+- Admin → Instance settings (Schritt 8): GitHub owner/repo, timezone, cookie domain (Custom Domain) bzw. leer (`*.pages.dev`)
 - Pages `page-speed-tester-dashboard` deployed (`PST_API_URL` als **Pages Build-Env**, nicht Worker)
 - GitHub Secrets (6 Stück)
-- Admin-Account angelegt, mindestens ein Projekt mit URLs
+- Admin-Account angelegt, mindestens ein Projekt mit URLs (Schritt 9)
 - `/health` OK
 - Erster Workflow-Lauf erfolgreich
 - Dashboard zeigt Metriken nach Login
