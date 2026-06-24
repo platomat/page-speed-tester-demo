@@ -544,6 +544,10 @@ function githubRunLinkHtml(status) {
   return ` <a href="${escapeHtml(status.github_run_url)}" target="_blank" rel="noopener noreferrer">View on GitHub Actions</a>`;
 }
 
+function runStatusDismissHtml() {
+  return ` <button type="button" class="status-hint-dismiss btn-secondary" data-run-status-dismiss title="Clear dashboard status only — does not cancel GitHub Actions">Dismiss</button>`;
+}
+
 function buildProjectScopeMessage(status, { justFinished = false, projectId = getScope().projectId } = {}) {
   const project = projects.find((p) => p.id === projectId);
   const name = escapeHtml(project?.name ?? "this project");
@@ -551,15 +555,16 @@ function buildProjectScopeMessage(status, { justFinished = false, projectId = ge
 
   if (status?.running) {
     const scope = escapeHtml(urlScopeLabel(status.url_ids, projectId));
+    const dismiss = runStatusDismissHtml();
     if (status.state === "pending") {
       return {
         spinner: true,
-        html: `Lighthouse test is starting for ${scope}…${ghLink}`,
+        html: `Lighthouse test is starting for ${scope}…${ghLink}${dismiss}`,
       };
     }
     return {
       spinner: true,
-      html: `Lighthouse test is running for ${scope}…${ghLink}`,
+      html: `Lighthouse test is running for ${scope}…${ghLink}${dismiss}`,
     };
   }
 
@@ -716,9 +721,28 @@ function renderRunStatus(status) {
   const ghLink = githubRunLinkHtml(status);
   const message =
     status.state === "pending"
-      ? `Lighthouse test is starting for ${scope}…${ghLink}`
-      : `Lighthouse test is running for ${scope}…${ghLink}`;
+      ? `Lighthouse test is starting for ${scope}…${ghLink}${runStatusDismissHtml()}`
+      : `Lighthouse test is running for ${scope}…${ghLink}${runStatusDismissHtml()}`;
   el.innerHTML = `<span class="status-hint-spinner" aria-hidden="true"></span><span>${message}</span>`;
+}
+
+async function dismissRunStatus() {
+  const { projectId, urlId } = getScope();
+  if (!projectId) return;
+  try {
+    await api(`/api/projects/${encodeURIComponent(projectId)}/run-status`, {
+      method: "DELETE",
+    });
+    wasRunStatusActive = false;
+    cachedRunStatus = { running: false };
+    if (urlId) {
+      renderRunStatus(cachedRunStatus);
+    } else {
+      renderProjectScopeView(cachedRunStatus);
+    }
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
 async function pollRunStatus(projectId) {
@@ -859,6 +883,12 @@ async function init() {
       void pollRunStatus(projectId);
     } catch (err) {
       alert(err.message);
+    }
+  });
+
+  document.querySelector("main")?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-run-status-dismiss]")) {
+      void dismissRunStatus();
     }
   });
 

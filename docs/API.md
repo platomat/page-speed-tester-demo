@@ -56,6 +56,7 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 | `PATCH` | `/api/projects/:id` | Admin | Projekt bearbeiten (Name, Cron, enabled, Keys, …) |
 | `DELETE` | `/api/projects/:id` | Admin | Projekt löschen |
 | `GET` | `/api/projects/:id/run-status` | Session + Zugriff | Laufstatus (KV) für Dashboard-Polling |
+| `DELETE` | `/api/projects/:id/run-status` | Session + Zugriff | Laufstatus zurücksetzen (z. B. nach abgebrochenem GH-Lauf); bricht GitHub **nicht** ab |
 | `POST` | `/api/projects/:id/trigger` | Session + Zugriff | Lighthouse-Lauf für gesamtes Projekt starten |
 | `POST` | `/api/projects/:id/urls/:url_id/trigger` | Session + Zugriff | Lighthouse-Lauf für eine URL |
 

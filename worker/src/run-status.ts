@@ -143,3 +143,24 @@ export async function getRunStatus(
     url_ids: record.url_ids ?? [],
   });
 }
+
+/** Clears stuck run status (e.g. after a cancelled GitHub Actions run). Does not cancel GH. */
+export async function resetRunStatus(
+  request: Request,
+  env: Env,
+  user: User,
+  projectId: string
+): Promise<Response> {
+  const access = await requireProjectAccess(request, env, user, projectId);
+  if (access instanceof Response) return access;
+
+  const project = await env.DB.prepare(`SELECT id FROM projects WHERE id = ?`)
+    .bind(projectId)
+    .first();
+  if (!project) {
+    return json(request, env, { error: "Project not found" }, 404);
+  }
+
+  await env.KV.delete(kvKey(projectId));
+  return json(request, env, { running: false, status: "reset" });
+}

@@ -38,6 +38,7 @@ import {
   getRunStatus,
   registerRunCompleted,
   registerRunStarted,
+  resetRunStatus,
 } from "./run-status";
 import {
   assignUserProject,
@@ -127,6 +128,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   if (runStatusMatch && method === "GET") {
     if (!user) return json(request, env, { error: "Unauthorized" }, 401);
     return getRunStatus(request, env, user, decodeURIComponent(runStatusMatch[1]));
+  }
+  if (runStatusMatch && method === "DELETE") {
+    if (!user) return json(request, env, { error: "Unauthorized" }, 401);
+    return resetRunStatus(request, env, user, decodeURIComponent(runStatusMatch[1]));
   }
 
   const triggerMatch = path.match(/^\/api\/projects\/([^/]+)\/trigger$/);
