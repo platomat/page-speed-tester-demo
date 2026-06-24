@@ -696,4 +696,4 @@ Logs unter **Actions → fehlgeschlagener Run**.
 
 ---
 
-Siehe auch `[README.md](../README.md)` für API-Referenz und Architektur.
+Siehe auch `[README.md](../README.md)` für Architektur und `[API.md](API.md)` für die Worker-API.

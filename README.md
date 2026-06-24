@@ -163,26 +163,7 @@ Worker-Cron alle **15 Minuten** prüft pro Projekt den konfigurierten Ausdruck (
 
 Login erforderlich. Admins sehen **Admin**-Link für Projekte, URLs, User und Zuweisungen.
 
-## API
-
-| Endpoint | Auth | Beschreibung |
-| -------- | ---- | ------------ |
-| `POST /api/auth/login` | — | Login → Session-Cookie |
-| `POST /api/auth/logout` | Session | Logout |
-| `GET /api/auth/me` | Session | Aktueller User |
-| `POST /api/auth/bootstrap` | — | Erster Admin (nur wenn keine Users) |
-| `GET /api/projects` | Session | Projekte (User: nur zugewiesene) |
-| `POST /api/projects` | Admin | Projekt anlegen |
-| `GET/POST/PATCH/DELETE /api/projects/:id/urls` | Admin / Session | URL-CRUD |
-| `POST /api/projects/:id/trigger` | Session + Zugriff | Lighthouse-Lauf starten |
-| `GET /api/public/trigger/:id?key=` | Access key | Lighthouse-Lauf ohne Login |
-| `GET /api/metrics?project_id=&url_id=&strategy=` | Session | Metriken-Zeitreihe |
-| `GET /api/reports?project_id=&url_id=` | Session | Berichtsliste |
-| `GET /api/reports?key=` | Session | Lighthouse JSON |
-| `GET /api/internal/projects/:id/urls` | Bearer `WORKER_API_SECRET` | Für GitHub Actions |
-| `POST /api/runs` | Bearer `WORKER_API_SECRET` | Metrik eintragen |
-| `GET /api/users` … | Admin | User-Verwaltung |
-
+**API-Referenz:** [`docs/API.md`](docs/API.md)
 
 ## Lokale Entwicklung
 

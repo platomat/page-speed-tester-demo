@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg aria-label="Page Speed" role="img" version="1.1" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
  <rect width="32" height="32" rx="7" fill="#0f1419"/>
- <path d="m4.0037 22.034a11.996 12.069 0 0 1 23.993 0" fill="none" stroke="#e8ecf3" stroke-linecap="round"/>
+ <path d="m4.0037 22.034a11.996 12.069 0 0 1 23.993 0" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.25"/>
  <g transform="matrix(1.5704 0 0 1.5447 -9.2973 -13.07)" stroke-width=".64205">
-  <ellipse cx="16.064" cy="22.703" rx="2.5471" ry="2.5895" fill="#3b82f6"/>
-  <line x1="16.064" x2="20.064" y1="22.703" y2="14.156" stroke="#6ca1f8" stroke-linecap="round" stroke-width="2.5682"/>
+  <path d="m19.192 17.315-5.2884 4.1332a2.5471 2.5895 0.013022 0 0 0.93231 3.5373 2.5471 2.5895 0.013022 0 0 3.4794-0.94782z" fill="#6ca1f8" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".32103" style="paint-order:normal"/>
  </g>
  <g transform="matrix(1.0906 0 0 1.0972 -1.2631 -1.5277)" stroke-linecap="round" stroke-width="5.4852">
   <line x1="4.8534" x2="4.1471" y1="15.592" y2="15.169" stroke="#f63b3b"/>
