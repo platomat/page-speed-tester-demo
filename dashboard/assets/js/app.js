@@ -346,13 +346,15 @@ function renderLatest(desktopRuns, mobileRuns) {
     return;
   }
   container.innerHTML = `
-    <div class="latest-group">
-      <h2 class="latest-heading">Latest · Desktop</h2>
-      ${renderMetricCards(desktopRuns, "Desktop")}
-    </div>
-    <div class="latest-group">
-      <h2 class="latest-heading">Latest · Mobile</h2>
-      ${renderMetricCards(mobileRuns, "Mobile")}
+    <div class="latest-row">
+      <div class="latest-group">
+        <h2 class="latest-heading">Latest <span class="chart-device">Desktop</span></h2>
+        ${renderMetricCards(desktopRuns, "Desktop")}
+      </div>
+      <div class="latest-group">
+        <h2 class="latest-heading">Latest <span class="chart-device">Mobile</span></h2>
+        ${renderMetricCards(mobileRuns, "Mobile")}
+      </div>
     </div>`;
 }
 
