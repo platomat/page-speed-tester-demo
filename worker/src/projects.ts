@@ -28,6 +28,20 @@ async function deleteRunObjects(
   await Promise.all(reportKeys.map((key) => env.REPORTS.delete(key)));
 }
 
+/** Remove all Lighthouse JSON objects for a project (D1 keys + any orphans under the prefix). */
+async function deleteAllProjectReportsFromR2(env: Env, projectId: string): Promise<void> {
+  const reportKeys = await reportKeysForProject(env, projectId);
+  await deleteRunObjects(env, reportKeys);
+
+  const prefix = `reports/${projectId}/`;
+  let cursor: string | undefined;
+  do {
+    const listing = await env.REPORTS.list({ prefix, limit: 100, cursor });
+    await Promise.all(listing.objects.map((obj) => env.REPORTS.delete(obj.key)));
+    cursor = listing.truncated ? listing.cursor : undefined;
+  } while (cursor);
+}
+
 async function reportKeysForUrl(
   env: Env,
   projectId: string,
@@ -256,8 +270,7 @@ export async function deleteProject(
 ): Promise<Response> {
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
-  const reportKeys = await reportKeysForProject(env, projectId);
-  await deleteRunObjects(env, reportKeys);
+  await deleteAllProjectReportsFromR2(env, projectId);
   await env.DB.prepare(`DELETE FROM urls WHERE project_id = ?`).bind(projectId).run();
   await env.DB.prepare(`DELETE FROM project_users WHERE project_id = ?`).bind(projectId).run();
   await env.DB.prepare(`DELETE FROM projects WHERE id = ?`).bind(projectId).run();

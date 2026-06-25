@@ -2,6 +2,8 @@ let projects = [];
 let users = [];
 let adminMessageTimer = null;
 
+const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+
 function updateCronHint() {
   const tz = getInstanceTimezone();
   const hint = document.getElementById("cron-hint");
@@ -341,7 +343,7 @@ async function loadProjects(selectProjectId) {
       </td>
       <td class="actions-cell">
         <button type="button" class="btn-secondary btn-sm" data-action="save-project">Save</button>
-        <button type="button" class="btn-danger btn-sm" data-action="delete-project">Delete</button>
+        <button type="button" class="icon-btn btn-danger btn-sm" data-action="delete-project" title="Delete project" aria-label="Delete project">${ICON_DELETE}</button>
       </td>
     </tr>`
     )
@@ -375,7 +377,7 @@ async function loadUrls() {
       <td><input type="checkbox" ${u.enabled ? "checked" : ""} data-field="enabled" /></td>
       <td class="actions-cell">
         <button type="button" class="btn-secondary btn-sm" data-action="save-url">Save</button>
-        <button type="button" class="btn-danger btn-sm" data-action="delete-url">Delete</button>
+        <button type="button" class="icon-btn btn-danger btn-sm" data-action="delete-url" title="Delete URL" aria-label="Delete URL">${ICON_DELETE}</button>
       </td>
     </tr>`
     )
