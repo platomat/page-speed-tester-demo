@@ -219,7 +219,10 @@ function reportJsonUrl(reportKey) {
     });
     return `${API_URL}/api/public/share/report?${params}`;
   }
-  return `${API_URL}${reportKeyApiPath(reportKey)}`;
+  const url = new URL(`${API_URL}${reportKeyApiPath(reportKey)}`);
+  const token = getSessionToken();
+  if (token) url.searchParams.set("session_token", token);
+  return url.toString();
 }
 
 function reportDetailUrl(reportKey) {

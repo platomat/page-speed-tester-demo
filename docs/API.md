@@ -97,7 +97,7 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 | ------- | ---- | ---- | ------------ |
 | `GET` | `/api/metrics?project_id=&url_id=&strategy=` | Session + Zugriff | Metriken-Zeitreihe (`strategy`: `desktop` \| `mobile`) |
 | `GET` | `/api/reports?project_id=&url_id=` | Session + Zugriff | Berichtsliste |
-| `GET` | `/api/reports?key=` | Session + Zugriff | Lighthouse-JSON zu `report_key` |
+| `GET` | `/api/reports?key=` | Session + Zugriff | Lighthouse-JSON zu `report_key`. Session auch per Query `session_token` (GET, z. B. neuer Tab für Raw JSON). |
 | `GET` | `/api/reports/:project_id/:filename` | Session + Zugriff | Lighthouse-JSON (Pfad aus R2-Key) |
 | `DELETE` | `/api/reports` | Session + Zugriff | Ausgewählte Berichte löschen (Body mit Keys) |
 

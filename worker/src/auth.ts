@@ -54,6 +54,16 @@ export function getSessionId(request: Request): string | null {
     const token = auth.slice(7).trim();
     if (token) return token;
   }
+  // Allow session_token on GET for opening report JSON in a new browser tab
+  // (no Authorization header; cookie may not cross Pages ↔ Worker origins).
+  if (request.method === "GET") {
+    try {
+      const queryToken = new URL(request.url).searchParams.get("session_token")?.trim();
+      if (queryToken) return queryToken;
+    } catch {
+      // ignore
+    }
+  }
   const cookie = request.headers.get("Cookie") ?? "";
   const match = cookie.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
   return match ? match[1] : null;
