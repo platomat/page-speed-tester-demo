@@ -413,7 +413,7 @@ async function reconcileSyncResult(
   if (upToDate) {
     const healed: UpstreamSyncResult = {
       status: "success",
-      message: "Upstream merged (repository is up to date)",
+      message: "Upstream merged",
       sha: last.sha ?? null,
       github_run_id: last.github_run_id ?? null,
       updated_at: new Date().toISOString(),
