@@ -14,8 +14,12 @@ import {
   resolveReportObject,
 } from "./report-storage";
 
-/** Bucket name configured on the REPORTS binding (see wrangler.toml.template). */
-const REPORTS_BUCKET_NAME = "page-speed-tester-reports";
+/** Default bucket name on the REPORTS binding; real value comes from env (see generate-wrangler). */
+const DEFAULT_REPORTS_BUCKET_NAME = "page-speed-tester-reports";
+
+function reportsBucketName(env: Env): string {
+  return env.REPORTS_BUCKET_NAME?.trim() || DEFAULT_REPORTS_BUCKET_NAME;
+}
 
 async function deleteRunObjects(
   env: Env,
@@ -530,11 +534,12 @@ export async function getReportJson(
     const runInDb = await env.DB.prepare(`SELECT 1 FROM runs WHERE report_key = ?`)
       .bind(normalized)
       .first();
+    const bucketName = reportsBucketName(env);
     const debug = await diagnoseReportLookup(
       env,
       normalized,
       parts.projectId,
-      REPORTS_BUCKET_NAME
+      bucketName
     );
     const wiringLikelyWrong = !debug.bucket_has_any_reports;
     return json(
@@ -547,7 +552,7 @@ export async function getReportJson(
         hint: !runInDb
           ? "No run record exists for this report_key."
           : wiringLikelyWrong
-            ? `The Worker R2 binding (bucket "${REPORTS_BUCKET_NAME}") sees no objects under reports/ at all, yet the run is registered. The deployed binding reads a DIFFERENT bucket than GitHub Actions uploads to. Check: (1) R2_BUCKET secret equals binding bucket_name, (2) same Cloudflare account, (3) bucket jurisdiction — if R2_ENDPOINT contains ".eu." set R2_JURISDICTION=eu in the Worker build vars and redeploy.`
+            ? `The Worker R2 binding (bucket "${bucketName}") sees no objects under reports/ at all, yet the run is registered. The deployed binding reads a DIFFERENT bucket than GitHub Actions uploads to. Check: (1) R2_BUCKET secret equals binding bucket_name (set R2_BUCKET_NAME build var if your bucket differs from the default), (2) same Cloudflare account, (3) bucket jurisdiction — if R2_ENDPOINT contains ".eu." set R2_JURISDICTION=eu in the Worker build vars and redeploy.`
             : "Run is registered and the bucket has other reports, but not this exact key — likely a report_key/slug mismatch. See debug.sample_keys for what the binding actually stores.",
         debug,
       },
@@ -688,7 +693,7 @@ export async function insertRun(
               env,
               reportKey,
               payload.project_id,
-              REPORTS_BUCKET_NAME
+              reportsBucketName(env)
             ),
           }),
     },

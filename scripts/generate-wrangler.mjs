@@ -62,9 +62,12 @@ function substitute(template, vars) {
   return out.trimEnd() + "\n";
 }
 
-function workerVarsSection(instanceRole) {
-  if (!instanceRole) return "";
-  return `[vars]\nPST_INSTANCE_ROLE = ${JSON.stringify(instanceRole)}\n`;
+function workerVarsSection(instanceRole, reportsBucket) {
+  // Always expose the configured bucket name so the Worker can report it in
+  // diagnostics (the R2 binding does not expose its own bucket name at runtime).
+  const lines = [`REPORTS_BUCKET_NAME = ${JSON.stringify(reportsBucket)}`];
+  if (instanceRole) lines.push(`PST_INSTANCE_ROLE = ${JSON.stringify(instanceRole)}`);
+  return `[vars]\n${lines.join("\n")}\n`;
 }
 
 function r2JurisdictionLine(jurisdiction) {
@@ -76,6 +79,7 @@ await loadDotEnv();
 
 const instanceRole = process.env.PST_INSTANCE_ROLE?.trim().toLowerCase() ?? "";
 const r2Jurisdiction = process.env.R2_JURISDICTION?.trim().toLowerCase() ?? "";
+const r2BucketName = process.env.R2_BUCKET_NAME?.trim() || "page-speed-tester-reports";
 
 const vars = {
   WORKER_NAME: process.env.WORKER_NAME?.trim() || "page-speed-tester-api",
@@ -83,7 +87,8 @@ const vars = {
   D1_DATABASE_ID: requireEnv("D1_DATABASE_ID"),
   KV_NAMESPACE_ID: requireEnv("KV_NAMESPACE_ID"),
   CRON_EXPRESSION: process.env.CRON_EXPRESSION?.trim() || "*/5 * * * *",
-  WORKER_VARS_SECTION: workerVarsSection(instanceRole),
+  R2_BUCKET_NAME: r2BucketName,
+  WORKER_VARS_SECTION: workerVarsSection(instanceRole, r2BucketName),
   R2_JURISDICTION_LINE: r2JurisdictionLine(r2Jurisdiction),
 };
 
@@ -92,4 +97,6 @@ const toml = substitute(template, vars);
 await writeFile(outputPath, toml, "utf8");
 
 const roleNote = instanceRole ? `, PST_INSTANCE_ROLE=${instanceRole}` : "";
-console.log(`generate-wrangler: wrote ${outputPath} (name=${vars.WORKER_NAME}${roleNote})`);
+console.log(
+  `generate-wrangler: wrote ${outputPath} (name=${vars.WORKER_NAME}, db=${vars.D1_DATABASE_NAME}, r2=${r2BucketName}${roleNote})`
+);

@@ -13,6 +13,11 @@ export interface Env {
   /** Optional comma-separated dashboard origins for CORS (full URLs). */
   DASHBOARD_ORIGIN?: string;
   /**
+   * Configured R2 bucket name on the REPORTS binding, written to [vars] by
+   * generate-wrangler. Used only for diagnostics (the binding does not expose it).
+   */
+  REPORTS_BUCKET_NAME?: string;
+  /**
    * Set to `upstream` on the public template/demo instance (the source repo others sync from).
    * Hides upstream sync in Admin and disables sync API on that Worker.
    */

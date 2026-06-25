@@ -69,7 +69,7 @@ In Cloudflare Pages: **Settings → Environment variables →** Typ **Build** (n
 | Custom Domain (alternativ)                          | `https://bucket.page-speed-tester.mydomain.tld`    |
 
 
-Bucket-Name: `page-speed-tester-reports`
+Bucket-Name: `page-speed-tester-reports` (Default). Weicht der Bucket ab (z. B. Demo `page-speed-tester-reports-demo`), Build-Variable **`R2_BUCKET_NAME`** am Worker setzen — sie **muss** mit dem GitHub-Secret `R2_BUCKET` übereinstimmen, sonst liest das Worker-Binding einen anderen Bucket (Symptom: Upload ok, aber Report-Ansicht „Report not found“ mit `objects_under_project_prefix: 0`).
 
 > **Wichtig — Jurisdiction:** Wurde der Bucket mit einer **Jurisdiction** (z. B. **EU**) angelegt, enthält der Endpoint `.eu.` (`…eu.r2.cloudflarestorage.com`). Dann **muss** das Worker-R2-Binding dieselbe Jurisdiction nutzen, sonst liest der Worker einen **anderen** (leeren) Bucket gleichen Namens — typisches Symptom: Upload erfolgreich und Datei im Dashboard sichtbar, aber Report-Ansicht meldet „Report not found“. Lösung: Build-Variable **`R2_JURISDICTION=eu`** am Worker setzen (siehe Build-Variablen-Tabelle) und neu deployen. Das Script schreibt dann `jurisdiction = "eu"` ins R2-Binding.
 
@@ -240,6 +240,7 @@ Unter **Workers → dein Worker → Settings → Build** (nicht Runtime) **→**
 | `KV_NAMESPACE_ID` | Text | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID                                            |
 | `WORKER_NAME`     | Text | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
 | `D1_DATABASE_NAME` | Text | optional | DB-Name nur falls **abweichend** vom Default `page-speed-tester-db` (z. B. Demo: `page-speed-tester-db-demo`). Wird in `wrangler.toml` geschrieben; Migrationen laufen ohnehin über das Binding `DB`. |
+| `R2_BUCKET_NAME` | Text | optional | R2-Bucket-Name nur falls **abweichend** vom Default `page-speed-tester-reports` (z. B. Demo: `page-speed-tester-reports-demo`). **Muss exakt dem GitHub-Secret `R2_BUCKET` entsprechen**, sonst liest der Worker einen anderen Bucket → „Report not found“. |
 | `CRON_EXPRESSION` | Text | optional | `*/5` * * * *                                                                                |
 | `R2_JURISDICTION` | Text | **nur bei Jurisdiction-Bucket** | `eu` (oder `fedramp`) — nur setzen, wenn der R2-Bucket mit Jurisdiction angelegt wurde (Endpoint enthält `.eu.`). Script schreibt `jurisdiction` ins R2-Binding. |
 | `PST_INSTANCE_ROLE` | Text | **nur Demo-Worker** | `upstream` — wird in `wrangler.toml` `[vars]` geschrieben; Kunden-Instanzen **weg** lassen |
