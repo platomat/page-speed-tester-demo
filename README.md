@@ -4,6 +4,10 @@ Self-hosted **Lighthouse**-Monitoring: Du betreibst eine eigene Instanz auf **Cl
 
 Typischer Einsatz: mehrere Websites oder Kundenprojekte überwachen, Metriken in Charts vergleichen, Berichte als JSON ablegen, Läufe per Cron oder per Klick auslösen.
 
+<p align="center">
+  <img src="dashboard/assets/img/favicon.svg" alt="Page Speed Tester" width="96">
+</p>
+
 ---
 
 ## Was das Projekt kann
