@@ -176,8 +176,10 @@
                 <input type="checkbox" id="instance-cron-enabled" name="cron_enabled" />
               </div>
               <p class="settings-field-hint">
-                When enabled, the Worker checks every 15&nbsp;minutes which projects are due and
-                triggers GitHub Actions. Manual <strong>Run test</strong> still works when disabled.
+                When enabled, the Worker cron (interval from build env
+                <code>CRON_EXPRESSION</code> → <code>wrangler.toml</code>) checks which projects are
+                due and triggers GitHub Actions. Manual <strong>Run test</strong> still works when
+                disabled.
               </p>
 
               <label for="instance-store-screenshots" class="settings-label">Report screenshots</label>
