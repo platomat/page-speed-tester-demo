@@ -141,9 +141,9 @@
   min-height: 2.25rem;
 }
 
-.settings-control input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
+input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
   margin: 0;
   padding: 0;
   accent-color: var(--accent);
