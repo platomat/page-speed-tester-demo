@@ -8,14 +8,44 @@ import { json } from "./http";
 import { ensureShareToken, normalizeShareToken } from "./share";
 import { slugifyId } from "./slug";
 
+async function deleteRunObjects(
+  env: Env,
+  reportKeys: string[]
+): Promise<void> {
+  await Promise.all(reportKeys.map((key) => env.REPORTS.delete(key)));
+}
+
+async function reportKeysForUrl(
+  env: Env,
+  projectId: string,
+  urlId: string
+): Promise<string[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT report_key FROM runs WHERE project_id = ? AND url_id = ?`
+  )
+    .bind(projectId, urlId)
+    .all<{ report_key: string }>();
+  return (results ?? []).map((r) => r.report_key);
+}
+
+async function reportKeysForProject(env: Env, projectId: string): Promise<string[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT report_key FROM runs WHERE project_id = ?`
+  )
+    .bind(projectId)
+    .all<{ report_key: string }>();
+  return (results ?? []).map((r) => r.report_key);
+}
+
 async function resolveUrlId(
   env: Env,
   projectId: string,
   requestedId: string | undefined,
-  name: string
+  name: string,
+  url: string
 ): Promise<{ id: string } | { error: string; status: number }> {
   const manual = requestedId?.trim();
-  const base = slugifyId(manual || `${projectId}-${name}`);
+  const base = slugifyId(manual || `${projectId}-${url || name}`);
   if (!base) {
     return { error: "Could not derive a valid URL id", status: 400 };
   }
@@ -213,6 +243,8 @@ export async function deleteProject(
 ): Promise<Response> {
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
+  const reportKeys = await reportKeysForProject(env, projectId);
+  await deleteRunObjects(env, reportKeys);
   await env.DB.prepare(`DELETE FROM urls WHERE project_id = ?`).bind(projectId).run();
   await env.DB.prepare(`DELETE FROM project_users WHERE project_id = ?`).bind(projectId).run();
   await env.DB.prepare(`DELETE FROM projects WHERE id = ?`).bind(projectId).run();
@@ -248,7 +280,7 @@ export async function createProjectUrl(
   if (!body.name || !body.url) {
     return json(request, env, { error: "name and url required" }, 400);
   }
-  const resolved = await resolveUrlId(env, projectId, body.id, body.name);
+  const resolved = await resolveUrlId(env, projectId, body.id, body.name, body.url);
   if ("error" in resolved) {
     return json(request, env, { error: resolved.error }, resolved.status);
   }
@@ -299,6 +331,8 @@ export async function deleteProjectUrl(
 ): Promise<Response> {
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
+  const reportKeys = await reportKeysForUrl(env, projectId, urlId);
+  await deleteRunObjects(env, reportKeys);
   await env.DB.prepare(`DELETE FROM urls WHERE id = ? AND project_id = ?`)
     .bind(urlId, projectId)
     .run();
