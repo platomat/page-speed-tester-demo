@@ -13,6 +13,7 @@ Typischer Einsatz: mehrere Websites oder Kundenprojekte überwachen, Metriken in
 - **Dashboard** mit Login, Charts, Berichtsliste und Detailansicht einzelner Lighthouse-JSONs
 - **Manueller Start** („Run test“) und **Cron** pro Projekt
 - **Benutzer & Rechte:** Admins verwalten alles; normale User sehen nur zugewiesene Projekte
+- **Login Rate-Limit:** Schutz vor Brute-Force — fehlgeschlagene Anmeldungen lösen progressives Backoff aus (1s → 2s → 4s …, Deckel 15 Min.), getrackt pro IP und Login in KV; nach erfolgreichem Login wird der Zähler zurückgesetzt
 - **Share-Link:** Schreibgeschützte Dashboard-Ansicht für Gäste — Metriken, Charts und Berichte eines Projekts ohne Login (eigener Share-Key, rotierbar in der Admin-UI)
 - **Trigger-URL:** Lighthouse-Lauf per Link oder curl auslösen — ohne Login, mit Access-Key pro Projekt (getrennt vom Share-Key; Rate-Limit: max. 1 Lauf alle 5 Minuten)
 - **Speicher:** Metriken in **D1**, vollständige Berichte in **R2** — nichts Kritisches im Git-Repo
