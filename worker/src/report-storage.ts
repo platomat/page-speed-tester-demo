@@ -29,6 +29,52 @@ export function reportKeyParts(reportKey: string): { projectId: string; filename
   return { projectId: match[1], filename: match[2] };
 }
 
+export interface ReportLookupDiagnostics {
+  /** Worker binding the lookup used. */
+  binding: string;
+  /** Configured bucket name on that binding. */
+  binding_bucket: string;
+  project_prefix: string;
+  /** Objects the binding sees under reports/<projectId>/. */
+  objects_under_project_prefix: number;
+  /** First few keys the binding actually sees (for slug/key drift checks). */
+  sample_keys: string[];
+  /** Whether the binding sees ANY object under reports/. */
+  bucket_has_any_reports: boolean;
+  /** Whether the exact requested key is visible to the binding right now. */
+  exact_key_visible_to_binding: boolean;
+}
+
+/**
+ * Reports what the Worker R2 binding actually sees, to distinguish a real
+ * "missing object" from a binding↔bucket wiring problem (wrong bucket name,
+ * wrong jurisdiction, or different account than the S3 upload writes to).
+ */
+export async function diagnoseReportLookup(
+  env: Env,
+  reportKey: string,
+  projectId: string,
+  bindingBucket: string
+): Promise<ReportLookupDiagnostics> {
+  const normalized = normalizeReportKey(reportKey);
+  const projectPrefix = `reports/${projectId}/`;
+  const [projectListing, rootListing, head] = await Promise.all([
+    env.REPORTS.list({ prefix: projectPrefix, limit: 100 }),
+    env.REPORTS.list({ prefix: "reports/", limit: 1 }),
+    env.REPORTS.head(normalized),
+  ]);
+  return {
+    binding: "REPORTS",
+    binding_bucket: bindingBucket,
+    project_prefix: projectPrefix,
+    objects_under_project_prefix: projectListing.objects.length,
+    sample_keys: projectListing.objects.slice(0, 5).map((o) => o.key),
+    bucket_has_any_reports: rootListing.objects.length > 0,
+    exact_key_visible_to_binding:
+      head != null || projectListing.objects.some((o) => o.key === normalized),
+  };
+}
+
 /** Load Lighthouse JSON from R2; falls back to same run stamp + strategy if identifier slug differs. */
 export async function resolveReportObject(
   env: Env,

@@ -14,7 +14,7 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "REPORTS"
 bucket_name = "page-speed-tester-reports"
-
+{{R2_JURISDICTION_LINE}}
 [[kv_namespaces]]
 binding = "KV"
 id = "{{KV_NAMESPACE_ID}}"

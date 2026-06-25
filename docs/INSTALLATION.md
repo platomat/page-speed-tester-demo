@@ -64,11 +64,14 @@ In Cloudflare Pages: **Settings → Environment variables →** Typ **Build** (n
 | Variante                                            | URL                                                |
 | --------------------------------------------------- | -------------------------------------------------- |
 | Account-Endpoint (**empfohlen** für GitHub Actions) | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
+| Account-Endpoint **EU-Jurisdiction**                | `https://YOUR_ACCOUNT_ID.eu.r2.cloudflarestorage.com` |
 | Custom Domain                                       | `https://bucket-page-speed-tester-reports.mydomain.tld`   |
 | Custom Domain (alternativ)                          | `https://bucket.page-speed-tester.mydomain.tld`    |
 
 
 Bucket-Name: `page-speed-tester-reports`
+
+> **Wichtig — Jurisdiction:** Wurde der Bucket mit einer **Jurisdiction** (z. B. **EU**) angelegt, enthält der Endpoint `.eu.` (`…eu.r2.cloudflarestorage.com`). Dann **muss** das Worker-R2-Binding dieselbe Jurisdiction nutzen, sonst liest der Worker einen **anderen** (leeren) Bucket gleichen Namens — typisches Symptom: Upload erfolgreich und Datei im Dashboard sichtbar, aber Report-Ansicht meldet „Report not found“. Lösung: Build-Variable **`R2_JURISDICTION=eu`** am Worker setzen (siehe Build-Variablen-Tabelle) und neu deployen. Das Script schreibt dann `jurisdiction = "eu"` ins R2-Binding.
 
 ---
 
@@ -237,6 +240,7 @@ Unter **Workers → dein Worker → Settings → Build** (nicht Runtime) **→**
 | `KV_NAMESPACE_ID` | Text | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID                                            |
 | `WORKER_NAME`     | Text | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
 | `CRON_EXPRESSION` | Text | optional | `*/5` * * * *                                                                                |
+| `R2_JURISDICTION` | Text | **nur bei Jurisdiction-Bucket** | `eu` (oder `fedramp`) — nur setzen, wenn der R2-Bucket mit Jurisdiction angelegt wurde (Endpoint enthält `.eu.`). Script schreibt `jurisdiction` ins R2-Binding. |
 | `PST_INSTANCE_ROLE` | Text | **nur Demo-Worker** | `upstream` — wird in `wrangler.toml` `[vars]` geschrieben; Kunden-Instanzen **weg** lassen |
 
 

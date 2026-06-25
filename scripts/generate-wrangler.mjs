@@ -67,9 +67,15 @@ function workerVarsSection(instanceRole) {
   return `[vars]\nPST_INSTANCE_ROLE = ${JSON.stringify(instanceRole)}\n`;
 }
 
+function r2JurisdictionLine(jurisdiction) {
+  if (!jurisdiction) return "";
+  return `jurisdiction = ${JSON.stringify(jurisdiction)}\n`;
+}
+
 await loadDotEnv();
 
 const instanceRole = process.env.PST_INSTANCE_ROLE?.trim().toLowerCase() ?? "";
+const r2Jurisdiction = process.env.R2_JURISDICTION?.trim().toLowerCase() ?? "";
 
 const vars = {
   WORKER_NAME: process.env.WORKER_NAME?.trim() || "page-speed-tester-api",
@@ -77,6 +83,7 @@ const vars = {
   KV_NAMESPACE_ID: requireEnv("KV_NAMESPACE_ID"),
   CRON_EXPRESSION: process.env.CRON_EXPRESSION?.trim() || "*/5 * * * *",
   WORKER_VARS_SECTION: workerVarsSection(instanceRole),
+  R2_JURISDICTION_LINE: r2JurisdictionLine(r2Jurisdiction),
 };
 
 const template = await readFile(templatePath, "utf8");

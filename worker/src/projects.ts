@@ -8,10 +8,14 @@ import { json } from "./http";
 import { ensureShareToken, normalizeShareToken } from "./share";
 import { slugifyId } from "./slug";
 import {
+  diagnoseReportLookup,
   normalizeReportKey,
   reportKeyParts,
   resolveReportObject,
 } from "./report-storage";
+
+/** Bucket name configured on the REPORTS binding (see wrangler.toml.template). */
+const REPORTS_BUCKET_NAME = "page-speed-tester-reports";
 
 async function deleteRunObjects(
   env: Env,
@@ -526,6 +530,13 @@ export async function getReportJson(
     const runInDb = await env.DB.prepare(`SELECT 1 FROM runs WHERE report_key = ?`)
       .bind(normalized)
       .first();
+    const debug = await diagnoseReportLookup(
+      env,
+      normalized,
+      parts.projectId,
+      REPORTS_BUCKET_NAME
+    );
+    const wiringLikelyWrong = !debug.bucket_has_any_reports;
     return json(
       request,
       env,
@@ -533,9 +544,12 @@ export async function getReportJson(
         error: "Report not found",
         report_key: normalized,
         run_registered: Boolean(runInDb),
-        hint: runInDb
-          ? "Run is registered in D1 but the JSON file is missing from R2. Verify GitHub Actions R2_BUCKET matches the Worker R2 binding."
-          : "No run record exists for this report_key.",
+        hint: !runInDb
+          ? "No run record exists for this report_key."
+          : wiringLikelyWrong
+            ? `The Worker R2 binding (bucket "${REPORTS_BUCKET_NAME}") sees no objects under reports/ at all, yet the run is registered. The deployed binding reads a DIFFERENT bucket than GitHub Actions uploads to. Check: (1) R2_BUCKET secret equals binding bucket_name, (2) same Cloudflare account, (3) bucket jurisdiction — if R2_ENDPOINT contains ".eu." set R2_JURISDICTION=eu in the Worker build vars and redeploy.`
+            : "Run is registered and the bucket has other reports, but not this exact key — likely a report_key/slug mismatch. See debug.sample_keys for what the binding actually stores.",
+        debug,
       },
       404
     );
@@ -669,7 +683,13 @@ export async function insertRun(
         ? {}
         : {
             warning:
-              "Run registered, but the report object was not yet visible via the Worker R2 binding. If reports fail to load, verify GitHub Actions R2_BUCKET matches the Worker REPORTS binding.",
+              "Run registered, but the report object was not yet visible via the Worker R2 binding. If reports keep failing to load, the binding likely reads a different bucket than the S3 upload (check R2_BUCKET name, Cloudflare account, and bucket jurisdiction).",
+            debug: await diagnoseReportLookup(
+              env,
+              reportKey,
+              payload.project_id,
+              REPORTS_BUCKET_NAME
+            ),
           }),
     },
     201
