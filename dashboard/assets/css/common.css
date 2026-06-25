@@ -10,6 +10,7 @@
   --good: #22c55e;
   --warn: #eab308;
   --bad: #802626;
+  --bad-hover: #ef4444;
 }
 
 * {
@@ -258,8 +259,8 @@ button[disabled] {
 
 .icon-btn.btn-danger:hover {
   background: rgba(239, 68, 68, 0.15);
-  border-color: var(--bad);
-  color: var(--bad);
+  border-color: var(--bad-hover);
+  color: var(--bad-hover);
 }
 
 table {
