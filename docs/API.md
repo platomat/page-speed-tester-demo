@@ -111,6 +111,7 @@ Projektweite Marker auf der Zeitachse der Charts (z. B. „Deploy v2.1“). Gelt
 | ------- | ---- | ---- | ------------ |
 | `GET` | `/api/projects/:id/annotations` | Session + Zugriff | Annotations des Projekts (aufsteigend nach `annotated_at`) |
 | `POST` | `/api/projects/:id/annotations` | Session + Zugriff | Anlegen. Body: `{ annotated_at (ISO), label, link? }` |
+| `PATCH` | `/api/projects/:id/annotations/:annotation_id` | Session + Zugriff | Bearbeiten. Body: `{ annotated_at (ISO), label, link? }` |
 | `DELETE` | `/api/projects/:id/annotations/:annotation_id` | Session + Zugriff | Löschen |
 
 `label` max. 200 Zeichen; `link` optional, muss `http(s)`-URL sein.

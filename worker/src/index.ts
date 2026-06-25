@@ -38,6 +38,7 @@ import {
   createAnnotation,
   deleteAnnotation,
   listAnnotations,
+  updateAnnotation,
 } from "./annotations";
 import { runScheduledProjects } from "./scheduler";
 import {
@@ -207,15 +208,16 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   const annotationItemMatch = path.match(
     /^\/api\/projects\/([^/]+)\/annotations\/([^/]+)$/
   );
-  if (annotationItemMatch && method === "DELETE") {
+  if (annotationItemMatch) {
     if (!user) return json(request, env, { error: "Unauthorized" }, 401);
-    return deleteAnnotation(
-      request,
-      env,
-      user,
-      decodeURIComponent(annotationItemMatch[1]),
-      decodeURIComponent(annotationItemMatch[2])
-    );
+    const projectId = decodeURIComponent(annotationItemMatch[1]);
+    const annotationId = decodeURIComponent(annotationItemMatch[2]);
+    if (method === "PATCH") {
+      return updateAnnotation(request, env, user, projectId, annotationId);
+    }
+    if (method === "DELETE") {
+      return deleteAnnotation(request, env, user, projectId, annotationId);
+    }
   }
 
   const internalMatch = path.match(/^\/api\/internal\/projects\/([^/]+)\/urls$/);

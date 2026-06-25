@@ -325,6 +325,8 @@ let cachedRunStatus = { running: false };
 let shareContext = null;
 /** @type {Array<{id: number, annotated_at: string, label: string, link: string|null, time: number}>} */
 let currentAnnotations = [];
+/** @type {number | null} */
+let editingAnnotationId = null;
 
 function isSharePage() {
   return document.getElementById("site-header")?.dataset.page === "share";
@@ -625,6 +627,34 @@ function prefillAnnotationTime() {
   at.value = local.toISOString().slice(0, 16);
 }
 
+function isoToLocalDateTimeInput(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+const ICON_EDIT = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+
+const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+
+function renderAnnotationEditItem(a) {
+  const atValue = escapeHtml(isoToLocalDateTimeInput(a.annotated_at));
+  const labelValue = escapeHtml(a.label);
+  const linkValue = a.link ? escapeHtml(a.link) : "";
+  return `<li class="annotation-item annotation-item-editing" id="annotation-item-${a.id}">
+    <form class="annotation-edit-form" data-annotation-edit="${a.id}">
+      <input type="datetime-local" name="at" value="${atValue}" required />
+      <input type="text" name="label" value="${labelValue}" maxlength="200" required />
+      <input type="url" name="link" value="${linkValue}" placeholder="Link (optional)" />
+      <div class="annotation-edit-actions">
+        <button type="submit" class="btn-sm">Save</button>
+        <button type="button" class="btn-sm btn-secondary" data-annotation-edit-cancel>Cancel</button>
+      </div>
+    </form>
+  </li>`;
+}
+
 function renderAnnotationsList(annotations) {
   const list = document.getElementById("annotations-list");
   if (!list) return;
@@ -633,17 +663,21 @@ function renderAnnotationsList(annotations) {
   } else {
     list.innerHTML = annotations
       .map((a) => {
+        if (!shareContext && editingAnnotationId === a.id) {
+          return renderAnnotationEditItem(a);
+        }
         const when = escapeHtml(formatDateTime(a.annotated_at, { seconds: true }));
         const link = a.link
           ? ` <a href="${escapeHtml(a.link)}" target="_blank" rel="noopener">↗</a>`
           : "";
-        const del = shareContext
+        const actions = shareContext
           ? ""
-          : `<button type="button" class="icon-btn btn-danger btn-sm" data-annotation-delete="${a.id}" title="Delete" aria-label="Delete annotation">${ICON_DELETE}</button>`;
+          : `<button type="button" class="icon-btn btn-sm" data-annotation-edit="${a.id}" title="Edit" aria-label="Edit annotation">${ICON_EDIT}</button>
+          <button type="button" class="icon-btn btn-danger btn-sm" data-annotation-delete="${a.id}" title="Delete" aria-label="Delete annotation">${ICON_DELETE}</button>`;
         return `<li class="annotation-item" id="annotation-item-${a.id}">
           <span class="annotation-when">${when}</span>
           <span class="annotation-label">${escapeHtml(a.label)}${link}</span>
-          ${del}
+          ${actions}
         </li>`;
       })
       .join("");
@@ -673,8 +707,6 @@ async function reloadAnnotations(projectId) {
 const ICON_DETAILS = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>`;
 
 const ICON_JSON = `<span class="json-label" aria-hidden="true">{}</span>`;
-
-const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
 function renderDeviceCell(report, deviceLabel) {
   if (!report) {
@@ -1084,6 +1116,7 @@ async function pollRunStatus(projectId) {
 }
 
 async function onScopeChange() {
+  editingAnnotationId = null;
   const snapshot = getScopeSnapshot();
   const { projectId, urlId } = snapshot;
   if (!projectId) return;
@@ -1251,16 +1284,66 @@ function initAnnotationForm() {
   }
 
   document.getElementById("annotations-list")?.addEventListener("click", async (event) => {
-    const btn = event.target.closest("[data-annotation-delete]");
-    if (!btn) return;
+    const editBtn = event.target.closest("[data-annotation-edit]");
+    if (editBtn && !editBtn.matches("form")) {
+      editingAnnotationId = Number(editBtn.dataset.annotationEdit);
+      renderAnnotationsList(currentAnnotations);
+      return;
+    }
+
+    const cancelBtn = event.target.closest("[data-annotation-edit-cancel]");
+    if (cancelBtn) {
+      editingAnnotationId = null;
+      renderAnnotationsList(currentAnnotations);
+      return;
+    }
+
+    const deleteBtn = event.target.closest("[data-annotation-delete]");
+    if (!deleteBtn) return;
     const { projectId } = getScope();
     if (!projectId) return;
     if (!confirm("Delete this annotation?")) return;
     try {
       await api(
-        `/api/projects/${encodeURIComponent(projectId)}/annotations/${encodeURIComponent(btn.dataset.annotationDelete)}`,
+        `/api/projects/${encodeURIComponent(projectId)}/annotations/${encodeURIComponent(deleteBtn.dataset.annotationDelete)}`,
         { method: "DELETE" }
       );
+      if (editingAnnotationId === Number(deleteBtn.dataset.annotationDelete)) {
+        editingAnnotationId = null;
+      }
+      await reloadAnnotations(projectId);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.getElementById("annotations-list")?.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-annotation-edit]");
+    if (!form) return;
+    event.preventDefault();
+    const { projectId } = getScope();
+    if (!projectId) return;
+    const annotationId = form.dataset.annotationEdit;
+    const annotatedAt = localDateTimeToIso(form.querySelector('[name="at"]')?.value);
+    const label = form.querySelector('[name="label"]')?.value.trim() ?? "";
+    const link = form.querySelector('[name="link"]')?.value.trim() ?? "";
+    if (!annotatedAt) {
+      alert("Please pick a valid date and time.");
+      return;
+    }
+    if (!label) {
+      alert("Please enter a label.");
+      return;
+    }
+    try {
+      await api(
+        `/api/projects/${encodeURIComponent(projectId)}/annotations/${encodeURIComponent(annotationId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ annotated_at: annotatedAt, label, link: link || undefined }),
+        }
+      );
+      editingAnnotationId = null;
       await reloadAnnotations(projectId);
     } catch (err) {
       alert(err.message);

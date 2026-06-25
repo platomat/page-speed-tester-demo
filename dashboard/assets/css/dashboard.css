@@ -459,7 +459,6 @@
 .annotation-form input[type="datetime-local"],
 .annotation-form input[type="text"],
 .annotation-form input[type="url"] {
-  font: inherit;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -507,6 +506,50 @@
 .annotation-item.annotation-item-highlight {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
+}
+
+.annotation-item-editing {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.annotation-edit-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+}
+
+.annotation-edit-form input[type="datetime-local"],
+.annotation-edit-form input[type="text"],
+.annotation-edit-form input[type="url"] {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.annotation-edit-form input[type="text"] {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.annotation-edit-form input[type="url"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.annotation-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.annotation-item .icon-btn + .icon-btn {
+  margin-left: 0;
 }
 
 .annotation-when {

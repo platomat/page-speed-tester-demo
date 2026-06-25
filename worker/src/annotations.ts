@@ -28,6 +28,29 @@ function normalizeLink(value: unknown): string | null {
   }
 }
 
+function parseAnnotationBody(body: {
+  annotated_at?: string;
+  label?: string;
+  link?: string;
+}): { ok: true; fields: { annotated_at: string; label: string; link: string | null } } | { ok: false; error: string } {
+  const annotatedAt = normalizeTimestamp(body.annotated_at);
+  if (!annotatedAt) {
+    return { ok: false, error: "Valid annotated_at timestamp required" };
+  }
+  const label = typeof body.label === "string" ? body.label.trim() : "";
+  if (!label) {
+    return { ok: false, error: "Label required" };
+  }
+  if (label.length > MAX_LABEL_LENGTH) {
+    return { ok: false, error: `Label too long (max ${MAX_LABEL_LENGTH})` };
+  }
+  const link = normalizeLink(body.link);
+  if (body.link && !link) {
+    return { ok: false, error: "Link must be a valid http(s) URL" };
+  }
+  return { ok: true, fields: { annotated_at: annotatedAt, label, link } };
+}
+
 export async function listAnnotations(
   request: Request,
   env: Env,
@@ -60,21 +83,11 @@ export async function createAnnotation(
     link?: string;
   };
 
-  const annotatedAt = normalizeTimestamp(body.annotated_at);
-  if (!annotatedAt) {
-    return json(request, env, { error: "Valid annotated_at timestamp required" }, 400);
+  const parsed = parseAnnotationBody(body);
+  if (!parsed.ok) {
+    return json(request, env, { error: parsed.error }, 400);
   }
-  const label = typeof body.label === "string" ? body.label.trim() : "";
-  if (!label) {
-    return json(request, env, { error: "Label required" }, 400);
-  }
-  if (label.length > MAX_LABEL_LENGTH) {
-    return json(request, env, { error: `Label too long (max ${MAX_LABEL_LENGTH})` }, 400);
-  }
-  const link = normalizeLink(body.link);
-  if (body.link && !link) {
-    return json(request, env, { error: "Link must be a valid http(s) URL" }, 400);
-  }
+  const { annotated_at: annotatedAt, label, link } = parsed.fields;
 
   const createdAt = new Date().toISOString();
   const result = await env.DB.prepare(
@@ -94,6 +107,55 @@ export async function createAnnotation(
     created_by: user.username,
   };
   return json(request, env, { annotation }, 201);
+}
+
+export async function updateAnnotation(
+  request: Request,
+  env: Env,
+  user: User,
+  projectId: string,
+  annotationId: string
+): Promise<Response> {
+  const access = await requireProjectAccess(request, env, user, projectId);
+  if (access instanceof Response) return access;
+
+  const id = Number(annotationId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return json(request, env, { error: "Invalid annotation id" }, 400);
+  }
+  const existing = await env.DB.prepare(
+    `SELECT id FROM annotations WHERE id = ? AND project_id = ?`
+  )
+    .bind(id, projectId)
+    .first();
+  if (!existing) {
+    return json(request, env, { error: "Annotation not found" }, 404);
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    annotated_at?: string;
+    label?: string;
+    link?: string;
+  };
+  const parsed = parseAnnotationBody(body);
+  if (!parsed.ok) {
+    return json(request, env, { error: parsed.error }, 400);
+  }
+  const { annotated_at: annotatedAt, label, link } = parsed.fields;
+
+  await env.DB.prepare(
+    `UPDATE annotations SET annotated_at = ?, label = ?, link = ? WHERE id = ? AND project_id = ?`
+  )
+    .bind(annotatedAt, label, link, id, projectId)
+    .run();
+
+  const annotation = await env.DB.prepare(
+    `SELECT id, project_id, annotated_at, label, link, created_at, created_by
+     FROM annotations WHERE id = ? AND project_id = ?`
+  )
+    .bind(id, projectId)
+    .first<Annotation>();
+  return json(request, env, { annotation });
 }
 
 export async function deleteAnnotation(
