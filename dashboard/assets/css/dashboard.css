@@ -499,6 +499,14 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
+  scroll-margin-top: 1rem;
+  scroll-margin-bottom: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.annotation-item.annotation-item-highlight {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .annotation-when {
@@ -552,4 +560,12 @@
   font-size: 0.75rem;
   word-break: break-all;
   margin-top: 0.25rem;
+}
+
+.annotation-tooltip-hint {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  color: var(--muted);
+  font-size: 0.7rem;
 }

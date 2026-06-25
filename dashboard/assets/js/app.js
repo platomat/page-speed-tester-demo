@@ -189,6 +189,45 @@ if (typeof Chart !== "undefined") {
   Chart.register(annotationsPlugin);
 }
 
+function findAnnotationHit(chart, offsetX, offsetY) {
+  const hits = chart.$annotationHits || [];
+  for (const hit of hits) {
+    if (
+      Math.abs(offsetX - hit.x) <= 5 &&
+      offsetY >= hit.top - 6 &&
+      offsetY <= hit.bottom + 4
+    ) {
+      return hit;
+    }
+  }
+  return null;
+}
+
+function scrollToAnnotationListEntries(anns) {
+  if (!anns?.length) return;
+  document.querySelector(".annotations-section")?.classList.remove("hidden");
+
+  document.querySelectorAll(".annotation-item-highlight").forEach((el) => {
+    el.classList.remove("annotation-item-highlight");
+  });
+
+  let firstEl = null;
+  for (const ann of anns) {
+    const el = document.getElementById(`annotation-item-${ann.id}`);
+    if (!el) continue;
+    el.classList.add("annotation-item-highlight");
+    if (!firstEl) firstEl = el;
+  }
+
+  firstEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  window.setTimeout(() => {
+    for (const ann of anns) {
+      document.getElementById(`annotation-item-${ann.id}`)?.classList.remove("annotation-item-highlight");
+    }
+  }, 2500);
+}
+
 function ensureAnnotationTooltip() {
   let el = document.getElementById("annotation-tooltip");
   if (!el) {
@@ -210,7 +249,7 @@ function annotationTooltipHtml(anns) {
         : "";
       return `<div class="annotation-tooltip-entry"><div class="annotation-tooltip-when">${when}</div><div class="annotation-tooltip-label">${label}</div>${link}</div>`;
     })
-    .join("");
+    .join("") + `<div class="annotation-tooltip-hint">Click to jump to list</div>`;
 }
 
 function attachAnnotationTooltip(chart) {
@@ -219,31 +258,30 @@ function attachAnnotationTooltip(chart) {
   canvas.dataset.annotationTooltip = "1";
 
   canvas.addEventListener("mousemove", (event) => {
-    const hits = chart.$annotationHits || [];
+    const found = findAnnotationHit(chart, event.offsetX, event.offsetY);
     const tip = ensureAnnotationTooltip();
-    let found = null;
-    for (const hit of hits) {
-      if (
-        Math.abs(event.offsetX - hit.x) <= 5 &&
-        event.offsetY >= hit.top - 6 &&
-        event.offsetY <= hit.bottom + 4
-      ) {
-        found = hit;
-        break;
-      }
-    }
     if (!found) {
       tip.classList.add("hidden");
+      canvas.style.cursor = "";
       return;
     }
     tip.innerHTML = annotationTooltipHtml(found.anns);
     tip.classList.remove("hidden");
     tip.style.left = `${event.clientX + 12}px`;
     tip.style.top = `${event.clientY + 12}px`;
+    canvas.style.cursor = "pointer";
   });
 
   canvas.addEventListener("mouseleave", () => {
     ensureAnnotationTooltip().classList.add("hidden");
+    canvas.style.cursor = "";
+  });
+
+  canvas.addEventListener("click", (event) => {
+    const found = findAnnotationHit(chart, event.offsetX, event.offsetY);
+    if (!found) return;
+    ensureAnnotationTooltip().classList.add("hidden");
+    scrollToAnnotationListEntries(found.anns);
   });
 }
 
@@ -602,7 +640,7 @@ function renderAnnotationsList(annotations) {
         const del = shareContext
           ? ""
           : `<button type="button" class="icon-btn btn-danger btn-sm" data-annotation-delete="${a.id}" title="Delete" aria-label="Delete annotation">${ICON_DELETE}</button>`;
-        return `<li class="annotation-item">
+        return `<li class="annotation-item" id="annotation-item-${a.id}">
           <span class="annotation-when">${when}</span>
           <span class="annotation-label">${escapeHtml(a.label)}${link}</span>
           ${del}
