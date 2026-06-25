@@ -1,6 +1,7 @@
 import type { Env } from "./env";
 import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./access-key";
 import { json } from "./http";
+import { getTimezone } from "./settings";
 
 export async function ensureShareToken(env: Env, projectId: string): Promise<string> {
   const row = await env.DB.prepare(`SELECT share_token FROM projects WHERE id = ?`)
@@ -66,9 +67,12 @@ export async function publicShareProject(
     .bind(projectId)
     .all<{ id: string; name: string; url: string }>();
 
+  const timezone = await getTimezone(env);
+
   return json(request, env, {
     project,
     urls: results ?? [],
+    timezone,
   });
 }
 
@@ -204,7 +208,9 @@ export async function publicShareReportJson(
       run_at: string;
     }>();
 
-  return json(request, env, { lighthouse, run: run ?? null });
+  const timezone = await getTimezone(env);
+
+  return json(request, env, { lighthouse, run: run ?? null, timezone });
 }
 
 export function normalizeShareToken(value: string): string | null {

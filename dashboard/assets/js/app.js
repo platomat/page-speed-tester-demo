@@ -821,6 +821,7 @@ async function initShareDashboard(ctx) {
 
   try {
     const data = await apiPublic(`/api/public/share/${encodeURIComponent(ctx.projectId)}`);
+    if (data.timezone) setInstanceTimezone(data.timezone);
     projects = [data.project];
     projectUrls.set(ctx.projectId, sortProjectUrls(data.urls ?? []));
   } catch (err) {

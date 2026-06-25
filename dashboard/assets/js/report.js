@@ -269,6 +269,7 @@ async function loadReport(reportKey) {
         `/api/public/share/report?report_key=${encodeURIComponent(reportKey)}`
       )
     : await api(`/api/reports?key=${encodeURIComponent(reportKey)}`);
+  if (data.timezone) setInstanceTimezone(data.timezone);
   const report = data.lighthouse ?? data;
   const run = data.run ?? null;
   renderReport(report, reportKey);

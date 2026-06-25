@@ -528,9 +528,9 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 | **Upstream repository** | `page-speed-tester-demo` | Upstream-Repo-Name |
 | **Upstream branch** | `main` | Branch zum Vergleichen und Mergen |
 
-**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** auf deinem Repo. Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
+**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** und **Pull requests: Read and write** auf deinem Repo (Template-Sync legt einen Cross-Repo-PR an und merged ihn). Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
 
-**Hinweis (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk. Der Status ermittelt fehlende Upstream-Commits per SHA-Abgleich (`commit-walk`), nicht über `owner:branch`-Compare (das würde fälschlich „Up to date“ anzeigen).
+**Hinweis (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk. Der Status ermittelt fehlende Upstream-Commits per SHA-Abgleich (`commit-walk`), nicht über `owner:branch`-Compare (das würde fälschlich „Up to date“ anzeigen). Der Sync erstellt dafür einen Pull Request mit `head_repo` (gleiche GitHub-Organisation) und merged ihn — nicht die veraltete Merges-API mit `owner:branch` (Fehler „Head does not exist“).
 
 API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream`.
 

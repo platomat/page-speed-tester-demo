@@ -11,7 +11,7 @@ async function initSiteHeader() {
     try {
       user = (await api("/api/auth/me")).user;
     } catch {
-      window.location.href = "login.html";
+      window.location.href = "/login.html";
       return null;
     }
   }
@@ -20,7 +20,7 @@ async function initSiteHeader() {
 
   const adminNav =
     user?.role === "admin"
-      ? `<a href="admin.html" class="icon-btn header-admin-btn${page === "admin" ? " is-active" : ""}" title="Settings" aria-label="Admin settings">${ICON_GEAR}</a>`
+      ? `<a href="/admin.html" class="icon-btn header-admin-btn${page === "admin" ? " is-active" : ""}" title="Settings" aria-label="Admin settings">${ICON_GEAR}</a>`
       : "";
 
   const userNav = user
@@ -28,13 +28,13 @@ async function initSiteHeader() {
        <button id="logout-btn" type="button" class="btn-secondary">Logout</button>`
     : requireAuth
       ? ""
-      : `<a href="login.html" class="header-nav-link">Login</a>`;
+      : `<a href="/login.html" class="header-nav-link">Login</a>`;
 
   root.innerHTML = `
     <div class="header-row">
       <div class="header-brand">
-        <a href="index.html" class="header-brand-link">
-          <img src="assets/img/favicon.svg" alt="" class="header-favicon" width="32" height="32" />
+        <a href="/" class="header-brand-link">
+          <img src="/assets/img/favicon.svg" alt="" class="header-favicon" width="32" height="32" />
           <span class="header-title">Page Speed Dashboard</span>
         </a>
         ${subtitle ? `<p class="subtitle header-subtitle">${escapeHtml(subtitle)}</p>` : ""}
@@ -50,7 +50,7 @@ async function initSiteHeader() {
       await api("/api/auth/logout", { method: "POST" });
     } finally {
       sessionStorage.removeItem("pst_session_token");
-      window.location.href = "login.html";
+      window.location.href = "/login.html";
     }
   });
 

@@ -78,6 +78,9 @@ async function apiPublic(path, options = {}) {
 }
 
 async function loadInstanceSettings() {
+  if (isPublicShareMode()) {
+    return instanceTimezone;
+  }
   try {
     const data = await api("/api/settings");
     if (data?.timezone) instanceTimezone = data.timezone;
@@ -85,6 +88,10 @@ async function loadInstanceSettings() {
     instanceTimezone = "UTC";
   }
   return instanceTimezone;
+}
+
+function setInstanceTimezone(timezone) {
+  if (timezone?.trim()) instanceTimezone = timezone.trim();
 }
 
 function getInstanceTimezone() {
@@ -150,7 +157,7 @@ function reportDetailUrl(reportKey) {
   if (publicShareKey) {
     params.set("share", publicShareKey);
   }
-  return `report?${params}`;
+  return `/report/?${params}`;
 }
 
 function publicTriggerUrl(projectId, accessKey, urlId) {
@@ -161,7 +168,7 @@ function publicTriggerUrl(projectId, accessKey, urlId) {
 
 function publicShareDashboardUrl(projectId, shareToken) {
   const params = new URLSearchParams({ project: projectId, key: shareToken });
-  return `/share?${params}`;
+  return `/share/?${params}`;
 }
 
 function escapeHtml(text) {

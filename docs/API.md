@@ -60,7 +60,7 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
 | `GET` | `/api/github/upstream-status` | Admin | Vergleich deines Repos mit dem Upstream (ahead/behind/diverged) |
-| `POST` | `/api/github/sync-upstream` | Admin | Upstream in dein Repo mergen (Fork: GitHub merge-upstream; Template: cross-repo merge). Rate-Limit 1×/Minute. Erfordert Worker-Secret `GH_PAT` mit **Contents: Read and write** auf deinem Repo. |
+| `POST` | `/api/github/sync-upstream` | Admin | Upstream in dein Repo mergen (Fork: GitHub merge-upstream; Template: Cross-Repo-PR mit `head_repo` + Merge). Rate-Limit 1×/Minute. Erfordert Worker-Secret `GH_PAT` mit **Contents** und **Pull requests: Read and write** auf deinem Repo. |
 
 ---
 

@@ -250,6 +250,89 @@ export async function fetchUpstreamCompare(
   };
 }
 
+type PullRequestSummary = {
+  number: number;
+  mergeable: boolean | null;
+  mergeable_state?: string;
+  html_url?: string;
+};
+
+async function listOpenUpstreamPullRequests(
+  pat: string,
+  target: { owner: string; repo: string },
+  upstream: { owner: string; repo: string; branch: string },
+  branch: string
+): Promise<PullRequestSummary[]> {
+  const head = `${upstream.owner}:${branch}`;
+  const url =
+    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls` +
+    `?state=open&head=${encodeURIComponent(head)}&base=${encodeURIComponent(branch)}`;
+  const res = await ghRequest(pat, url);
+  if (!res.ok) return [];
+  const data = (await res.json()) as PullRequestSummary[];
+  return Array.isArray(data) ? data : [];
+}
+
+async function createUpstreamPullRequest(
+  pat: string,
+  target: { owner: string; repo: string },
+  upstream: { owner: string; repo: string; branch: string },
+  branch: string
+): Promise<{ pr: PullRequestSummary } | { error: string; status: number }> {
+  const title = `Sync from upstream ${upstream.owner}/${upstream.repo}@${branch}`;
+  const payload: Record<string, string> = {
+    title,
+    base: branch,
+    head: branch,
+  };
+
+  // Template copies are outside the fork network — owner:branch merge/PR head fails with
+  // "Head does not exist". Same-org cross-repo PRs require head_repo (branch name only in head).
+  if (upstream.owner === target.owner) {
+    payload.head_repo = `${upstream.owner}/${upstream.repo}`;
+  } else {
+    payload.head = `${upstream.owner}:${branch}`;
+  }
+
+  const res = await ghRequest(
+    pat,
+    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+
+  if (res.ok) {
+    const pr = (await res.json()) as PullRequestSummary;
+    return { pr };
+  }
+
+  if (res.status === 422) {
+    const existing = await listOpenUpstreamPullRequests(pat, target, upstream, branch);
+    if (existing[0]) return { pr: existing[0] };
+  }
+
+  return { error: await parseGhError(res), status: res.status };
+}
+
+async function mergePullRequest(
+  pat: string,
+  target: { owner: string; repo: string },
+  pullNumber: number,
+  commitTitle: string
+): Promise<Response> {
+  return ghRequest(
+    pat,
+    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls/${pullNumber}/merge`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        commit_title: commitTitle,
+        merge_method: "merge",
+      }),
+    }
+  );
+}
+
+/** Fork network only — merges API accepts owner:branch as head. */
 async function crossRepoMerge(
   env: Env,
   target: { owner: string; repo: string },
@@ -268,6 +351,31 @@ async function crossRepoMerge(
       }),
     }
   );
+}
+
+async function crossRepoPullRequestSync(
+  env: Env,
+  target: { owner: string; repo: string },
+  upstream: { owner: string; repo: string; branch: string },
+  branch: string
+): Promise<Response> {
+  const commitTitle = `Sync from upstream ${upstream.owner}/${upstream.repo}@${branch}`;
+
+  const existing = await listOpenUpstreamPullRequests(env.GH_PAT, target, upstream, branch);
+  let pullNumber = existing[0]?.number;
+
+  if (!pullNumber) {
+    const created = await createUpstreamPullRequest(env.GH_PAT, target, upstream, branch);
+    if ("error" in created) {
+      return new Response(JSON.stringify({ message: created.error }), {
+        status: created.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    pullNumber = created.pr.number;
+  }
+
+  return mergePullRequest(env.GH_PAT, target, pullNumber, commitTitle);
 }
 
 export async function getUpstreamStatus(request: Request, env: Env): Promise<Response> {
@@ -330,7 +438,9 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
     });
   }
 
-  let method: "merge-upstream" | "cross-repo-merge" = is_fork ? "merge-upstream" : "cross-repo-merge";
+  let method: "merge-upstream" | "cross-repo-merge" | "cross-repo-pr-merge" = is_fork
+    ? "merge-upstream"
+    : "cross-repo-pr-merge";
   let mergeRes: Response;
 
   if (is_fork) {
@@ -347,7 +457,7 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
       mergeRes = await crossRepoMerge(env, target, upstream, branch);
     }
   } else {
-    mergeRes = await crossRepoMerge(env, target, upstream, branch);
+    mergeRes = await crossRepoPullRequestSync(env, target, upstream, branch);
   }
 
   if (mergeRes.ok) {
@@ -359,7 +469,9 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
       message:
         method === "merge-upstream"
           ? "Upstream merged (fork sync)"
-          : "Upstream merged into repository",
+          : method === "cross-repo-pr-merge"
+            ? "Upstream merged via pull request"
+            : "Upstream merged into repository",
       method,
       sha: typeof body.sha === "string" ? body.sha : null,
       compare: "error" in updatedCompare ? compareResult : updatedCompare,
@@ -367,7 +479,7 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
   }
 
   const errMsg = await parseGhError(mergeRes);
-  const conflict = mergeRes.status === 409;
+  const conflict = mergeRes.status === 409 || mergeRes.status === 405;
   return json(
     request,
     env,
