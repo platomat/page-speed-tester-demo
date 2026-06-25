@@ -116,11 +116,7 @@ function isPublicShareMode() {
 }
 
 function reportKeyApiPath(reportKey) {
-  const match = String(reportKey).match(/^reports\/([^/]+)\/(.+)$/);
-  if (!match) {
-    throw new Error(`Invalid report key: ${reportKey}`);
-  }
-  return `/api/reports/${encodeURIComponent(match[1])}/${encodeURIComponent(match[2])}`;
+  return `/api/reports?key=${encodeURIComponent(String(reportKey))}`;
 }
 
 async function apiPublic(path, options = {}) {

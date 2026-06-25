@@ -336,7 +336,14 @@ async function init() {
   try {
     await loadReport(reportKey);
   } catch (err) {
-    document.getElementById("report-root").innerHTML = `<p class="error">Failed to load report: ${escapeHtml(err.message)}</p>`;
+    const details = err.data
+      ? `<pre class="report-error-json">${escapeHtml(JSON.stringify(err.data, null, 2))}</pre>`
+      : "";
+    const hint = err.data?.hint
+      ? `<p class="report-error-hint">${escapeHtml(String(err.data.hint))}</p>`
+      : "";
+    document.getElementById("report-root").innerHTML =
+      `<p class="error">Failed to load report: ${escapeHtml(err.message)}</p>${hint}${details}`;
     document.getElementById("report-meta").textContent = "";
     setReportNavVisible(false);
   }

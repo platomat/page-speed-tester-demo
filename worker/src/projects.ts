@@ -7,6 +7,11 @@ import { isValidCronExpression, normalizeCronExpression } from "./cron";
 import { json } from "./http";
 import { ensureShareToken, normalizeShareToken } from "./share";
 import { slugifyId } from "./slug";
+import {
+  normalizeReportKey,
+  reportKeyParts,
+  resolveReportObject,
+} from "./report-storage";
 
 async function deleteRunObjects(
   env: Env,
@@ -510,19 +515,39 @@ export async function getReportJson(
   user: User,
   reportKey: string
 ): Promise<Response> {
-  const sub = reportKey.match(/^reports\/([^/]+)\/(.+)$/);
-  if (!sub) return json(request, env, { error: "Invalid report key" }, 400);
-  const access = await requireProjectAccess(request, env, user, sub[1]);
+  const parts = reportKeyParts(reportKey);
+  if (!parts) return json(request, env, { error: "Invalid report key" }, 400);
+  const normalized = normalizeReportKey(reportKey);
+  const access = await requireProjectAccess(request, env, user, parts.projectId);
   if (access instanceof Response) return access;
-  const object = await env.REPORTS.get(reportKey);
-  if (!object) return json(request, env, { error: "Report not found" }, 404);
-  const body = await object.text();
+
+  const resolved = await resolveReportObject(env, normalized, parts.projectId);
+  if (!resolved) {
+    const runInDb = await env.DB.prepare(`SELECT 1 FROM runs WHERE report_key = ?`)
+      .bind(normalized)
+      .first();
+    return json(
+      request,
+      env,
+      {
+        error: "Report not found",
+        report_key: normalized,
+        run_registered: Boolean(runInDb),
+        hint: runInDb
+          ? "Run is registered in D1 but the JSON file is missing from R2. Verify GitHub Actions R2_BUCKET matches the Worker R2 binding."
+          : "No run record exists for this report_key.",
+      },
+      404
+    );
+  }
+
+  const body = await resolved.object.text();
   const lighthouse = JSON.parse(body) as Record<string, unknown>;
   const run = await env.DB.prepare(
     `SELECT project_id, url_id, strategy, report_key, run_at
-     FROM runs WHERE report_key = ?`
+     FROM runs WHERE report_key = ? OR report_key = ?`
   )
-    .bind(reportKey)
+    .bind(normalized, resolved.key)
     .first<{
       project_id: string;
       url_id: string;
@@ -530,7 +555,11 @@ export async function getReportJson(
       report_key: string;
       run_at: string;
     }>();
-  return json(request, env, { lighthouse, run: run ?? null });
+  return json(request, env, {
+    lighthouse,
+    run: run ?? null,
+    report_key: resolved.key,
+  });
 }
 
 export async function deleteReports(

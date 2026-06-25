@@ -2,6 +2,10 @@ import type { Env } from "./env";
 import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./access-key";
 import { json } from "./http";
 import { getTimezone } from "./settings";
+import {
+  normalizeReportKey,
+  resolveReportObject,
+} from "./report-storage";
 
 export async function ensureShareToken(env: Env, projectId: string): Promise<string> {
   const row = await env.DB.prepare(`SELECT share_token FROM projects WHERE id = ?`)
@@ -195,23 +199,24 @@ export async function publicShareReportJson(
   }
 
   const projectId = sub[1];
+  const normalized = normalizeReportKey(reportKey);
   const project = await resolveShareProject(env, projectId, token);
   if (!project) {
     return json(request, env, { error: "Invalid project or share key" }, 403);
   }
 
-  const object = await env.REPORTS.get(reportKey);
-  if (!object) {
-    return json(request, env, { error: "Report not found" }, 404);
+  const resolved = await resolveReportObject(env, normalized, projectId);
+  if (!resolved) {
+    return json(request, env, { error: "Report not found", report_key: normalized }, 404);
   }
 
-  const body = await object.text();
+  const body = await resolved.object.text();
   const lighthouse = JSON.parse(body) as Record<string, unknown>;
   const run = await env.DB.prepare(
     `SELECT project_id, url_id, strategy, report_key, run_at
-     FROM runs WHERE report_key = ?`
+     FROM runs WHERE report_key = ? OR report_key = ?`
   )
-    .bind(reportKey)
+    .bind(normalized, resolved.key)
     .first<{
       project_id: string;
       url_id: string;
