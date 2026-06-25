@@ -21,10 +21,34 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+}
+
+body::before {
+  background-image: url(/assets/img/favicon.svg);
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  background-size: 100%;
+  content: "";
+  height: 100%;
+  left: 0;
+  opacity: 0.02;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 0;
+}
+
+header,
+main,
+.site-footer {
+  position: relative;
+  z-index: 1;
 }
 
 main {
