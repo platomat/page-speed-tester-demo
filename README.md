@@ -1,12 +1,10 @@
+<img src="dashboard/assets/img/favicon.svg" alt="Page Speed Tester" width="96">
+
 # Page Speed Tester
 
 Self-hosted **Lighthouse**-Monitoring: Du betreibst eine eigene Instanz auf **Cloudflare** (API, Speicher, Dashboard) und startest die eigentlichen Tests per **GitHub Actions** in **deinem** Repository. Kein zentraler SaaS-Dienst — jede Installation gehört dir.
 
 Typischer Einsatz: mehrere Websites oder Kundenprojekte überwachen, Metriken in Charts vergleichen, Berichte als JSON ablegen, Läufe per Cron oder per Klick auslösen.
-
-<p align="center">
-  <img src="dashboard/assets/img/favicon.svg" alt="Page Speed Tester" width="96">
-</p>
 
 ---
 
