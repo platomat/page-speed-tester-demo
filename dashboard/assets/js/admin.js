@@ -2,6 +2,8 @@ let projects = [];
 let users = [];
 let adminMessageTimer = null;
 
+const ICON_SAVE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+
 const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
 function updateCronHint() {
@@ -342,7 +344,7 @@ async function loadProjects(selectProjectId) {
         <input type="checkbox" ${p.enabled ? "checked" : ""} data-field="enabled" />
       </td>
       <td class="actions-cell">
-        <button type="button" class="btn-secondary btn-sm" data-action="save-project">Save</button>
+        <button type="button" class="icon-btn btn-sm" data-action="save-project" title="Save project" aria-label="Save project">${ICON_SAVE}</button>
         <button type="button" class="icon-btn btn-danger btn-sm" data-action="delete-project" title="Delete project" aria-label="Delete project">${ICON_DELETE}</button>
       </td>
     </tr>`
@@ -376,7 +378,7 @@ async function loadUrls() {
       <td><input type="url" class="url-input" value="${escapeHtml(u.url)}" data-field="url" /></td>
       <td><input type="checkbox" ${u.enabled ? "checked" : ""} data-field="enabled" /></td>
       <td class="actions-cell">
-        <button type="button" class="btn-secondary btn-sm" data-action="save-url">Save</button>
+        <button type="button" class="icon-btn btn-sm" data-action="save-url" title="Save URL" aria-label="Save URL">${ICON_SAVE}</button>
         <button type="button" class="icon-btn btn-danger btn-sm" data-action="delete-url" title="Delete URL" aria-label="Delete URL">${ICON_DELETE}</button>
       </td>
     </tr>`

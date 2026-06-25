@@ -245,6 +245,11 @@ button[disabled] {
 }
 
 /* Icon delete — use: icon-btn btn-danger btn-sm (project-wide) */
+.icon-btn.btn-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
 .icon-btn.btn-danger {
   background: transparent;
   border-color: var(--bad);
