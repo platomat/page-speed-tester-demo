@@ -10,7 +10,7 @@ function copyrightYears() {
 function initSiteFooter() {
   const root = document.getElementById("site-footer");
   if (!root) return;
-  root.innerHTML = `© ${copyrightYears()} <strong>PageSpeedTester</strong> • One of <a href="https://platomat.com/" target="_blank" rel="noopener">PlatoMat</a> • Contribute on <a href="https://github.com/platomat/page-speed-tester-demo" target="_blank" rel="noopener">GitHub</a>`;
+  root.innerHTML = `© ${copyrightYears()} <strong>PageSpeedTester</strong> • One of <a href="https://platomat.com/" target="_blank" rel="noopener"><strong>PlatoMat</strong></a> • Contribute on <a href="https://github.com/platomat/page-speed-tester-demo" target="_blank" rel="noopener"><strong>GitHub</strong></a>`;
 }
 
 initSiteFooter();
