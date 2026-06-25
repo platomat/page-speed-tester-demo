@@ -33,7 +33,7 @@ Lighthouse läuft **nicht** direkt in Cloudflare Workers (kein Chrome dort).
 | `**PST_API_URL`**                           | Text   | **Pages → Build environment variables**                      | Beim Pages-Deploy (Build-Schritt) | Worker-URL in `dashboard/config.js` (optional bei Custom Domain — Fallback `api.<host>`) |
 | `COOKIE_DOMAIN`                             | Text   | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | Session-Cookie für Dashboard + API (z. B. `.page-speed-tester.mydomain.tld`)             |
 | `DASHBOARD_ORIGIN`                          | Text   | optional Worker `[vars]`                                     | Worker-Laufzeit                   | Zusätzliche Dashboard-Origins für CORS (kommagetrennt, volle URLs)                       |
-| `PST_INSTANCE_ROLE`                         | Text   | optional Worker `[vars]`                                     | Worker-Laufzeit                   | Nur **Demo/Template-Quelle:** `upstream` — blendet Admin **Upstream sync** aus (Kunden-Instanzen **nicht** setzen) |
+| `PST_INSTANCE_ROLE`                         | Text   | **Worker → Settings → Variables & Secrets → Environment Variables** (Runtime, **nicht** Build) | Worker-Laufzeit                   | Nur **Demo/Template-Quelle:** Wert `upstream` — blendet Admin **Upstream sync** aus (Kunden-Instanzen **nicht** setzen) |
 | `GH_OWNER`, `GH_REPO`                       | Text   | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | GitHub `repository_dispatch`-Ziel                                                        |
 | `SESSION_SECRET`                            | Secret | **Worker → Secrets**                                         | Worker-Laufzeit                   | Session-Verschlüsselung                                                                  |
 | `GH_PAT`                                    | Secret | **Worker → Secrets**                                         | Worker-Laufzeit                   | GitHub API                                                                               |
@@ -520,7 +520,7 @@ Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo hab
 
 Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/behind/diverged) und Button **Sync from upstream** — merged Änderungen aus dem Upstream-Repo in **dein** GitHub-Repo (ohne lokales `git fetch`/`merge`).
 
-**Nicht auf der öffentlichen Demo/Template-Instanz:** Dort ist dieses Repo die **Quelle** für andere. Am Demo-Worker **`PST_INSTANCE_ROLE=upstream`** setzen (Worker → Settings → Variables, Text) — dann fehlen Upstream-Felder und Sync im Admin. Kunden-Instanzen (private Template-Kopien) lassen die Variable **weg**.
+**Nicht auf der öffentlichen Demo/Template-Instanz:** Dort ist dieses Repo die **Quelle** für andere. Am Demo-Worker **`PST_INSTANCE_ROLE=upstream`** als **Runtime**-Variable setzen — **Workers → Settings → Variables & Secrets → Environment Variables** (Text, **nicht** unter Build → Variables). Nach dem Speichern Worker neu deployen. Dann fehlen Upstream-Felder und Sync im Admin. Kunden-Instanzen (private Template-Kopien) lassen die Variable **weg**.
 
 | Feld | Default | Zweck |
 | ---- | ------- | ----- |
