@@ -79,6 +79,7 @@ const r2Jurisdiction = process.env.R2_JURISDICTION?.trim().toLowerCase() ?? "";
 
 const vars = {
   WORKER_NAME: process.env.WORKER_NAME?.trim() || "page-speed-tester-api",
+  D1_DATABASE_NAME: process.env.D1_DATABASE_NAME?.trim() || "page-speed-tester-db",
   D1_DATABASE_ID: requireEnv("D1_DATABASE_ID"),
   KV_NAMESPACE_ID: requireEnv("KV_NAMESPACE_ID"),
   CRON_EXPRESSION: process.env.CRON_EXPRESSION?.trim() || "*/5 * * * *",

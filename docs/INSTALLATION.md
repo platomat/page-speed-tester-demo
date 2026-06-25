@@ -224,8 +224,8 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 1. **Build → Compute → Workers & Pages →Create application → Continue with Github**
 2. **Worker-Name** in Cloudflare: `page-speed-tester-api` (erscheint auch als `*.workers.dev`-Subdomain)
 3. **Repo** (z. B. `meine-firma/page-speed-tester`), **Branch** `main`
-4. **Deploy command:** `node scripts/generate-wrangler.mjs && npx wrangler d1 migrations apply page-speed-tester-db --remote && npx wrangler deploy`
-   (führt offene D1-Migrationen vor dem Deploy aus; ohne Migrationen genügt `node scripts/generate-wrangler.mjs && npx wrangler deploy`)
+4. **Deploy command:** `node scripts/generate-wrangler.mjs && npx wrangler d1 migrations apply DB --remote && npx wrangler deploy`
+   (`DB` ist der **Binding-Name** aus `wrangler.toml` — unabhängig vom DB-Namen, daher identisch für alle Instanzen; ohne Migrationen genügt `node scripts/generate-wrangler.mjs && npx wrangler deploy`)
 5. **API token:** neuen generieren (Name z.B:: `api-token-page-speed-tester`) oder bestehenden wählen
 6. **Path / Root directory:** leer oder `/` (Repo-Root) — **nicht** `dashboard`
 
@@ -239,6 +239,7 @@ Unter **Workers → dein Worker → Settings → Build** (nicht Runtime) **→**
 | `D1_DATABASE_ID`  | Text | ✅        | D1 → `page-speed-tester-db` → Database ID                                                    |
 | `KV_NAMESPACE_ID` | Text | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID                                            |
 | `WORKER_NAME`     | Text | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
+| `D1_DATABASE_NAME` | Text | optional | DB-Name nur falls **abweichend** vom Default `page-speed-tester-db` (z. B. Demo: `page-speed-tester-db-demo`). Wird in `wrangler.toml` geschrieben; Migrationen laufen ohnehin über das Binding `DB`. |
 | `CRON_EXPRESSION` | Text | optional | `*/5` * * * *                                                                                |
 | `R2_JURISDICTION` | Text | **nur bei Jurisdiction-Bucket** | `eu` (oder `fedramp`) — nur setzen, wenn der R2-Bucket mit Jurisdiction angelegt wurde (Endpoint enthält `.eu.`). Script schreibt `jurisdiction` ins R2-Binding. |
 | `PST_INSTANCE_ROLE` | Text | **nur Demo-Worker** | `upstream` — wird in `wrangler.toml` `[vars]` geschrieben; Kunden-Instanzen **weg** lassen |

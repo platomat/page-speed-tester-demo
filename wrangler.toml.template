@@ -7,7 +7,7 @@ compatibility_date = "2024-06-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "page-speed-tester-db"
+database_name = "{{D1_DATABASE_NAME}}"
 database_id = "{{D1_DATABASE_ID}}"
 migrations_dir = "migrations"
 
