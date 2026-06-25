@@ -17,6 +17,7 @@ LH_USER_AGENT="${LH_USER_AGENT:-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 # to the same host and can trip server-side rate limits / fail2ban. Set LH_WARMUP=1 to enable.
 LH_WARMUP="${LH_WARMUP:-0}"
 LH_RETRY_DELAY_SEC="${LH_RETRY_DELAY_SEC:-8}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ "$strategy" = "desktop" ]; then
   max_load="$LH_MAX_WAIT_LOAD_DESKTOP"
@@ -57,8 +58,8 @@ for attempt in 1 2; do
     exit 0
   fi
   if [ "$attempt" -eq 1 ]; then
-    echo "Attempt $attempt failed for $page_url ($strategy), retrying in ${LH_RETRY_DELAY_SEC}s…" >&2
-    sleep "$LH_RETRY_DELAY_SEC"
+    echo "Attempt $attempt failed for $page_url ($strategy), retrying…" >&2
+    "$SCRIPT_DIR/sleep-jitter.sh" "$LH_RETRY_DELAY_SEC"
   fi
 done
 
