@@ -13,11 +13,13 @@ function transliterateGerman(value) {
 }
 
 export function urlSlug(url) {
-  return transliterateGerman(url)
+  const scheme = url.match(/^(https?):\/\//i)?.[1]?.toLowerCase() ?? "http";
+  const hostPath = transliterateGerman(url)
     .replace(/^https?:\/\//i, "")
     .replace(/\/+$/, "")
     .replace(/[^\w-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+  return hostPath ? `${scheme}-${hostPath}` : scheme;
 }
 
 if (process.argv[1]?.endsWith("url-slug.mjs")) {

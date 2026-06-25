@@ -93,7 +93,7 @@ jobs:
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: |
-          chmod +x scripts/ci/lighthouse-audit.sh
+          chmod +x scripts/ci/lighthouse-audit.sh scripts/ci/sleep-jitter.sh
           mkdir -p reports
           RUN_STAMP=$(date -u +%Y-%m-%dT%H%M%SZ)
           PROJECT_ID="$PROJECT_ID"
@@ -108,25 +108,24 @@ jobs:
           while IFS= read -r row; do
             url_id=$(echo "$row" | jq -r '.id')
             page_url=$(echo "$row" | jq -r '.url')
-            slug=$(node scripts/ci/url-slug.mjs "$page_url")
             n=$((n + 1))
             if [ "$n" -gt 1 ]; then
-              echo "Pausing ${URL_PAUSE_SEC}s before next URL (avoid rate limits)…"
-              sleep "$URL_PAUSE_SEC"
+              echo "Pausing before next URL (avoid rate limits)…"
+              scripts/ci/sleep-jitter.sh "$URL_PAUSE_SEC"
             fi
             echo "Testing $page_url (desktop)..."
             if scripts/ci/lighthouse-audit.sh "$page_url" desktop \
-              "reports/${RUN_STAMP}-desktop-${slug}.json" \
+              "reports/${RUN_STAMP}-desktop-${url_id}.json" \
               "$CHROME_PATH" "$LH_TIMEOUT_SEC"; then
               success=$((success + 1))
             else
               echo "Desktop run failed for $page_url"
             fi
-            echo "Pausing ${STRATEGY_PAUSE_SEC}s before mobile run…"
-            sleep "$STRATEGY_PAUSE_SEC"
+            echo "Pausing before mobile run…"
+            scripts/ci/sleep-jitter.sh "$STRATEGY_PAUSE_SEC"
             echo "Testing $page_url (mobile)..."
             if scripts/ci/lighthouse-audit.sh "$page_url" mobile \
-              "reports/${RUN_STAMP}-mobile-${slug}.json" \
+              "reports/${RUN_STAMP}-mobile-${url_id}.json" \
               "$CHROME_PATH" "$LH_TIMEOUT_SEC"; then
               success=$((success + 1))
             else

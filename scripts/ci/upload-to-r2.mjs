@@ -49,7 +49,7 @@ function parseReportFilename(filename) {
   if (stamped) {
     const ts = stamped[1];
     const runAt = `${ts.slice(0, 10)}T${ts.slice(11, 13)}:${ts.slice(13, 15)}:${ts.slice(15, 17)}.000Z`;
-    return { runAt, slug: stamped[3], strategy: stamped[2] };
+    return { runAt, identifier: stamped[3], strategy: stamped[2] };
   }
   return null;
 }
@@ -62,16 +62,20 @@ async function loadUrlMap() {
   } catch {
     console.warn("No project-urls.json found");
   }
-  const bySlug = new Map();
+  const byIdentifier = new Map();
   for (const u of projectUrls.urls ?? []) {
+    byIdentifier.set(u.id, u);
     const slug = urlSlug(u.url);
-    bySlug.set(slug, u);
-    // Legacy slugs from older runs (trailing slash → trailing dash in filename)
-    const legacy = u.url.replace(/^https?:\/\//i, "").replace(/[^\w-]+/g, "-");
-    if (legacy !== slug) bySlug.set(legacy, u);
-    bySlug.set(u.id, u);
+    byIdentifier.set(slug, u);
+    // Legacy slugs without scheme prefix (pre http/https distinction)
+    const legacy = u.url
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/+$/, "")
+      .replace(/[^\w-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (legacy && legacy !== slug) byIdentifier.set(legacy, u);
   }
-  return bySlug;
+  return byIdentifier;
 }
 
 async function uploadToR2(client, bucket, key, body) {
@@ -142,9 +146,9 @@ async function main() {
       continue;
     }
 
-    const urlEntry = urlMap.get(parsed.slug);
+    const urlEntry = urlMap.get(parsed.identifier);
     if (!urlEntry) {
-      console.warn(`No URL mapping for slug ${parsed.slug}, skipping ${file}`);
+      console.warn(`No URL mapping for identifier ${parsed.identifier}, skipping ${file}`);
       continue;
     }
 
