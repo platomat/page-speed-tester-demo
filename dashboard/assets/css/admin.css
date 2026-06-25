@@ -146,7 +146,7 @@ input[type="checkbox"] {
   height: 1.25rem;
   margin: 0;
   padding: 0;
-  accent-color: var(--accent);
+  accent-color: var(--good);
   cursor: pointer;
 }
 
