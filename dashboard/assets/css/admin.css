@@ -106,6 +106,34 @@
   max-width: 36rem;
 }
 
+.settings-group {
+  margin: 0 0 2rem;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.settings-group legend {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  padding: 0;
+  margin-bottom: 0.35rem;
+}
+
+.settings-group-hint {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.settings-group-hint code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  color: var(--text);
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: 8rem minmax(0, 1fr);

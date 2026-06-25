@@ -151,99 +151,121 @@
 
       <section class="admin-section">
         <h2>Instance settings</h2>
-        <p class="admin-section-hint">
-          Times in the dashboard and cron schedules use this timezone.
-          Disable scheduled runs globally while keeping manual triggers available.
-          The GitHub repository is where Lighthouse runs via Actions; set owner and repo
-          to <em>this instance’s</em> repo (the PAT secret must have access to it).
-          <strong>Cookie domain</strong> is the shared parent domain for dashboard and API
-          (e.g. <code>.kunde.de</code>); leave empty for <code>*.pages.dev</code> previews.
-        </p>
         <form id="settings-form" class="settings-form">
-          <div class="settings-grid">
-            <label for="instance-cron-enabled">Scheduled runs</label>
-            <label class="settings-checkbox">
-              <input type="checkbox" id="instance-cron-enabled" name="cron_enabled" />
-              Enable automatic Lighthouse runs (project cron schedules)
-            </label>
-            <label for="instance-gh-owner">GitHub owner</label>
-            <input
-              type="text"
-              id="instance-gh-owner"
-              name="gh_owner"
-              placeholder="org-or-user"
-              spellcheck="false"
-              autocomplete="off"
-            />
-            <label for="instance-gh-repo">GitHub repository</label>
-            <input
-              type="text"
-              id="instance-gh-repo"
-              name="gh_repo"
-              placeholder="page-speed-tester"
-              spellcheck="false"
-              autocomplete="off"
-            />
-            <label for="instance-upstream-owner" class="upstream-setting-item">Upstream owner</label>
-            <input
-              type="text"
-              id="instance-upstream-owner"
-              class="upstream-setting-item"
-              name="upstream_owner"
-              placeholder="platomat"
-              spellcheck="false"
-              autocomplete="off"
-            />
-            <label for="instance-upstream-repo" class="upstream-setting-item">Upstream repository</label>
-            <input
-              type="text"
-              id="instance-upstream-repo"
-              class="upstream-setting-item"
-              name="upstream_repo"
-              placeholder="page-speed-tester-demo"
-              spellcheck="false"
-              autocomplete="off"
-            />
-            <label for="instance-upstream-branch" class="upstream-setting-item">Upstream branch</label>
-            <input
-              type="text"
-              id="instance-upstream-branch"
-              class="upstream-setting-item"
-              name="upstream_branch"
-              placeholder="main"
-              spellcheck="false"
-              autocomplete="off"
-            />
-            <label for="instance-cookie-domain">Cookie domain</label>
-            <input
-              type="text"
-              id="instance-cookie-domain"
-              name="cookie_domain"
-              placeholder=".example.com"
-              spellcheck="false"
-              autocomplete="off"
-            />
-            <label for="instance-store-screenshots">Report screenshots</label>
-            <label class="settings-checkbox">
-              <input type="checkbox" id="instance-store-screenshots" name="store_screenshots" />
-              Store viewport &amp; full-page screenshots in Lighthouse JSON
-            </label>
-            <p class="settings-field-hint settings-field-hint--full">
-              Off by default — smaller reports and lower R2 usage. When enabled, JSON files are much
-              larger; R2 storage fills faster and may incur Cloudflare charges. Screenshots appear in
-              the report detail view for runs started after you save this setting.
+          <fieldset class="settings-group">
+            <legend>PageSpeed Tester</legend>
+            <p class="settings-group-hint">
+              Times in the dashboard and project cron schedules use this timezone.
+              Scheduled runs are checked every 15 minutes; disable them globally while
+              keeping manual triggers available.
             </p>
-            <label for="instance-timezone">Timezone</label>
-            <input
-              type="text"
-              id="instance-timezone"
-              name="timezone"
-              list="timezone-options"
-              placeholder="Europe/Berlin"
-              required
-              spellcheck="false"
-            />
-          </div>
+            <div class="settings-grid">
+              <label for="instance-timezone">Timezone</label>
+              <input
+                type="text"
+                id="instance-timezone"
+                name="timezone"
+                list="timezone-options"
+                placeholder="Europe/Berlin"
+                required
+                spellcheck="false"
+              />
+              <label for="instance-cron-enabled">Scheduled runs</label>
+              <label class="settings-checkbox">
+                <input type="checkbox" id="instance-cron-enabled" name="cron_enabled" />
+                Enable automatic Lighthouse runs (project cron schedules)
+              </label>
+              <label for="instance-store-screenshots">Report screenshots</label>
+              <label class="settings-checkbox">
+                <input type="checkbox" id="instance-store-screenshots" name="store_screenshots" />
+                Store viewport &amp; full-page screenshots in Lighthouse JSON
+              </label>
+              <p class="settings-field-hint settings-field-hint--full">
+                Off by default — smaller reports and lower R2 usage. When enabled, JSON files are much
+                larger; R2 storage fills faster and may incur Cloudflare charges. Screenshots appear in
+                the report detail view for runs started after you save this setting.
+              </p>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>GitHub</legend>
+            <p class="settings-group-hint">
+              Repository where Lighthouse runs via Actions. Set owner and repo to
+              <em>this instance’s</em> repo — the <code>GH_PAT</code> secret must have access to it.
+              Upstream fields apply when syncing template updates (see Upstream sync below).
+            </p>
+            <div class="settings-grid">
+              <label for="instance-gh-owner">GitHub owner</label>
+              <input
+                type="text"
+                id="instance-gh-owner"
+                name="gh_owner"
+                placeholder="org-or-user"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <label for="instance-gh-repo">GitHub repository</label>
+              <input
+                type="text"
+                id="instance-gh-repo"
+                name="gh_repo"
+                placeholder="page-speed-tester"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <label for="instance-upstream-owner" class="upstream-setting-item">Upstream owner</label>
+              <input
+                type="text"
+                id="instance-upstream-owner"
+                class="upstream-setting-item"
+                name="upstream_owner"
+                placeholder="platomat"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <label for="instance-upstream-repo" class="upstream-setting-item">Upstream repository</label>
+              <input
+                type="text"
+                id="instance-upstream-repo"
+                class="upstream-setting-item"
+                name="upstream_repo"
+                placeholder="page-speed-tester-demo"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <label for="instance-upstream-branch" class="upstream-setting-item">Upstream branch</label>
+              <input
+                type="text"
+                id="instance-upstream-branch"
+                class="upstream-setting-item"
+                name="upstream_branch"
+                placeholder="main"
+                spellcheck="false"
+                autocomplete="off"
+              />
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>Session &amp; domains</legend>
+            <p class="settings-group-hint">
+              Shared parent domain for login cookies across dashboard and API
+              (e.g. <code>.kunde.de</code>). Leave empty for <code>*.pages.dev</code> previews.
+            </p>
+            <div class="settings-grid">
+              <label for="instance-cookie-domain">Cookie domain</label>
+              <input
+                type="text"
+                id="instance-cookie-domain"
+                name="cookie_domain"
+                placeholder=".example.com"
+                spellcheck="false"
+                autocomplete="off"
+              />
+            </div>
+          </fieldset>
+
           <datalist id="timezone-options">
             <option value="UTC"></option>
             <option value="Europe/Berlin"></option>
