@@ -55,7 +55,30 @@ function renderUpstreamStatus(data) {
       `<p><a href="${escapeHtml(data.compare_url)}" target="_blank" rel="noopener">View compare on GitHub</a></p>`
     );
   }
+  if (data.last_sync) {
+    parts.push(renderLastSync(data.last_sync));
+  }
   return parts.join("");
+}
+
+function renderLastSync(sync) {
+  if (!sync || typeof sync !== "object") return "";
+  const labels = {
+    pending: "Sync läuft…",
+    success: "Letzter Sync erfolgreich",
+    conflict: "Letzter Sync: Merge-Konflikt",
+    error: "Letzter Sync fehlgeschlagen",
+  };
+  const cls =
+    sync.status === "success"
+      ? "upstream-sync-ok"
+      : sync.status === "pending"
+        ? "upstream-sync-pending"
+        : "upstream-sync-error";
+  const label = labels[sync.status] ?? "Letzter Sync";
+  const when = sync.updated_at ? ` (${escapeHtml(formatDateTime(sync.updated_at))})` : "";
+  const message = sync.message ? `: ${escapeHtml(String(sync.message))}` : "";
+  return `<p class="upstream-last-sync ${cls}"><strong>${escapeHtml(label)}</strong>${when}${message}</p>`;
 }
 
 function formatUpstreamStatusLabel(data) {
@@ -89,12 +112,34 @@ async function loadUpstreamStatus() {
     const data = await api("/api/github/upstream-status");
     statusEl.innerHTML = renderUpstreamStatus(data);
     syncBtn.disabled = !data.can_sync;
+    return data;
   } catch (err) {
     statusEl.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
     syncBtn.disabled = true;
+    return null;
   } finally {
     if (refreshBtn) refreshBtn.disabled = false;
   }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Poll upstream status until the dispatched sync workflow reports a result.
+async function pollUpstreamSyncResult({ attempts = 20, intervalMs = 5000 } = {}) {
+  for (let i = 0; i < attempts; i++) {
+    await delay(intervalMs);
+    const data = await loadUpstreamStatus();
+    const sync = data?.last_sync;
+    if (sync && sync.status && sync.status !== "pending") {
+      return sync;
+    }
+    if (data && data.behind_by === 0 && data.status !== "diverged") {
+      return sync ?? { status: "success", message: "Up to date" };
+    }
+  }
+  return null;
 }
 
 async function syncUpstreamFromAdmin() {
@@ -107,6 +152,26 @@ async function syncUpstreamFromAdmin() {
   try {
     const data = await api("/api/github/sync-upstream", { method: "POST" });
     showMessage(data.message || "Upstream synced");
+
+    if (data.started) {
+      // Workflow dispatched — poll until the GitHub Action reports a result.
+      const result = await pollUpstreamSyncResult();
+      if (result?.status === "success") {
+        showMessage(result.message || "Upstream merged via GitHub Actions");
+      } else if (result?.status === "conflict") {
+        showMessage(result.message || "Merge conflict — resolve manually with git", true);
+      } else if (result?.status === "error") {
+        showMessage(result.message || "Upstream sync failed", true);
+      } else {
+        showMessage(
+          "Sync läuft noch — prüfe die GitHub Actions und aktualisiere den Status.",
+          true
+        );
+      }
+      await loadUpstreamStatus();
+      return;
+    }
+
     if (data.compare) {
       document.getElementById("upstream-status").innerHTML = renderUpstreamStatus(data.compare);
       syncBtn.disabled = !data.compare.can_sync;

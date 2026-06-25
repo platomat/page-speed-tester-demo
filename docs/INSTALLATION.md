@@ -549,9 +549,27 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 | **Upstream repository** | `page-speed-tester-demo` | Upstream-Repo-Name |
 | **Upstream branch** | `main` | Branch zum Vergleichen und Mergen |
 
-**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** und **Pull requests: Read and write** auf deinem Repo (Template-Sync legt einen Cross-Repo-PR an und merged ihn). Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
+**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** und **Actions: Read and write** auf deinem Repo (der Sync löst einen Workflow aus). Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
 
-**Hinweis (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk. Der Status ermittelt fehlende Upstream-Commits per SHA-Abgleich (`commit-walk`), nicht über `owner:branch`-Compare (das würde fälschlich „Up to date“ anzeigen). Der Sync erstellt dafür einen Pull Request mit `head_repo` (gleiche GitHub-Organisation) und merged ihn — nicht die veraltete Merges-API mit `owner:branch` (Fehler „Head does not exist“).
+**Wie der Sync funktioniert (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk; GitHubs Merge-/PR-API liefert dafür sporadisch **500**. Der Sync löst deshalb den Workflow **`.github/workflows/upstream-sync.yml`** in deinem Repo aus (`repository_dispatch`, Event `sync-upstream`). Der Workflow macht einen echten `git fetch upstream` + `git merge --no-edit` + `git push origin` und meldet das Ergebnis (`success` / `conflict` / `error`) an den Worker zurück. Der Admin-Button pollt den Status, bis das Ergebnis vorliegt.
+
+**Benötigte GitHub-Secrets im Ziel-Repo** (Settings → Secrets and variables → Actions):
+
+| Secret | Zweck |
+| ------ | ----- |
+| `WORKER_API_URL`, `WORKER_API_SECRET` | bereits für Lighthouse vorhanden — der Workflow meldet damit das Sync-Ergebnis zurück |
+| `UPSTREAM_SYNC_TOKEN` *(optional, empfohlen)* | PAT mit **Contents: write** auf dem Ziel-Repo und **Lesezugriff** auf das Upstream-Repo. Nötig, wenn das Upstream **privat** ist und/oder der Push Pages/Worker-Auto-Deploy auslösen soll. Ohne dieses Secret nutzt der Workflow `GITHUB_TOKEN` (Push nach origin ok; privates Upstream nicht erreichbar, Deploy-Hooks lösen nicht aus). |
+
+**Wichtig (Erststart):** Der Workflow muss bereits im **Default-Branch deines Ziel-Repos** liegen, damit er per Dispatch startbar ist. Bei einem bestehenden Repo ohne die Datei einmalig manuell mergen:
+
+```bash
+git remote add upstream https://github.com/platomat/page-speed-tester-demo.git
+git fetch upstream
+git merge --no-edit upstream/main
+git push origin main
+```
+
+Danach laufen alle weiteren Syncs über den Admin-Button.
 
 API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream` (vom Build in `wrangler.toml` `[vars]`).
 

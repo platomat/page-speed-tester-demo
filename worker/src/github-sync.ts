@@ -5,7 +5,17 @@ import { getGitHubTarget, getUpstreamTarget, isUpstreamSyncEnabled } from "./set
 
 const SYNC_COOLDOWN_MS = 60_000;
 const SYNC_KV_KEY = "upstream-sync:last";
+const SYNC_RESULT_KV_KEY = "upstream-sync:result";
+const SYNC_RESULT_TTL = 24 * 60 * 60;
 const MAX_COMMITS_TO_WALK = 100;
+
+export type UpstreamSyncResult = {
+  status: "pending" | "success" | "conflict" | "error";
+  message: string;
+  sha?: string | null;
+  github_run_id?: string | null;
+  updated_at: string;
+};
 
 type GhJson = Record<string, unknown>;
 
@@ -263,212 +273,6 @@ export async function fetchUpstreamCompare(
   };
 }
 
-type PullRequestSummary = {
-  number: number;
-  mergeable: boolean | null;
-  mergeable_state?: string;
-  html_url?: string;
-  title?: string;
-  head?: { ref?: string; sha?: string; repo?: { full_name?: string } };
-};
-
-const SYNC_PR_TITLE_PREFIX = "Sync from upstream ";
-const MERGE_POLL_MS = 2_000;
-const MERGE_POLL_MAX = 30;
-const MERGE_RETRY_DELAYS_MS = [0, 3_000, 6_000, 12_000];
-const MERGE_METHODS = ["merge", "squash", "rebase"] as const;
-const POST_CREATE_PR_DELAY_MS = 3_000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function upstreamRepoFullName(upstream: { owner: string; repo: string }): string {
-  return `${upstream.owner}/${upstream.repo}`;
-}
-
-function isUpstreamSyncPullRequest(
-  pr: PullRequestSummary,
-  upstream: { owner: string; repo: string }
-): boolean {
-  const headRepo = pr.head?.repo?.full_name;
-  if (headRepo === upstreamRepoFullName(upstream)) return true;
-  return Boolean(pr.title?.startsWith(SYNC_PR_TITLE_PREFIX));
-}
-
-async function fetchPullRequest(
-  pat: string,
-  target: { owner: string; repo: string },
-  pullNumber: number
-): Promise<PullRequestSummary | null> {
-  const res = await ghRequest(
-    pat,
-    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls/${pullNumber}`
-  );
-  if (!res.ok) return null;
-  return (await res.json()) as PullRequestSummary;
-}
-
-async function listOpenUpstreamPullRequests(
-  pat: string,
-  target: { owner: string; repo: string },
-  upstream: { owner: string; repo: string; branch: string },
-  branch: string
-): Promise<PullRequestSummary[]> {
-  const url =
-    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls` +
-    `?state=open&base=${encodeURIComponent(branch)}&per_page=30`;
-  const res = await ghRequest(pat, url);
-  if (!res.ok) return [];
-  const data = (await res.json()) as PullRequestSummary[];
-  if (!Array.isArray(data)) return [];
-  return data.filter((pr) => isUpstreamSyncPullRequest(pr, upstream));
-}
-
-async function waitForMergeablePullRequest(
-  pat: string,
-  target: { owner: string; repo: string },
-  pullNumber: number
-): Promise<{ pr: PullRequestSummary } | { error: string; status: number; pr?: PullRequestSummary }> {
-  for (let attempt = 0; attempt < MERGE_POLL_MAX; attempt++) {
-    const pr = await fetchPullRequest(pat, target, pullNumber);
-    if (!pr) {
-      return { error: "Pull request not found", status: 404 };
-    }
-    if (pr.mergeable === true) {
-      return { pr };
-    }
-    if (pr.mergeable === false) {
-      const conflict = pr.mergeable_state === "dirty" || pr.mergeable_state === "unstable";
-      return {
-        error: conflict
-          ? "Merge conflict — resolve manually on GitHub or with git"
-          : `Pull request is not mergeable (${pr.mergeable_state ?? "unknown"})`,
-        status: conflict ? 409 : 422,
-        pr,
-      };
-    }
-    await sleep(MERGE_POLL_MS);
-  }
-
-  const pr = await fetchPullRequest(pat, target, pullNumber);
-  return {
-    error: "Timed out waiting for GitHub to compute mergeability — try again or merge the PR on GitHub",
-    status: 504,
-    pr: pr ?? undefined,
-  };
-}
-
-async function createUpstreamPullRequest(
-  pat: string,
-  target: { owner: string; repo: string },
-  upstream: { owner: string; repo: string; branch: string },
-  branch: string
-): Promise<{ pr: PullRequestSummary } | { error: string; status: number }> {
-  const title = `${SYNC_PR_TITLE_PREFIX}${upstream.owner}/${upstream.repo}@${branch}`;
-  const payload: Record<string, string> = {
-    title,
-    body: "Automated upstream template sync (Page Speed Tester admin).",
-    base: branch,
-    head: branch,
-  };
-
-  // Template copies are outside the fork network — owner:branch merge/PR head fails with
-  // "Head does not exist". Same-org cross-repo PRs require head_repo (branch name only in head).
-  if (upstream.owner === target.owner) {
-    payload.head_repo = `${upstream.owner}/${upstream.repo}`;
-  } else {
-    payload.head = `${upstream.owner}:${branch}`;
-  }
-
-  const res = await ghRequest(
-    pat,
-    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls`,
-    { method: "POST", body: JSON.stringify(payload) }
-  );
-
-  if (res.ok) {
-    const pr = (await res.json()) as PullRequestSummary;
-    return { pr };
-  }
-
-  if (res.status === 422) {
-    const existing = await listOpenUpstreamPullRequests(pat, target, upstream, branch);
-    if (existing[0]) return { pr: existing[0] };
-  }
-
-  return { error: await parseGhError(res), status: res.status };
-}
-
-async function mergePullRequest(
-  pat: string,
-  target: { owner: string; repo: string },
-  pullNumber: number,
-  commitTitle: string,
-  options?: { merge_method?: (typeof MERGE_METHODS)[number]; sha?: string }
-): Promise<Response> {
-  const body: Record<string, string> = {
-    commit_title: commitTitle,
-    merge_method: options?.merge_method ?? "merge",
-  };
-  if (options?.sha) body.sha = options.sha;
-
-  return ghRequest(
-    pat,
-    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls/${pullNumber}/merge`,
-    {
-      method: "PUT",
-      body: JSON.stringify(body),
-    }
-  );
-}
-
-async function mergePullRequestWithRetry(
-  pat: string,
-  target: { owner: string; repo: string },
-  pullNumber: number,
-  commitTitle: string
-): Promise<{ response: Response; lastMethod?: string; github?: GhJson | null }> {
-  let lastRes: Response | null = null;
-  let lastMethod: string | undefined;
-  let lastGithub: GhJson | null = null;
-
-  for (const delayMs of MERGE_RETRY_DELAYS_MS) {
-    if (delayMs > 0) await sleep(delayMs);
-
-    const pr = await fetchPullRequest(pat, target, pullNumber);
-    const headSha = pr?.head?.sha;
-
-    for (const mergeMethod of MERGE_METHODS) {
-      lastMethod = mergeMethod;
-      const res = await mergePullRequest(pat, target, pullNumber, commitTitle, {
-        merge_method: mergeMethod,
-        sha: headSha,
-      });
-      if (res.ok) {
-        return { response: res, lastMethod: mergeMethod };
-      }
-
-      const { message, details } = await parseGhErrorDetails(res.clone());
-      lastGithub = details;
-      lastRes = new Response(JSON.stringify(details ?? { message }), {
-        status: res.status,
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (res.status !== 500 && res.status !== 502 && res.status !== 503) {
-        return { response: lastRes, lastMethod: mergeMethod, github: details };
-      }
-    }
-  }
-
-  return {
-    response: lastRes ?? new Response(null, { status: 500 }),
-    lastMethod,
-    github: lastGithub,
-  };
-}
-
 /** Fork network only — merges API accepts owner:branch as head. */
 async function crossRepoMerge(
   env: Env,
@@ -490,107 +294,89 @@ async function crossRepoMerge(
   );
 }
 
-async function crossRepoPullRequestSync(
+/**
+ * Dispatch the `sync-upstream` workflow in the target repo. A real `git merge`
+ * in GitHub Actions is reliable even for template copies that are not in the
+ * fork network (the merges/PR API returns 500 for those).
+ */
+async function dispatchUpstreamSyncWorkflow(
   env: Env,
   target: { owner: string; repo: string },
   upstream: { owner: string; repo: string; branch: string },
   branch: string
-): Promise<Response> {
-  const commitTitle = `${SYNC_PR_TITLE_PREFIX}${upstream.owner}/${upstream.repo}@${branch}`;
-  const pat = env.GH_PAT;
-
-  const tryMergePullRequest = async (
-    pullNumber: number
-  ): Promise<
-    | { ok: true; response: Response }
-    | {
-        ok: false;
-        response?: Response;
-        error: string;
-        status: number;
-        pr?: PullRequestSummary;
-        merge_method?: string;
-        github?: GhJson;
-      }
-  > => {
-    const ready = await waitForMergeablePullRequest(pat, target, pullNumber);
-    if ("error" in ready) {
-      return {
-        ok: false,
-        error: ready.error,
-        status: ready.status,
-        pr: ready.pr,
-      };
-    }
-
-    const mergeAttempt = await mergePullRequestWithRetry(pat, target, pullNumber, commitTitle);
-    if (mergeAttempt.response.ok) {
-      return { ok: true, response: mergeAttempt.response };
-    }
-
-    const { message, details } = await parseGhErrorDetails(mergeAttempt.response.clone());
-
-    return {
-      ok: false,
-      response: mergeAttempt.response,
-      error: message,
-      status: mergeAttempt.response.status,
-      pr: ready.pr,
-      merge_method: mergeAttempt.lastMethod,
-      github: details ?? mergeAttempt.github ?? undefined,
-    };
-  };
-
-  const existing = await listOpenUpstreamPullRequests(pat, target, upstream, branch);
-  for (const pr of existing) {
-    const result = await tryMergePullRequest(pr.number);
-    if (result.ok) return result.response;
-    if (result.status === 409) {
-      return ghErrorResponse(
-        {
-          message: result.error,
-          pull_request_url: result.pr?.html_url ?? null,
-          pull_request_number: result.pr?.number ?? null,
-        },
-        result.status
-      );
-    }
-    // Keep the open PR on transient GitHub 5xx — closing and recreating often makes it worse.
-  }
-
-  const created = await createUpstreamPullRequest(pat, target, upstream, branch);
-  if ("error" in created) {
-    return ghErrorResponse({ message: created.error }, created.status);
-  }
-
-  await sleep(POST_CREATE_PR_DELAY_MS);
-
-  const merged = await tryMergePullRequest(created.pr.number);
-  if (merged.ok) return merged.response;
-
-  const prUrl = merged.pr?.html_url;
-  const detail = prUrl ? ` Open PR: ${prUrl}` : "";
-  return ghErrorResponse(
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const res = await ghRequest(
+    env.GH_PAT,
+    `https://api.github.com/repos/${target.owner}/${target.repo}/dispatches`,
     {
-      message: `${merged.error}.${detail}`,
-      pull_request_url: merged.pr?.html_url ?? null,
-      pull_request_number: merged.pr?.number ?? null,
-      github_status: merged.status,
-      merge_method: merged.merge_method ?? null,
-      github: merged.github ?? null,
-      hint: prUrl
-        ? "GitHub could not auto-merge — open the pull request on GitHub and merge manually."
-        : null,
-    },
-    merged.status >= 500 ? 502 : merged.status
+      method: "POST",
+      body: JSON.stringify({
+        event_type: "sync-upstream",
+        client_payload: {
+          upstream_owner: upstream.owner,
+          upstream_repo: upstream.repo,
+          upstream_branch: upstream.branch,
+          target_branch: branch,
+        },
+      }),
+    }
   );
+  if (res.ok) return { ok: true };
+  return { ok: false, status: res.status, message: await parseGhError(res) };
 }
 
-function ghErrorResponse(body: GhJson, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
+async function setUpstreamSyncResult(
+  env: Env,
+  result: UpstreamSyncResult
+): Promise<void> {
+  await env.KV.put(SYNC_RESULT_KV_KEY, JSON.stringify(result), {
+    expirationTtl: SYNC_RESULT_TTL,
   });
+}
+
+export async function getUpstreamSyncResult(
+  env: Env
+): Promise<UpstreamSyncResult | null> {
+  const raw = await env.KV.get(SYNC_RESULT_KV_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as UpstreamSyncResult;
+  } catch {
+    return null;
+  }
+}
+
+/** Internal endpoint — the sync workflow reports merge/push outcome here. */
+export async function registerUpstreamSyncResult(
+  request: Request,
+  env: Env
+): Promise<Response> {
+  const auth = request.headers.get("Authorization");
+  if (!auth || auth !== `Bearer ${env.WORKER_API_SECRET}`) {
+    return json(request, env, { error: "Unauthorized" }, 401);
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    status?: string;
+    message?: string;
+    sha?: string;
+    github_run_id?: string;
+  };
+
+  const status: UpstreamSyncResult["status"] =
+    body.status === "success" || body.status === "conflict" || body.status === "error"
+      ? body.status
+      : "error";
+
+  await setUpstreamSyncResult(env, {
+    status,
+    message: body.message?.trim() || "Upstream sync finished",
+    sha: body.sha?.trim() || null,
+    github_run_id: body.github_run_id?.trim() || null,
+    updated_at: new Date().toISOString(),
+  });
+
+  return json(request, env, { ok: true });
 }
 
 export async function getUpstreamStatus(request: Request, env: Env): Promise<Response> {
@@ -605,7 +391,8 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
   if ("error" in result) {
     return json(request, env, { error: result.error }, result.status);
   }
-  return json(request, env, result);
+  const last_sync = await getUpstreamSyncResult(env);
+  return json(request, env, { ...result, last_sync });
 }
 
 export async function syncUpstream(request: Request, env: Env): Promise<Response> {
@@ -653,26 +440,55 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
     });
   }
 
-  let method: "merge-upstream" | "cross-repo-merge" | "cross-repo-pr-merge" = is_fork
-    ? "merge-upstream"
-    : "cross-repo-pr-merge";
+  // Template copies are not in the fork network — the merges/PR API returns 500.
+  // Dispatch a workflow that runs a real `git merge` + push instead.
+  if (!is_fork) {
+    const dispatch = await dispatchUpstreamSyncWorkflow(env, target, upstream, branch);
+    if (!dispatch.ok) {
+      return json(
+        request,
+        env,
+        {
+          ok: false,
+          error: `Could not start sync workflow: ${dispatch.message}`,
+          method: "workflow-dispatch",
+          compare: compareResult,
+          hint: "Ensure .github/workflows/upstream-sync.yml exists on the target repo's default branch and the GitHub PAT can dispatch it.",
+        },
+        502
+      );
+    }
+    await env.KV.put(SYNC_KV_KEY, String(Date.now()));
+    await setUpstreamSyncResult(env, {
+      status: "pending",
+      message: "Sync workflow dispatched — merging upstream via GitHub Actions",
+      updated_at: new Date().toISOString(),
+    });
+    return json(request, env, {
+      ok: true,
+      started: true,
+      method: "workflow-dispatch",
+      message:
+        "Sync läuft als GitHub Action (git merge). Der Status aktualisiert sich in Kürze.",
+      compare: compareResult,
+      actions_url: `https://github.com/${target.owner}/${target.repo}/actions/workflows/upstream-sync.yml`,
+    });
+  }
+
+  let method: "merge-upstream" | "cross-repo-merge" = "merge-upstream";
   let mergeRes: Response;
 
-  if (is_fork) {
-    mergeRes = await ghRequest(
-      env.GH_PAT,
-      `https://api.github.com/repos/${target.owner}/${target.repo}/merge-upstream`,
-      {
-        method: "POST",
-        body: JSON.stringify({ branch, base_branch: branch }),
-      }
-    );
-    if (!mergeRes.ok && (mergeRes.status === 422 || mergeRes.status === 403)) {
-      method = "cross-repo-merge";
-      mergeRes = await crossRepoMerge(env, target, upstream, branch);
+  mergeRes = await ghRequest(
+    env.GH_PAT,
+    `https://api.github.com/repos/${target.owner}/${target.repo}/merge-upstream`,
+    {
+      method: "POST",
+      body: JSON.stringify({ branch, base_branch: branch }),
     }
-  } else {
-    mergeRes = await crossRepoPullRequestSync(env, target, upstream, branch);
+  );
+  if (!mergeRes.ok && (mergeRes.status === 422 || mergeRes.status === 403)) {
+    method = "cross-repo-merge";
+    mergeRes = await crossRepoMerge(env, target, upstream, branch);
   }
 
   if (mergeRes.ok) {
@@ -684,9 +500,7 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
       message:
         method === "merge-upstream"
           ? "Upstream merged (fork sync)"
-          : method === "cross-repo-pr-merge"
-            ? "Upstream merged via pull request"
-            : "Upstream merged into repository",
+          : "Upstream merged into repository",
       method,
       sha: typeof body.sha === "string" ? body.sha : null,
       compare: "error" in updatedCompare ? compareResult : updatedCompare,

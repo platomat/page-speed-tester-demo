@@ -59,8 +59,9 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/github/upstream-status` | Admin | Vergleich deines Repos mit dem Upstream (ahead/behind/diverged) |
-| `POST` | `/api/github/sync-upstream` | Admin | Upstream in dein Repo mergen (Fork: GitHub merge-upstream; Template: Cross-Repo-PR mit `head_repo` + Merge). Rate-Limit 1×/Minute. Erfordert Worker-Secret `GH_PAT` mit **Contents** und **Pull requests: Read and write** auf deinem Repo. |
+| `GET` | `/api/github/upstream-status` | Admin | Vergleich deines Repos mit dem Upstream (ahead/behind/diverged) inkl. `last_sync` (letztes Workflow-Ergebnis) |
+| `POST` | `/api/github/sync-upstream` | Admin | Upstream in dein Repo mergen. Fork: GitHub `merge-upstream` (synchron). Template-Kopie: löst den Workflow `upstream-sync.yml` aus (`git merge` + push) und antwortet mit `{ ok: true, started: true, method: "workflow-dispatch" }`. Rate-Limit 1×/Minute. Erfordert `GH_PAT` mit **Contents** und **Actions: Read and write**. |
+| `POST` | `/api/internal/upstream-sync/result` | Worker-Secret (`WORKER_API_SECRET`) | Der Sync-Workflow meldet hier sein Ergebnis (`status` = `success`/`conflict`/`error`, `sha`, `message`). |
 
 ---
 

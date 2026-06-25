@@ -48,7 +48,11 @@ import {
   unassignUserProject,
 } from "./users";
 import { getSettings, updateSettings } from "./settings";
-import { getUpstreamStatus, syncUpstream } from "./github-sync";
+import {
+  getUpstreamStatus,
+  registerUpstreamSyncResult,
+  syncUpstream,
+} from "./github-sync";
 
 async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -185,6 +189,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   }
   if (path === "/api/internal/runs/completed" && method === "POST") {
     return registerRunCompleted(request, env);
+  }
+  if (path === "/api/internal/upstream-sync/result" && method === "POST") {
+    return registerUpstreamSyncResult(request, env);
   }
 
   // Users (admin)

@@ -236,6 +236,29 @@
   align-items: center;
 }
 
+.upstream-last-sync {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+}
+
+.upstream-last-sync.upstream-sync-ok {
+  border-color: var(--success, #1a7f37);
+  color: var(--success, #1a7f37);
+}
+
+.upstream-last-sync.upstream-sync-pending {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.upstream-last-sync.upstream-sync-error {
+  border-color: var(--danger, #cf222e);
+  color: var(--danger, #cf222e);
+}
+
 .upstream-error-json {
   margin: 0.75rem 0 0;
   padding: 0.75rem 1rem;
