@@ -78,10 +78,12 @@ function formatUpstreamStatusLabel(data) {
 async function loadUpstreamStatus() {
   const statusEl = document.getElementById("upstream-status");
   const syncBtn = document.getElementById("upstream-sync-btn");
+  const refreshBtn = document.getElementById("upstream-refresh-btn");
   if (!statusEl || !syncBtn) return;
 
   statusEl.textContent = "Loading upstream status…";
   syncBtn.disabled = true;
+  if (refreshBtn) refreshBtn.disabled = true;
 
   try {
     const data = await api("/api/github/upstream-status");
@@ -90,6 +92,8 @@ async function loadUpstreamStatus() {
   } catch (err) {
     statusEl.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
     syncBtn.disabled = true;
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
   }
 }
 
@@ -330,9 +334,6 @@ async function init() {
 
   await loadSettingsForm();
   updateCronHint();
-  if (document.getElementById("upstream-sync-section") && !document.getElementById("upstream-sync-section").classList.contains("hidden")) {
-    await loadUpstreamStatus();
-  }
   bindCronPreview(
     document.getElementById("project-cron"),
     document.getElementById("project-cron-preview")
@@ -351,9 +352,6 @@ async function init() {
       refreshAllCronPreviews();
       showMessage("Settings saved");
       applyUpstreamSyncVisibility(data.upstream_sync_enabled !== false);
-      if (data.upstream_sync_enabled !== false) {
-        await loadUpstreamStatus();
-      }
     } catch (err) {
       showMessage(err.message, true);
     }
