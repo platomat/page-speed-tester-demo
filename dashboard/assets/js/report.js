@@ -307,7 +307,7 @@ async function init() {
 
   if (!reportKey) {
     document.getElementById("report-root").innerHTML =
-      '<p class="error">Missing report key. Use <code>report.html?key=reports/{project_id}/{filename}</code></p>';
+      '<p class="error">Missing report key. Use <code>/report?key=reports/{project_id}/{filename}</code></p>';
     document.getElementById("report-meta").textContent = "";
     setReportNavVisible(false);
     return;

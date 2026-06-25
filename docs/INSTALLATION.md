@@ -546,7 +546,7 @@ URLs werden im Dashboard unter **Admin** angelegt (oder per API) — nicht im Re
 4. URLs pro Projekt hinzufügen
 5. Pro Projekt zwei Schlüssel in der Spalte **Keys & links**:
   - **Trigger** — startet Lighthouse-Läufe (API-URL, kein Login)
-  - **Share** — schreibgeschützte Dashboard-Ansicht für Gäste (`share.html`)
+  - **Share** — schreibgeschützte Dashboard-Ansicht für Gäste (`/share`)
 
 Alternativ per API (`POST /api/projects`, `POST /api/projects/:id/urls`) — nur als **admin** eingeloggt.
 
@@ -595,7 +595,7 @@ Rate-Limit beim manuellen Trigger: max. 1 Lauf alle 5 Minuten pro Projekt (KV).
 Share-Key steht in der Admin-UI neben dem Trigger-Key. Link öffnet das Dashboard im Lesemodus:
 
 ```
-https://page-speed-tester.mydomain.tld/share.html?project=default&key=DEIN_SHARE_KEY
+https://page-speed-tester.mydomain.tld/share?project=default&key=DEIN_SHARE_KEY
 ```
 
 Gäste sehen Metriken, Charts und Berichte **nur für dieses Projekt**. Tests starten, Admin und Löschen sind nicht möglich. Der Share-Key ist vom Trigger-Key getrennt — wer den Share-Link hat, kann keine Tests auslösen.

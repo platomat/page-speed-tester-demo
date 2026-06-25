@@ -1,2 +1,3 @@
-/report    /report.html    200
-/share     /share.html     200
+# Legacy .html URLs → directory routes (avoid /share ↔ share.html redirect loops on Pages)
+/share.html   /share/   301
+/report.html  /report/  301

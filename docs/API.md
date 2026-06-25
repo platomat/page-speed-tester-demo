@@ -117,7 +117,7 @@ Rate-Limit: max. 1 manueller Lauf alle 5 Minuten pro Projekt (KV).
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/public/share/:project_id?share_key=` | Share key | Projekt-Metadaten für `share.html` |
+| `GET` | `/api/public/share/:project_id?share_key=` | Share key | Projekt-Metadaten für `/share` |
 | `GET` | `/api/public/share/:project_id/metrics?share_key=` | Share key | Metriken (Query wie `/api/metrics`) |
 | `GET` | `/api/public/share/:project_id/reports?share_key=` | Share key | Berichtsliste |
 | `GET` | `/api/public/share/report?share_key=&report_key=` | Share key | Lighthouse-JSON |

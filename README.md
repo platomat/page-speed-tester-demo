@@ -74,6 +74,16 @@ Lokal entwickeln: `npm install` → `npm run dev` (Worker `http://localhost:8787
 
 ---
 
+## Live-Demo (Share-Ansicht)
+
+Öffentliche **schreibgeschützte** Dashboard-Vorschau der Demo-Instanz (Projekt `example-com`, nur Lesen — kein Login):
+
+**[page-speed-tester-demo.storyofai.net/share?project=example-com&key=…](https://page-speed-tester-demo.storyofai.net/share?project=example-com&key=7c31b74295847e63e0dbffc01e3a416a5ebdb18b9323a1c4b4b858d95d3d37e9)**
+
+So siehst du Charts und Berichte, bevor du eine eigene Instanz aufsetzt.
+
+---
+
 ## Dokumentation
 
 

@@ -161,8 +161,7 @@ function publicTriggerUrl(projectId, accessKey, urlId) {
 
 function publicShareDashboardUrl(projectId, shareToken) {
   const params = new URLSearchParams({ project: projectId, key: shareToken });
-  const base = window.location.href.replace(/[#?].*$/, "").replace(/[^/]+$/, "");
-  return `${base}share.html?${params}`;
+  return `/share?${params}`;
 }
 
 function escapeHtml(text) {
