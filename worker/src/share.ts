@@ -6,6 +6,7 @@ import {
   normalizeReportKey,
   resolveReportObject,
 } from "./report-storage";
+import { listShareAnnotations } from "./annotations";
 
 export async function ensureShareToken(env: Env, projectId: string): Promise<string> {
   const row = await env.DB.prepare(`SELECT share_token FROM projects WHERE id = ?`)
@@ -135,6 +136,23 @@ export async function publicShareMetrics(
     .all();
 
   return json(request, env, { project_id: projectId, url_id: urlId, strategy, runs: results ?? [] });
+}
+
+export async function publicShareAnnotations(
+  request: Request,
+  env: Env,
+  projectId: string
+): Promise<Response> {
+  const token = shareKeyFromRequest(request);
+  if (!token) {
+    return json(request, env, { error: "key query parameter required" }, 400);
+  }
+  const project = await resolveShareProject(env, projectId, token);
+  if (!project) {
+    return json(request, env, { error: "Invalid project or share key" }, 403);
+  }
+  const annotations = await listShareAnnotations(env, projectId);
+  return json(request, env, { project_id: projectId, annotations });
 }
 
 export async function publicShareReports(

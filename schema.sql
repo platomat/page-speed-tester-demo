@@ -75,6 +75,20 @@ CREATE TABLE IF NOT EXISTS runs (
 
 CREATE INDEX IF NOT EXISTS idx_runs_project_url ON runs(project_id, url_id, strategy, run_at);
 
+CREATE TABLE IF NOT EXISTS annotations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  annotated_at TEXT NOT NULL,
+  label TEXT NOT NULL,
+  link TEXT,
+  created_at TEXT NOT NULL,
+  created_by TEXT,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_annotations_project ON annotations(project_id, annotated_at);
+
 -- Existing databases (add column once):
 -- ALTER TABLE projects ADD COLUMN share_token TEXT UNIQUE;
 -- ALTER TABLE runs ADD COLUMN trigger_source TEXT NOT NULL DEFAULT 'manual';
+-- Annotations: run the CREATE TABLE / CREATE INDEX statements above once.

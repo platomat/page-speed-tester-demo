@@ -260,6 +260,19 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_runs_project_url ON runs(project_id, url_id, strategy, run_at);
+
+CREATE TABLE IF NOT EXISTS annotations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  annotated_at TEXT NOT NULL,
+  label TEXT NOT NULL,
+  link TEXT,
+  created_at TEXT NOT NULL,
+  created_by TEXT,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_annotations_project ON annotations(project_id, annotated_at);
 ```
 
 **Alternativ per Wrangler** (lokal oder remote):
@@ -268,7 +281,7 @@ CREATE INDEX IF NOT EXISTS idx_runs_project_url ON runs(project_id, url_id, stra
 npm run db:migrate:remote
 ```
 
-Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sessions`, `runs` müssen erscheinen.
+Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sessions`, `runs`, `annotations` müssen erscheinen.
 
 **Hinweis:** Projekte und URLs legst du danach im Dashboard unter **Admin** an — nicht per SQL. Der erste Admin-User wird beim ersten Login über **Initial setup** im Dashboard erstellt.
 
@@ -642,6 +655,8 @@ Gäste sehen Metriken, Charts und Berichte **nur für dieses Projekt**. Tests st
 Share-Key rotieren: Admin → Projekt → ↻ neben Share-Key (alte Links werden ungültig).
 
 Bestehende Datenbanken: einmalig `ALTER TABLE projects ADD COLUMN share_token TEXT UNIQUE;` — fehlende Tokens werden beim ersten Admin-Aufruf automatisch erzeugt.
+
+**Annotations (bestehende Datenbanken):** einmalig die `CREATE TABLE annotations …` + `CREATE INDEX idx_annotations_project …` aus `schema.sql` ausführen (oder `npm run db:migrate:remote`).
 
 ---
 

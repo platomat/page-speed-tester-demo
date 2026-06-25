@@ -100,8 +100,128 @@ const chartAverageLabelPlugin = {
   },
 };
 
+const ANNOTATION_COLOR = "rgba(59, 130, 246, 0.85)";
+
+/** Pixel x for an arbitrary timestamp on a category axis, interpolated between runs. */
+function annotationPixelX(timeMs, runTimes, xScale, chartArea) {
+  const pts = [];
+  for (let i = 0; i < runTimes.length; i++) {
+    if (runTimes[i] != null) pts.push({ i, t: runTimes[i] });
+  }
+  if (!pts.length) return null;
+
+  let x;
+  if (timeMs <= pts[0].t) {
+    x = xScale.getPixelForValue(pts[0].i);
+  } else if (timeMs >= pts[pts.length - 1].t) {
+    x = xScale.getPixelForValue(pts[pts.length - 1].i);
+  } else {
+    let k = 0;
+    while (k < pts.length - 1 && pts[k + 1].t < timeMs) k++;
+    const a = pts[k];
+    const b = pts[k + 1];
+    const f = b.t > a.t ? (timeMs - a.t) / (b.t - a.t) : 0;
+    x = xScale.getPixelForValue(a.i) + f * (xScale.getPixelForValue(b.i) - xScale.getPixelForValue(a.i));
+  }
+  if (x < chartArea.left - 0.5 || x > chartArea.right + 0.5) return null;
+  return x;
+}
+
+const annotationsPlugin = {
+  id: "annotations",
+  afterDatasetsDraw(chart) {
+    const annotations = chart.$annotations;
+    const runTimes = chart.$runTimes;
+    const xScale = chart.scales?.x;
+    const { ctx, chartArea } = chart;
+    chart.$annotationHits = [];
+    if (!annotations?.length || !runTimes?.length || !xScale || !chartArea) return;
+
+    for (const ann of annotations) {
+      const x = annotationPixelX(ann.time, runTimes, xScale, chartArea);
+      if (x == null) continue;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = ANNOTATION_COLOR;
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = ANNOTATION_COLOR;
+      ctx.beginPath();
+      ctx.moveTo(x - 4, chartArea.top);
+      ctx.lineTo(x + 4, chartArea.top);
+      ctx.lineTo(x, chartArea.top + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      chart.$annotationHits.push({ x, top: chartArea.top, bottom: chartArea.bottom, ann });
+    }
+  },
+};
+
 if (typeof Chart !== "undefined") {
   Chart.register(chartAverageLabelPlugin);
+  Chart.register(annotationsPlugin);
+}
+
+function ensureAnnotationTooltip() {
+  let el = document.getElementById("annotation-tooltip");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "annotation-tooltip";
+    el.className = "annotation-tooltip hidden";
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function annotationTooltipHtml(ann) {
+  const when = escapeHtml(formatDateTime(ann.annotated_at, { seconds: true }));
+  const label = escapeHtml(ann.label);
+  const link = ann.link
+    ? `<div class="annotation-tooltip-link">${escapeHtml(ann.link)}</div>`
+    : "";
+  return `<div class="annotation-tooltip-when">${when}</div><div class="annotation-tooltip-label">${label}</div>${link}`;
+}
+
+function attachAnnotationTooltip(chart) {
+  const canvas = chart.canvas;
+  if (!canvas || canvas.dataset.annotationTooltip === "1") return;
+  canvas.dataset.annotationTooltip = "1";
+
+  canvas.addEventListener("mousemove", (event) => {
+    const hits = chart.$annotationHits || [];
+    const tip = ensureAnnotationTooltip();
+    let found = null;
+    for (const hit of hits) {
+      if (
+        Math.abs(event.offsetX - hit.x) <= 5 &&
+        event.offsetY >= hit.top - 6 &&
+        event.offsetY <= hit.bottom + 4
+      ) {
+        found = hit;
+        break;
+      }
+    }
+    if (!found) {
+      tip.classList.add("hidden");
+      return;
+    }
+    tip.innerHTML = annotationTooltipHtml(found.ann);
+    tip.classList.remove("hidden");
+    tip.style.left = `${event.clientX + 12}px`;
+    tip.style.top = `${event.clientY + 12}px`;
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    ensureAnnotationTooltip().classList.add("hidden");
+  });
 }
 
 function resizeAllCharts() {
@@ -142,6 +262,8 @@ let wasRunStatusActive = false;
 let cachedRunStatus = { running: false };
 /** @type {{ projectId: string, shareKey: string } | null} */
 let shareContext = null;
+/** @type {Array<{id: number, annotated_at: string, label: string, link: string|null, time: number}>} */
+let currentAnnotations = [];
 
 function isSharePage() {
   return document.getElementById("site-header")?.dataset.page === "share";
@@ -316,13 +438,15 @@ function buildChartDatasets(data, metricKey) {
   return datasets;
 }
 
-function upsertChart(id, labels, data, metricKey) {
+function upsertChart(id, labels, data, metricKey, runTimes = []) {
   const canvas = document.getElementById(id);
   if (!canvas) return;
   if (charts[id]) {
     charts[id].data.labels = labels;
     charts[id].data.datasets = buildChartDatasets(data, metricKey);
     charts[id].options = chartOptions(metricKey);
+    charts[id].$runTimes = runTimes;
+    charts[id].$annotations = currentAnnotations;
     charts[id].update();
     resizeAllCharts();
     return;
@@ -335,6 +459,10 @@ function upsertChart(id, labels, data, metricKey) {
     },
     options: chartOptions(metricKey),
   });
+  charts[id].$runTimes = runTimes;
+  charts[id].$annotations = currentAnnotations;
+  attachAnnotationTooltip(charts[id]);
+  charts[id].update();
 }
 
 function renderMetricCards(runs, deviceLabel) {
@@ -387,22 +515,98 @@ function renderLatest(desktopRuns, mobileRuns) {
     </div>`;
 }
 
+function runTimeMs(run) {
+  const d = parseRunDate(run);
+  return d ? d.getTime() : null;
+}
+
 function renderCharts(desktopRuns, mobileRuns) {
+  const desktopTimes = desktopRuns.map(runTimeMs);
+  const mobileTimes = mobileRuns.map(runTimeMs);
   for (const metric of METRICS) {
     if (!metric.chart) continue;
     upsertChart(
       `chart-${metric.chart}-desktop`,
       desktopRuns.map((r) => formatDateTime(r)),
       desktopRuns.map((r) => r[metric.key]),
-      metric.key
+      metric.key,
+      desktopTimes
     );
     upsertChart(
       `chart-${metric.chart}-mobile`,
       mobileRuns.map((r) => formatDateTime(r)),
       mobileRuns.map((r) => r[metric.key]),
-      metric.key
+      metric.key,
+      mobileTimes
     );
   }
+}
+
+function normalizeAnnotations(list) {
+  return (list ?? [])
+    .map((a) => ({ ...a, time: Date.parse(a.annotated_at) }))
+    .filter((a) => Number.isFinite(a.time))
+    .sort((a, b) => a.time - b.time);
+}
+
+function refreshChartAnnotations() {
+  for (const chart of Object.values(charts)) {
+    chart.$annotations = currentAnnotations;
+    chart.update();
+  }
+}
+
+function prefillAnnotationTime() {
+  const at = document.getElementById("annotation-at");
+  if (!at || at.value) return;
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  at.value = local.toISOString().slice(0, 16);
+}
+
+function renderAnnotationsList(annotations) {
+  const list = document.getElementById("annotations-list");
+  if (!list) return;
+  if (!annotations.length) {
+    list.innerHTML = '<li class="annotations-empty">No annotations yet.</li>';
+  } else {
+    list.innerHTML = annotations
+      .map((a) => {
+        const when = escapeHtml(formatDateTime(a.annotated_at, { seconds: true }));
+        const link = a.link
+          ? ` <a href="${escapeHtml(a.link)}" target="_blank" rel="noopener">↗</a>`
+          : "";
+        const del = shareContext
+          ? ""
+          : `<button type="button" class="icon-btn btn-danger btn-sm" data-annotation-delete="${a.id}" title="Delete" aria-label="Delete annotation">${ICON_DELETE}</button>`;
+        return `<li class="annotation-item">
+          <span class="annotation-when">${when}</span>
+          <span class="annotation-label">${escapeHtml(a.label)}${link}</span>
+          ${del}
+        </li>`;
+      })
+      .join("");
+  }
+  if (!shareContext) prefillAnnotationTime();
+}
+
+function localDateTimeToIso(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+async function reloadAnnotations(projectId) {
+  try {
+    const data = shareContext
+      ? await apiPublic(`/api/public/share/${encodeURIComponent(projectId)}/annotations`)
+      : await api(`/api/projects/${encodeURIComponent(projectId)}/annotations`);
+    currentAnnotations = normalizeAnnotations(data.annotations);
+  } catch {
+    currentAnnotations = [];
+  }
+  renderAnnotationsList(currentAnnotations);
+  refreshChartAnnotations();
 }
 
 const ICON_DETAILS = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>`;
@@ -567,6 +771,7 @@ function showUrlScopeView(desktopRuns, mobileRuns) {
   const hasData = desktopRuns.length > 0 || mobileRuns.length > 0;
   document.getElementById("latest")?.classList.remove("hidden");
   document.querySelector(".charts")?.classList.toggle("hidden", !hasData);
+  document.querySelector(".annotations-section")?.classList.toggle("hidden", !hasData);
   document.querySelector(".reports-section")?.classList.toggle("hidden", !hasData);
 }
 
@@ -654,19 +859,22 @@ async function loadData() {
 
     showUrlMetricsView();
     const base = `/api/public/share/${encodeURIComponent(projectId)}`;
-    const [desktopData, mobileData, reportsData] = await Promise.all([
+    const [desktopData, mobileData, reportsData, annotationsData] = await Promise.all([
       apiPublic(`${base}/metrics?url_id=${encodeURIComponent(urlId)}&strategy=desktop`),
       apiPublic(`${base}/metrics?url_id=${encodeURIComponent(urlId)}&strategy=mobile`),
       apiPublic(`${base}/reports?url_id=${encodeURIComponent(urlId)}`),
+      apiPublic(`${base}/annotations`).catch(() => ({ annotations: [] })),
     ]);
 
     const desktopRuns = desktopData.runs ?? [];
     const mobileRuns = mobileData.runs ?? [];
     if (!scopeMatches(snapshot)) return;
+    currentAnnotations = normalizeAnnotations(annotationsData.annotations);
     renderLatest(desktopRuns, mobileRuns);
     showUrlScopeView(desktopRuns, mobileRuns);
     if (desktopRuns.length > 0 || mobileRuns.length > 0) {
       renderCharts(desktopRuns, mobileRuns);
+      renderAnnotationsList(currentAnnotations);
       renderReportsTable(reportsData.reports ?? [], projectId, urlId);
     }
     return;
@@ -688,19 +896,22 @@ async function loadData() {
 
   showUrlMetricsView();
   const base = `/api/metrics?project_id=${encodeURIComponent(projectId)}&url_id=${encodeURIComponent(urlId)}`;
-  const [desktopData, mobileData, reportsData] = await Promise.all([
+  const [desktopData, mobileData, reportsData, annotationsData] = await Promise.all([
     api(`${base}&strategy=desktop`),
     api(`${base}&strategy=mobile`),
     api(`/api/reports?project_id=${encodeURIComponent(projectId)}&url_id=${encodeURIComponent(urlId)}`),
+    api(`/api/projects/${encodeURIComponent(projectId)}/annotations`).catch(() => ({ annotations: [] })),
   ]);
 
   const desktopRuns = desktopData.runs ?? [];
   const mobileRuns = mobileData.runs ?? [];
   if (!scopeMatches(snapshot)) return;
+  currentAnnotations = normalizeAnnotations(annotationsData.annotations);
   renderLatest(desktopRuns, mobileRuns);
   showUrlScopeView(desktopRuns, mobileRuns);
   if (desktopRuns.length > 0 || mobileRuns.length > 0) {
     renderCharts(desktopRuns, mobileRuns);
+    renderAnnotationsList(currentAnnotations);
     renderReportsTable(reportsData.reports ?? [], projectId, urlId);
   }
 }
@@ -938,9 +1149,62 @@ async function init() {
     }
   });
 
+  initAnnotationForm();
+
   if (projects.length) {
     await onScopeChange();
   }
+}
+
+function initAnnotationForm() {
+  const form = document.getElementById("annotation-form");
+  if (form) {
+    prefillAnnotationTime();
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const { projectId } = getScope();
+      if (!projectId) return;
+      const annotatedAt = localDateTimeToIso(document.getElementById("annotation-at").value);
+      const label = document.getElementById("annotation-label").value.trim();
+      const link = document.getElementById("annotation-link").value.trim();
+      if (!annotatedAt) {
+        alert("Please pick a valid date and time.");
+        return;
+      }
+      if (!label) {
+        alert("Please enter a label.");
+        return;
+      }
+      try {
+        await api(`/api/projects/${encodeURIComponent(projectId)}/annotations`, {
+          method: "POST",
+          body: JSON.stringify({ annotated_at: annotatedAt, label, link: link || undefined }),
+        });
+        document.getElementById("annotation-label").value = "";
+        document.getElementById("annotation-link").value = "";
+        await reloadAnnotations(projectId);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+
+  document.getElementById("annotations-list")?.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-annotation-delete]");
+    if (!btn) return;
+    const { projectId } = getScope();
+    if (!projectId) return;
+    if (!confirm("Delete this annotation?")) return;
+    try {
+      await api(
+        `/api/projects/${encodeURIComponent(projectId)}/annotations/${encodeURIComponent(btn.dataset.annotationDelete)}`,
+        { method: "DELETE" }
+      );
+      await reloadAnnotations(projectId);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
 }
 
 const shareCtx = parseShareContext();

@@ -28,11 +28,17 @@ import {
   updateProjectUrl,
 } from "./projects";
 import {
+  publicShareAnnotations,
   publicShareMetrics,
   publicShareProject,
   publicShareReportJson,
   publicShareReports,
 } from "./share";
+import {
+  createAnnotation,
+  deleteAnnotation,
+  listAnnotations,
+} from "./annotations";
 import { runScheduledProjects } from "./scheduler";
 import {
   getRunStatus,
@@ -85,6 +91,17 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   const publicShareReportsMatch = path.match(/^\/api\/public\/share\/([^/]+)\/reports$/);
   if (publicShareReportsMatch && method === "GET") {
     return publicShareReports(request, env, decodeURIComponent(publicShareReportsMatch[1]));
+  }
+
+  const publicShareAnnotationsMatch = path.match(
+    /^\/api\/public\/share\/([^/]+)\/annotations$/
+  );
+  if (publicShareAnnotationsMatch && method === "GET") {
+    return publicShareAnnotations(
+      request,
+      env,
+      decodeURIComponent(publicShareAnnotationsMatch[1])
+    );
   }
 
   // Auth
@@ -177,6 +194,28 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     const urlId = decodeURIComponent(urlItemMatch[2]);
     if (method === "PATCH") return updateProjectUrl(request, env, projectId, urlId);
     if (method === "DELETE") return deleteProjectUrl(request, env, projectId, urlId);
+  }
+
+  const annotationsMatch = path.match(/^\/api\/projects\/([^/]+)\/annotations$/);
+  if (annotationsMatch) {
+    if (!user) return json(request, env, { error: "Unauthorized" }, 401);
+    const projectId = decodeURIComponent(annotationsMatch[1]);
+    if (method === "GET") return listAnnotations(request, env, user, projectId);
+    if (method === "POST") return createAnnotation(request, env, user, projectId);
+  }
+
+  const annotationItemMatch = path.match(
+    /^\/api\/projects\/([^/]+)\/annotations\/([^/]+)$/
+  );
+  if (annotationItemMatch && method === "DELETE") {
+    if (!user) return json(request, env, { error: "Unauthorized" }, 401);
+    return deleteAnnotation(
+      request,
+      env,
+      user,
+      decodeURIComponent(annotationItemMatch[1]),
+      decodeURIComponent(annotationItemMatch[2])
+    );
   }
 
   const internalMatch = path.match(/^\/api\/internal\/projects\/([^/]+)\/urls$/);

@@ -91,6 +91,27 @@
         </div>
       </section>
 
+      <section class="annotations-section url-metrics-panel hidden">
+        <h2>Annotations</h2>
+        <p class="annotations-hint">
+          Mark deploys or changes to see whether the metrics above shift afterwards.
+          Annotations apply to the whole project (all URLs).
+        </p>
+        <form id="annotation-form" class="annotation-form">
+          <input type="datetime-local" id="annotation-at" required />
+          <input
+            type="text"
+            id="annotation-label"
+            placeholder="What changed? (e.g. Deploy v2.1)"
+            maxlength="200"
+            required
+          />
+          <input type="url" id="annotation-link" placeholder="Link (optional)" />
+          <button type="submit">Add annotation</button>
+        </form>
+        <ul id="annotations-list" class="annotations-list"></ul>
+      </section>
+
       <section class="reports-section url-metrics-panel hidden">
         <h2>Reports</h2>
         <table id="reports-table">

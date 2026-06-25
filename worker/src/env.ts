@@ -45,6 +45,16 @@ export interface ProjectUrl {
   enabled: number;
 }
 
+export interface Annotation {
+  id: number;
+  project_id: string;
+  annotated_at: string;
+  label: string;
+  link: string | null;
+  created_at: string;
+  created_by: string | null;
+}
+
 export interface RunPayload {
   project_id: string;
   url_id: string;

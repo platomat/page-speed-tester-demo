@@ -103,6 +103,20 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 
 ---
 
+## Annotations (Deploys / Änderungen)
+
+Projektweite Marker auf der Zeitachse der Charts (z. B. „Deploy v2.1“). Gelten für **alle** URLs des Projekts.
+
+| Methode | Pfad | Auth | Beschreibung |
+| ------- | ---- | ---- | ------------ |
+| `GET` | `/api/projects/:id/annotations` | Session + Zugriff | Annotations des Projekts (aufsteigend nach `annotated_at`) |
+| `POST` | `/api/projects/:id/annotations` | Session + Zugriff | Anlegen. Body: `{ annotated_at (ISO), label, link? }` |
+| `DELETE` | `/api/projects/:id/annotations/:annotation_id` | Session + Zugriff | Löschen |
+
+`label` max. 200 Zeichen; `link` optional, muss `http(s)`-URL sein.
+
+---
+
 ## Öffentlicher Trigger (ohne Login)
 
 | Methode | Pfad | Auth | Beschreibung |
@@ -121,6 +135,7 @@ Rate-Limit: max. 1 manueller Lauf alle 5 Minuten pro Projekt (KV).
 | `GET` | `/api/public/share/:project_id?share_key=` | Share key | Projekt-Metadaten für `/share` |
 | `GET` | `/api/public/share/:project_id/metrics?share_key=` | Share key | Metriken (Query wie `/api/metrics`) |
 | `GET` | `/api/public/share/:project_id/reports?share_key=` | Share key | Berichtsliste |
+| `GET` | `/api/public/share/:project_id/annotations?share_key=` | Share key | Annotations (schreibgeschützt, ohne `created_by`) |
 | `GET` | `/api/public/share/report?share_key=&report_key=` | Share key | Lighthouse-JSON |
 
 ---
