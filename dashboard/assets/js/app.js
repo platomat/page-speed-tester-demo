@@ -127,6 +127,8 @@ function annotationPixelX(timeMs, runTimes, xScale, chartArea) {
   return x;
 }
 
+const ANNOTATION_MARKER_SPACING = 7;
+
 const annotationsPlugin = {
   id: "annotations",
   afterDatasetsDraw(chart) {
@@ -137,10 +139,19 @@ const annotationsPlugin = {
     chart.$annotationHits = [];
     if (!annotations?.length || !runTimes?.length || !xScale || !chartArea) return;
 
+    // Group annotations that resolve to (almost) the same x so markers for the
+    // same point in time can be stacked instead of overlapping into one.
+    const groups = new Map();
     for (const ann of annotations) {
       const x = annotationPixelX(ann.time, runTimes, xScale, chartArea);
       if (x == null) continue;
+      const key = Math.round(x);
+      const group = groups.get(key);
+      if (group) group.anns.push(ann);
+      else groups.set(key, { x, anns: [ann] });
+    }
 
+    for (const { x, anns } of groups.values()) {
       ctx.save();
       ctx.beginPath();
       ctx.setLineDash([4, 4]);
@@ -149,18 +160,26 @@ const annotationsPlugin = {
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = ANNOTATION_COLOR;
       ctx.stroke();
-
       ctx.setLineDash([]);
+
       ctx.fillStyle = ANNOTATION_COLOR;
-      ctx.beginPath();
-      ctx.moveTo(x - 4, chartArea.top);
-      ctx.lineTo(x + 4, chartArea.top);
-      ctx.lineTo(x, chartArea.top + 6);
-      ctx.closePath();
-      ctx.fill();
+      for (let j = 0; j < anns.length; j++) {
+        const topY = chartArea.top + j * ANNOTATION_MARKER_SPACING;
+        ctx.beginPath();
+        ctx.moveTo(x - 4, topY);
+        ctx.lineTo(x + 4, topY);
+        ctx.lineTo(x, topY + 6);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.restore();
 
-      chart.$annotationHits.push({ x, top: chartArea.top, bottom: chartArea.bottom, ann });
+      chart.$annotationHits.push({
+        x,
+        top: chartArea.top,
+        bottom: chartArea.bottom,
+        anns,
+      });
     }
   },
 };
@@ -181,13 +200,17 @@ function ensureAnnotationTooltip() {
   return el;
 }
 
-function annotationTooltipHtml(ann) {
-  const when = escapeHtml(formatDateTime(ann.annotated_at, { seconds: true }));
-  const label = escapeHtml(ann.label);
-  const link = ann.link
-    ? `<div class="annotation-tooltip-link">${escapeHtml(ann.link)}</div>`
-    : "";
-  return `<div class="annotation-tooltip-when">${when}</div><div class="annotation-tooltip-label">${label}</div>${link}`;
+function annotationTooltipHtml(anns) {
+  return anns
+    .map((ann) => {
+      const when = escapeHtml(formatDateTime(ann.annotated_at, { seconds: true }));
+      const label = escapeHtml(ann.label);
+      const link = ann.link
+        ? `<div class="annotation-tooltip-link">${escapeHtml(ann.link)}</div>`
+        : "";
+      return `<div class="annotation-tooltip-entry"><div class="annotation-tooltip-when">${when}</div><div class="annotation-tooltip-label">${label}</div>${link}</div>`;
+    })
+    .join("");
 }
 
 function attachAnnotationTooltip(chart) {
@@ -213,7 +236,7 @@ function attachAnnotationTooltip(chart) {
       tip.classList.add("hidden");
       return;
     }
-    tip.innerHTML = annotationTooltipHtml(found.ann);
+    tip.innerHTML = annotationTooltipHtml(found.anns);
     tip.classList.remove("hidden");
     tip.style.left = `${event.clientX + 12}px`;
     tip.style.top = `${event.clientY + 12}px`;

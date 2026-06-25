@@ -529,6 +529,12 @@
   line-height: 1.4;
 }
 
+.annotation-tooltip-entry + .annotation-tooltip-entry {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+}
+
 .annotation-tooltip-when {
   color: var(--muted);
   font-size: 0.75rem;
