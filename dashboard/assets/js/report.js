@@ -257,8 +257,7 @@ function renderReport(report, reportKey) {
 }
 
 function syncShareTokenFromUrl() {
-  const share = new URLSearchParams(window.location.search).get("share")?.trim();
-  if (share) setPublicShareKey(share);
+  restorePublicShareKeyFromPage();
 }
 
 async function loadReport(reportKey) {
@@ -292,9 +291,8 @@ async function loadReport(reportKey) {
 
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  const shareToken = params.get("share")?.trim();
+  const shareToken = restorePublicShareKeyFromPage();
   if (shareToken) {
-    setPublicShareKey(shareToken);
     document.getElementById("site-header")?.setAttribute("data-auth", "false");
     await initSiteHeader();
   } else {

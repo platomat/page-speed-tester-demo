@@ -25,6 +25,7 @@ function resolveApiUrl() {
 const API_URL = resolveApiUrl();
 
 const SESSION_TOKEN_KEY = "pst_session_token";
+const PUBLIC_SHARE_KEY_STORAGE = "pst_public_share_key";
 
 function getSessionToken() {
   return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
@@ -40,10 +41,51 @@ let publicShareKey = null;
 
 function setPublicShareKey(key) {
   publicShareKey = key?.trim() || null;
+  if (publicShareKey) {
+    try {
+      sessionStorage.setItem(PUBLIC_SHARE_KEY_STORAGE, publicShareKey);
+    } catch {
+      // ignore private mode / quota
+    }
+  }
 }
 
 function getPublicShareKey() {
   return publicShareKey;
+}
+
+function readShareTokenFromPageUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get("share_key")?.trim() ||
+    params.get("share")?.trim() ||
+    (() => {
+      const key = params.get("key")?.trim();
+      if (!key || key.startsWith("reports/")) return "";
+      const reportKey = params.get("report_key")?.trim();
+      if (reportKey && key === reportKey) return "";
+      return key;
+    })() ||
+    ""
+  );
+}
+
+function restorePublicShareKeyFromPage() {
+  const fromUrl = readShareTokenFromPageUrl();
+  if (fromUrl) {
+    setPublicShareKey(fromUrl);
+    return fromUrl;
+  }
+  try {
+    const stored = sessionStorage.getItem(PUBLIC_SHARE_KEY_STORAGE)?.trim();
+    if (stored) {
+      publicShareKey = stored;
+      return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 function isPublicShareMode() {

@@ -613,7 +613,7 @@ Bestehende Datenbanken: einmalig `ALTER TABLE projects ADD COLUMN share_token TE
 | -------- | -------------------------------------------------------------------------------------------------------------------------- |
 | R2-Pfad  | `reports/{project_id}/2026-06-23T143052Z-desktop-example-com.json`                                                         |
 | Muster   | `reports/{project_id}/{yyyy-mm-dd}T{HHMMSS}Z-{desktop                                                                      |
-| JSON-URL | `/api/reports/{project_id}/{filename}` (Login erforderlich) oder `/api/public/share/report?key=…&report_key=…` (Share-Key) |
+| JSON-URL | `/api/reports/{project_id}/{filename}` (Login erforderlich) oder `/api/public/share/report?share_key=…&report_key=…` (Share-Key) |
 
 
 **Hinweis:** Device steht **vor** dem Domain-Slug. Uhrzeit im Dateinamen, damit mehrere Läufe pro Tag eindeutig sind.

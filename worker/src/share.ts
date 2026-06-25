@@ -36,14 +36,26 @@ async function resolveShareProject(
   return { id: project.id, name: project.name };
 }
 
+function looksLikeReportKey(value: string): boolean {
+  return value.startsWith("reports/");
+}
+
+/** Share token from query string — never treat report_key / report page `key` as the token. */
 function shareKeyFromRequest(request: Request): string | null {
   const params = new URL(request.url).searchParams;
-  return (
-    params.get("share_key")?.trim() ||
-    params.get("key")?.trim() ||
-    params.get("share")?.trim() ||
-    null
-  );
+  const shareKey = params.get("share_key")?.trim();
+  if (shareKey) return shareKey;
+
+  const share = params.get("share")?.trim();
+  if (share) return share;
+
+  const key = params.get("key")?.trim();
+  if (!key || looksLikeReportKey(key)) return null;
+
+  const reportKey = params.get("report_key")?.trim();
+  if (reportKey && key === reportKey) return null;
+
+  return key;
 }
 
 export async function publicShareProject(
