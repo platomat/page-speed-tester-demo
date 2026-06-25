@@ -5,11 +5,15 @@
  *
  * Required: D1_DATABASE_ID, KV_NAMESPACE_ID
  * Optional: WORKER_NAME (default page-speed-tester-api), CRON_EXPRESSION (default every 5 min)
+ * Optional: PST_INSTANCE_ROLE (explicit); auto-set to "upstream" when building from repo page-speed-tester-demo
  */
 
 import { readFile, writeFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+
+const UPSTREAM_SOURCE_REPO = "page-speed-tester-demo";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const templatePath = join(root, "wrangler.toml.template");
@@ -58,20 +62,59 @@ function substitute(template, vars) {
     console.error("generate-wrangler: unresolved placeholders in template");
     process.exit(1);
   }
-  return out;
+  return out.trimEnd() + "\n";
+}
+
+function repoNameFromGitRemote(url) {
+  const normalized = url.trim().replace(/\.git$/, "");
+  const segments = normalized.split("/").filter(Boolean);
+  return segments.at(-1)?.toLowerCase() ?? "";
+}
+
+function detectBuildRepositoryName() {
+  const gh = process.env.GITHUB_REPOSITORY?.trim();
+  if (gh) return gh.split("/").pop()?.toLowerCase() ?? "";
+
+  const cfPages = process.env.CF_PAGES_REPO_NAME?.trim();
+  if (cfPages) return cfPages.toLowerCase();
+
+  try {
+    return repoNameFromGitRemote(execSync("git remote get-url origin", { encoding: "utf8" }));
+  } catch {
+    return "";
+  }
+}
+
+function resolveInstanceRole() {
+  const explicit = process.env.PST_INSTANCE_ROLE?.trim().toLowerCase();
+  if (explicit) return explicit;
+
+  const repoName = detectBuildRepositoryName();
+  if (repoName === UPSTREAM_SOURCE_REPO) return "upstream";
+
+  return "";
+}
+
+function workerVarsSection(role) {
+  if (role !== "upstream") return "";
+  return `[vars]\nPST_INSTANCE_ROLE = "upstream"\n`;
 }
 
 await loadDotEnv();
+
+const instanceRole = resolveInstanceRole();
 
 const vars = {
   WORKER_NAME: process.env.WORKER_NAME?.trim() || "page-speed-tester-api",
   D1_DATABASE_ID: requireEnv("D1_DATABASE_ID"),
   KV_NAMESPACE_ID: requireEnv("KV_NAMESPACE_ID"),
   CRON_EXPRESSION: process.env.CRON_EXPRESSION?.trim() || "*/5 * * * *",
+  WORKER_VARS_SECTION: workerVarsSection(instanceRole),
 };
 
 const template = await readFile(templatePath, "utf8");
 const toml = substitute(template, vars);
 await writeFile(outputPath, toml, "utf8");
 
-console.log(`generate-wrangler: wrote ${outputPath} (name=${vars.WORKER_NAME})`);
+const roleNote = instanceRole ? `, PST_INSTANCE_ROLE=${instanceRole}` : "";
+console.log(`generate-wrangler: wrote ${outputPath} (name=${vars.WORKER_NAME}${roleNote})`);

@@ -38,8 +38,15 @@ export function isUpstreamSourceInstance(env: Env): boolean {
   return role === "upstream";
 }
 
-export function isUpstreamSyncEnabled(env: Env): boolean {
-  return !isUpstreamSourceInstance(env);
+/** False on template source (env role or same repo as upstream — cannot sync from self). */
+export async function isUpstreamSyncEnabled(env: Env): Promise<boolean> {
+  if (isUpstreamSourceInstance(env)) return false;
+
+  const target = await getGitHubTarget(env);
+  if (!target) return true;
+
+  const upstream = await getUpstreamTarget(env);
+  return !githubReposMatch(target, upstream);
 }
 
 export function isValidGitHubSlug(value: string): boolean {
@@ -100,6 +107,16 @@ export async function getGitHubTarget(
   return { owner, repo };
 }
 
+function githubReposMatch(
+  a: { owner: string; repo: string },
+  b: { owner: string; repo: string }
+): boolean {
+  return (
+    a.owner.trim().toLowerCase() === b.owner.trim().toLowerCase() &&
+    a.repo.trim().toLowerCase() === b.repo.trim().toLowerCase()
+  );
+}
+
 /** Upstream template/fork source for sync (D1 settings with code defaults). */
 export async function getUpstreamTarget(
   env: Env
@@ -143,7 +160,7 @@ async function buildSettingsPayload(env: Env) {
     upstream_owner: upstream.owner,
     upstream_repo: upstream.repo,
     upstream_branch: upstream.branch,
-    upstream_sync_enabled: isUpstreamSyncEnabled(env),
+    upstream_sync_enabled: await isUpstreamSyncEnabled(env),
   };
 }
 
@@ -207,7 +224,7 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
   }
 
   if (
-    !isUpstreamSourceInstance(env) &&
+    (await isUpstreamSyncEnabled(env)) &&
     (body.upstream_owner !== undefined ||
       body.upstream_repo !== undefined ||
       body.upstream_branch !== undefined)

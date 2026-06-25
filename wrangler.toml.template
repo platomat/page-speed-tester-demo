@@ -20,3 +20,5 @@ id = "{{KV_NAMESPACE_ID}}"
 
 [triggers]
 crons = ["{{CRON_EXPRESSION}}"]
+
+{{WORKER_VARS_SECTION}}
