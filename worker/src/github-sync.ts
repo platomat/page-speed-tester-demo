@@ -7,6 +7,7 @@ const SYNC_COOLDOWN_MS = 60_000;
 const SYNC_KV_KEY = "upstream-sync:last";
 const SYNC_RESULT_KV_KEY = "upstream-sync:result";
 const SYNC_RESULT_TTL = 24 * 60 * 60;
+const SYNC_PENDING_MAX_MS = 10 * 60 * 1000;
 const MAX_COMMITS_TO_WALK = 100;
 
 export type UpstreamSyncResult = {
@@ -391,8 +392,53 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
   if ("error" in result) {
     return json(request, env, { error: result.error }, result.status);
   }
-  const last_sync = await getUpstreamSyncResult(env);
+  const last_sync = await reconcileSyncResult(env, result);
   return json(request, env, { ...result, last_sync });
+}
+
+/**
+ * The compare (behind_by) is the source of truth. If a sync is still marked
+ * "pending" but the repo is already up to date, the merge landed — heal the
+ * stored status so the admin UI stops showing "Sync läuft…" (even when the
+ * workflow's result callback never reached the Worker).
+ */
+async function reconcileSyncResult(
+  env: Env,
+  compare: UpstreamCompare
+): Promise<UpstreamSyncResult | null> {
+  const last = await getUpstreamSyncResult(env);
+  if (!last || last.status !== "pending") return last;
+
+  const upToDate = compare.behind_by === 0 && compare.status !== "diverged";
+  if (upToDate) {
+    const healed: UpstreamSyncResult = {
+      status: "success",
+      message: "Upstream gemergt (Repository ist auf dem aktuellen Stand)",
+      sha: last.sha ?? null,
+      github_run_id: last.github_run_id ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    await setUpstreamSyncResult(env, healed);
+    return healed;
+  }
+
+  // Still behind after the timeout window — the workflow likely failed or hit a
+  // conflict without reporting back. Don't leave "pending" stuck forever.
+  const startedAt = Date.parse(last.updated_at);
+  if (Number.isFinite(startedAt) && Date.now() - startedAt > SYNC_PENDING_MAX_MS) {
+    const stale: UpstreamSyncResult = {
+      status: "error",
+      message:
+        "Sync-Status unklar — Workflow hat sich nicht zurückgemeldet. GitHub Actions prüfen und Status aktualisieren.",
+      sha: last.sha ?? null,
+      github_run_id: last.github_run_id ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    await setUpstreamSyncResult(env, stale);
+    return stale;
+  }
+
+  return last;
 }
 
 export async function syncUpstream(request: Request, env: Env): Promise<Response> {

@@ -164,7 +164,7 @@ async function syncUpstreamFromAdmin() {
         showMessage(result.message || "Upstream sync failed", true);
       } else {
         showMessage(
-          "Sync läuft noch — prüfe die GitHub Actions und aktualisiere den Status.",
+          "Sync läuft noch in GitHub Actions — gleich auf „Refresh status“ klicken; der Status aktualisiert sich automatisch, sobald der Merge durch ist.",
           true
         );
       }
