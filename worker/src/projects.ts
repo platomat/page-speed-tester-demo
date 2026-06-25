@@ -624,19 +624,20 @@ export async function insertRun(
     return json(request, env, { error: "Unknown url_id for project" }, 400);
   }
   const reportKey = normalizeReportKey(payload.report_key);
-  const r2Object = await env.REPORTS.head(reportKey);
-  if (!r2Object) {
-    return json(
-      request,
-      env,
-      {
-        error: "Report object missing in R2",
-        report_key: reportKey,
-        hint: "GitHub Actions R2_BUCKET must match the Worker REPORTS binding (wrangler r2_buckets.bucket_name).",
-      },
-      400
-    );
+
+  // Best-effort visibility check. R2 reads via the Worker binding can lag a
+  // freshly written object from the S3 API by a moment, so retry briefly.
+  // Never fail registration on a miss — the upload already succeeded; a true
+  // bucket mismatch surfaces later via the report loader's diagnostics.
+  let r2Visible = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await env.REPORTS.head(reportKey)) {
+      r2Visible = true;
+      break;
+    }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 750));
   }
+
   const triggerSource = payload.trigger_source === "cron" ? "cron" : "manual";
   await env.DB.prepare(
     `INSERT INTO runs (project_id, url_id, strategy, run_at, performance,
@@ -658,5 +659,19 @@ export async function insertRun(
       triggerSource
     )
     .run();
-  return json(request, env, { status: "ok", report_key: reportKey }, 201);
+  return json(
+    request,
+    env,
+    {
+      status: "ok",
+      report_key: reportKey,
+      ...(r2Visible
+        ? {}
+        : {
+            warning:
+              "Run registered, but the report object was not yet visible via the Worker R2 binding. If reports fail to load, verify GitHub Actions R2_BUCKET matches the Worker REPORTS binding.",
+          }),
+    },
+    201
+  );
 }
