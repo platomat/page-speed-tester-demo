@@ -519,7 +519,6 @@
 .annotation-edit-form input[type="datetime-local"],
 .annotation-edit-form input[type="text"],
 .annotation-edit-form input[type="url"] {
-  font: inherit;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   border: 1px solid var(--border);

@@ -224,7 +224,7 @@ button[disabled] {
   padding: 0;
   box-sizing: border-box;
   border-radius: 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-button);
   background: var(--bg);
   color: var(--muted);
   flex-shrink: 0;
@@ -239,6 +239,7 @@ button[disabled] {
 
 .icon-btn:hover {
   color: var(--accent);
+  background: transparent;
   border-color: var(--accent);
   text-decoration: none;
 }
