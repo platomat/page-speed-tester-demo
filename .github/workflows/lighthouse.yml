@@ -99,6 +99,9 @@ jobs:
           PROJECT_ID="$PROJECT_ID"
           URL_COUNT=$(jq '.urls | length' project-urls.json)
           LH_TIMEOUT_SEC=60
+          # Throttling to avoid tripping server-side rate limits / fail2ban on the target host.
+          URL_PAUSE_SEC="${LH_URL_PAUSE_SEC:-20}"
+          STRATEGY_PAUSE_SEC="${LH_STRATEGY_PAUSE_SEC:-5}"
           echo "Auditing $URL_COUNT URL(s), desktop + mobile each (trigger: ${TRIGGER_SOURCE:-manual})."
           success=0
           n=0
@@ -108,8 +111,8 @@ jobs:
             slug=$(node scripts/ci/url-slug.mjs "$page_url")
             n=$((n + 1))
             if [ "$n" -gt 1 ]; then
-              echo "Pausing 10s before next URL (avoid rate limits)…"
-              sleep 10
+              echo "Pausing ${URL_PAUSE_SEC}s before next URL (avoid rate limits)…"
+              sleep "$URL_PAUSE_SEC"
             fi
             echo "Testing $page_url (desktop)..."
             if scripts/ci/lighthouse-audit.sh "$page_url" desktop \
@@ -119,6 +122,8 @@ jobs:
             else
               echo "Desktop run failed for $page_url"
             fi
+            echo "Pausing ${STRATEGY_PAUSE_SEC}s before mobile run…"
+            sleep "$STRATEGY_PAUSE_SEC"
             echo "Testing $page_url (mobile)..."
             if scripts/ci/lighthouse-audit.sh "$page_url" mobile \
               "reports/${RUN_STAMP}-mobile-${slug}.json" \

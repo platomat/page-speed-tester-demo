@@ -375,6 +375,23 @@ crons = ["*/15 * * * *"]
 
 Cron pro Projekt im **Admin-Dashboard** oder via `PATCH /api/projects/:id` setzen.
 
+#### Lighthouse-Tuning / `curl: (28) Connection timed out`
+
+Mehrere URLs **auf demselben Host** erzeugen in kurzer Zeit viele Requests von **einer** GitHub-Runner-IP (pro Audit lädt Lighthouse alle Assets, × desktop/mobile × Retries). Server-seitige Schutzmechanismen (Firewall, **fail2ban**, Cloudflare, Hoster-Anti-DDoS) können die IP dann **sperren** — die Verbindung läuft in einen **Timeout** (Pakete werden verworfen, kein HTTP-Fehler). Da die Sperre IP-weit gilt und über Läufe hinweg bestehen bleibt, scheitert oft schon die **erste** URL des nächsten Laufs (egal ob manuell oder Cron).
+
+**Beste Lösung:** GitHub-Actions-IPs auf dem Zielserver freigeben bzw. fail2ban-Limit erhöhen (falls eigener/Kunden-Server).
+
+**Drosselung im Workflow** (Standardwerte, per `env` in `.github/workflows/lighthouse.yml` überschreibbar):
+
+| Variable | Default | Zweck |
+| -------- | ------- | ----- |
+| `LH_URL_PAUSE_SEC` | `20` | Pause zwischen zwei URLs |
+| `LH_STRATEGY_PAUSE_SEC` | `5` | Pause zwischen Desktop- und Mobile-Lauf derselben URL |
+| `LH_RETRY_DELAY_SEC` | `8` | Wartezeit vor dem zweiten Versuch |
+| `LH_WARMUP` | `0` | Cache-Warmup-`curl` vor jedem Audit (Standard **aus** — erzeugt zusätzliche Last) |
+
+Bei aggressiven Server-Limits `LH_URL_PAUSE_SEC` / `LH_STRATEGY_PAUSE_SEC` erhöhen.
+
 #### Deploy prüfen
 
 ```
