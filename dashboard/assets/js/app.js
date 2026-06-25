@@ -361,6 +361,13 @@ function emptyMeasurementsHtml() {
   return '<p class="empty">No measurements yet — click Run now or wait for the scheduled test.</p>';
 }
 
+function latestHeading(deviceLabel, runs) {
+  const latest = runs[runs.length - 1];
+  const when = latest ? formatDateTime(latest, { seconds: true }) : "—";
+  const timestamp = when !== "—" ? ` ${when}` : "";
+  return `<h2 class="latest-heading">Latest <span class="chart-device">${deviceLabel}</span>${timestamp}</h2>`;
+}
+
 function renderLatest(desktopRuns, mobileRuns) {
   const container = document.getElementById("latest");
   if (!desktopRuns.length && !mobileRuns.length) {
@@ -370,11 +377,11 @@ function renderLatest(desktopRuns, mobileRuns) {
   container.innerHTML = `
     <div class="latest-row">
       <div class="latest-group">
-        <h2 class="latest-heading">Latest <span class="chart-device">Desktop</span></h2>
+        ${latestHeading("Desktop", desktopRuns)}
         ${renderMetricCards(desktopRuns, "Desktop")}
       </div>
       <div class="latest-group">
-        <h2 class="latest-heading">Latest <span class="chart-device">Mobile</span></h2>
+        ${latestHeading("Mobile", mobileRuns)}
         ${renderMetricCards(mobileRuns, "Mobile")}
       </div>
     </div>`;

@@ -318,7 +318,7 @@ function parseRunDate(run) {
   return null;
 }
 
-function formatDateTime(isoOrRun) {
+function formatDateTime(isoOrRun, options = {}) {
   const d =
     typeof isoOrRun === "object" && isoOrRun !== null
       ? parseRunDate(isoOrRun)
@@ -326,17 +326,18 @@ function formatDateTime(isoOrRun) {
         ? new Date(isoOrRun)
         : null;
   if (!d || Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("sv-SE", {
+  const fmt = new Intl.DateTimeFormat("sv-SE", {
     timeZone: instanceTimezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    second: options.seconds ? "2-digit" : undefined,
     hour12: false,
-  })
-    .format(d)
-    .slice(0, 16);
+  });
+  const formatted = fmt.format(d);
+  return options.seconds ? formatted.slice(0, 19) : formatted.slice(0, 16);
 }
 
 function runStampFromReport(report) {
