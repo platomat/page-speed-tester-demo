@@ -103,7 +103,7 @@
 }
 
 .settings-form {
-  max-width: 36rem;
+  max-width: 52rem;
 }
 
 .settings-group {
@@ -118,44 +118,30 @@
   font-weight: 600;
   color: var(--text);
   padding: 0;
-  margin-bottom: 0.35rem;
-}
-
-.settings-group-hint {
-  margin: 0 0 1rem;
-  font-size: 0.8125rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.settings-group-hint code {
-  font-family: ui-monospace, monospace;
-  font-size: 0.85em;
-  color: var(--text);
+  margin-bottom: 0.75rem;
 }
 
 .settings-grid {
   display: grid;
-  grid-template-columns: 8rem minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: center;
+  grid-template-columns: 9rem minmax(7rem, 12rem) minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  align-items: start;
 }
 
-.settings-grid > label:not(.settings-checkbox) {
+.settings-label {
   font-size: 0.875rem;
   color: var(--muted);
+  padding-top: 0.45rem;
+  margin: 0;
 }
 
-.settings-checkbox {
+.settings-control {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text);
-  cursor: pointer;
+  min-height: 2.25rem;
 }
 
-.settings-checkbox input[type="checkbox"] {
+.settings-control input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   margin: 0;
@@ -169,13 +155,16 @@
   font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--muted);
+  padding-top: 0.4rem;
 }
 
-.settings-field-hint--full {
-  grid-column: 1 / -1;
+.settings-field-hint code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  color: var(--text);
 }
 
-.settings-grid input:not([type="checkbox"]),
+.settings-control-input,
 .settings-grid select {
   font: inherit;
   padding: 0.5rem 0.75rem;
@@ -185,6 +174,27 @@
   color: var(--text);
   width: 100%;
   min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 0.35rem 0;
+  }
+
+  .settings-label {
+    padding-top: 0;
+  }
+
+  .settings-field-hint {
+    padding-top: 0;
+    margin-bottom: 0.75rem;
+  }
+
+  .settings-control {
+    min-height: auto;
+    margin-bottom: 0.25rem;
+  }
 }
 
 .settings-form-actions {

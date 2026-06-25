@@ -154,115 +154,139 @@
         <form id="settings-form" class="settings-form">
           <fieldset class="settings-group">
             <legend>PageSpeed Tester</legend>
-            <p class="settings-group-hint">
-              Times in the dashboard and project cron schedules use this timezone.
-              Scheduled runs are checked every 15 minutes; disable them globally while
-              keeping manual triggers available.
-            </p>
             <div class="settings-grid">
-              <label for="instance-timezone">Timezone</label>
+              <label for="instance-timezone" class="settings-label">Timezone</label>
               <input
                 type="text"
                 id="instance-timezone"
+                class="settings-control-input"
                 name="timezone"
                 list="timezone-options"
                 placeholder="Europe/Berlin"
                 required
                 spellcheck="false"
               />
-              <label for="instance-cron-enabled">Scheduled runs</label>
-              <label class="settings-checkbox">
+              <p class="settings-field-hint">
+                IANA timezone for dashboard date/time display and cron schedule evaluation
+                (e.g. <code>Europe/Berlin</code>, <code>UTC</code>).
+              </p>
+
+              <label for="instance-cron-enabled" class="settings-label">Scheduled runs</label>
+              <div class="settings-control">
                 <input type="checkbox" id="instance-cron-enabled" name="cron_enabled" />
-                Enable automatic Lighthouse runs (project cron schedules)
-              </label>
-              <label for="instance-store-screenshots">Report screenshots</label>
-              <label class="settings-checkbox">
+              </div>
+              <p class="settings-field-hint">
+                When enabled, the Worker checks every 15&nbsp;minutes which projects are due and
+                triggers GitHub Actions. Manual <strong>Run test</strong> still works when disabled.
+              </p>
+
+              <label for="instance-store-screenshots" class="settings-label">Report screenshots</label>
+              <div class="settings-control">
                 <input type="checkbox" id="instance-store-screenshots" name="store_screenshots" />
-                Store viewport &amp; full-page screenshots in Lighthouse JSON
-              </label>
-              <p class="settings-field-hint settings-field-hint--full">
-                Off by default — smaller reports and lower R2 usage. When enabled, JSON files are much
-                larger; R2 storage fills faster and may incur Cloudflare charges. Screenshots appear in
-                the report detail view for runs started after you save this setting.
+              </div>
+              <p class="settings-field-hint">
+                Store viewport and full-page screenshots in Lighthouse JSON (R2). Off by default —
+                much smaller reports and lower storage cost. Applies to runs started after you save.
               </p>
             </div>
           </fieldset>
 
           <fieldset class="settings-group">
             <legend>GitHub</legend>
-            <p class="settings-group-hint">
-              Repository where Lighthouse runs via Actions. Set owner and repo to
-              <em>this instance’s</em> repo — the <code>GH_PAT</code> secret must have access to it.
-              Upstream fields apply when syncing template updates (see Upstream sync below).
-            </p>
             <div class="settings-grid">
-              <label for="instance-gh-owner">GitHub owner</label>
+              <label for="instance-gh-owner" class="settings-label">GitHub owner</label>
               <input
                 type="text"
                 id="instance-gh-owner"
+                class="settings-control-input"
                 name="gh_owner"
                 placeholder="org-or-user"
                 spellcheck="false"
                 autocomplete="off"
               />
-              <label for="instance-gh-repo">GitHub repository</label>
+              <p class="settings-field-hint">
+                Organization or user that owns <em>this instance’s</em> repository — target for
+                <code>repository_dispatch</code> and Lighthouse workflows.
+              </p>
+
+              <label for="instance-gh-repo" class="settings-label">GitHub repository</label>
               <input
                 type="text"
                 id="instance-gh-repo"
+                class="settings-control-input"
                 name="gh_repo"
                 placeholder="page-speed-tester"
                 spellcheck="false"
                 autocomplete="off"
               />
-              <label for="instance-upstream-owner" class="upstream-setting-item">Upstream owner</label>
+              <p class="settings-field-hint">
+                Repository name where Actions run Lighthouse. Worker secret <code>GH_PAT</code> must
+                have access to this repo.
+              </p>
+
+              <label for="instance-upstream-owner" class="settings-label upstream-setting-item">Upstream owner</label>
               <input
                 type="text"
                 id="instance-upstream-owner"
-                class="upstream-setting-item"
+                class="settings-control-input upstream-setting-item"
                 name="upstream_owner"
                 placeholder="platomat"
                 spellcheck="false"
                 autocomplete="off"
               />
-              <label for="instance-upstream-repo" class="upstream-setting-item">Upstream repository</label>
+              <p class="settings-field-hint upstream-setting-item">
+                GitHub owner of the template/upstream repository used for compare and sync (Admin →
+                Upstream sync).
+              </p>
+
+              <label for="instance-upstream-repo" class="settings-label upstream-setting-item">Upstream repository</label>
               <input
                 type="text"
                 id="instance-upstream-repo"
-                class="upstream-setting-item"
+                class="settings-control-input upstream-setting-item"
                 name="upstream_repo"
                 placeholder="page-speed-tester-demo"
                 spellcheck="false"
                 autocomplete="off"
               />
-              <label for="instance-upstream-branch" class="upstream-setting-item">Upstream branch</label>
+              <p class="settings-field-hint upstream-setting-item">
+                Upstream template repo name to pull updates from (default:
+                <code>page-speed-tester-demo</code>).
+              </p>
+
+              <label for="instance-upstream-branch" class="settings-label upstream-setting-item">Upstream branch</label>
               <input
                 type="text"
                 id="instance-upstream-branch"
-                class="upstream-setting-item"
+                class="settings-control-input upstream-setting-item"
                 name="upstream_branch"
                 placeholder="main"
                 spellcheck="false"
                 autocomplete="off"
               />
+              <p class="settings-field-hint upstream-setting-item">
+                Branch on the upstream repo to compare and merge (usually <code>main</code>).
+              </p>
             </div>
           </fieldset>
 
           <fieldset class="settings-group">
             <legend>Session &amp; domains</legend>
-            <p class="settings-group-hint">
-              Shared parent domain for login cookies across dashboard and API
-              (e.g. <code>.kunde.de</code>). Leave empty for <code>*.pages.dev</code> previews.
-            </p>
             <div class="settings-grid">
-              <label for="instance-cookie-domain">Cookie domain</label>
+              <label for="instance-cookie-domain" class="settings-label">Cookie domain</label>
               <input
                 type="text"
                 id="instance-cookie-domain"
+                class="settings-control-input"
                 name="cookie_domain"
                 placeholder=".example.com"
                 spellcheck="false"
                 autocomplete="off"
               />
+              <p class="settings-field-hint">
+                Shared parent domain for login cookies on dashboard and API (e.g.
+                <code>.kunde.de</code>). Leave empty for <code>*.pages.dev</code> previews.
+              </p>
             </div>
           </fieldset>
 
