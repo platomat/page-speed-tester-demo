@@ -399,7 +399,7 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
 /**
  * The compare (behind_by) is the source of truth. If a sync is still marked
  * "pending" but the repo is already up to date, the merge landed — heal the
- * stored status so the admin UI stops showing "Sync läuft…" (even when the
+ * stored status so the admin UI stops showing "Sync in progress…" (even when the
  * workflow's result callback never reached the Worker).
  */
 async function reconcileSyncResult(
@@ -413,7 +413,7 @@ async function reconcileSyncResult(
   if (upToDate) {
     const healed: UpstreamSyncResult = {
       status: "success",
-      message: "Upstream gemergt (Repository ist auf dem aktuellen Stand)",
+      message: "Upstream merged (repository is up to date)",
       sha: last.sha ?? null,
       github_run_id: last.github_run_id ?? null,
       updated_at: new Date().toISOString(),
@@ -429,7 +429,7 @@ async function reconcileSyncResult(
     const stale: UpstreamSyncResult = {
       status: "error",
       message:
-        "Sync-Status unklar — Workflow hat sich nicht zurückgemeldet. GitHub Actions prüfen und Status aktualisieren.",
+        "Sync status unclear — workflow did not report back. Check GitHub Actions and refresh status.",
       sha: last.sha ?? null,
       github_run_id: last.github_run_id ?? null,
       updated_at: new Date().toISOString(),
@@ -515,7 +515,7 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
       started: true,
       method: "workflow-dispatch",
       message:
-        "Sync läuft als GitHub Action (git merge). Der Status aktualisiert sich in Kürze.",
+        "Sync running as GitHub Action (git merge). Status will update shortly.",
       compare: compareResult,
       actions_url: `https://github.com/${target.owner}/${target.repo}/actions/workflows/upstream-sync.yml`,
     });

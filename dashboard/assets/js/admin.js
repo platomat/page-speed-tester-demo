@@ -64,10 +64,10 @@ function renderUpstreamStatus(data) {
 function renderLastSync(sync) {
   if (!sync || typeof sync !== "object") return "";
   const labels = {
-    pending: "Sync läuft…",
-    success: "Letzter Sync erfolgreich",
-    conflict: "Letzter Sync: Merge-Konflikt",
-    error: "Letzter Sync fehlgeschlagen",
+    pending: "Sync in progress…",
+    success: "Last sync successful",
+    conflict: "Last sync: merge conflict",
+    error: "Last sync failed",
   };
   const cls =
     sync.status === "success"
@@ -75,7 +75,7 @@ function renderLastSync(sync) {
       : sync.status === "pending"
         ? "upstream-sync-pending"
         : "upstream-sync-error";
-  const label = labels[sync.status] ?? "Letzter Sync";
+  const label = labels[sync.status] ?? "Last sync";
   const when = sync.updated_at ? ` (${escapeHtml(formatDateTime(sync.updated_at))})` : "";
   const message = sync.message ? `: ${escapeHtml(String(sync.message))}` : "";
   return `<p class="upstream-last-sync ${cls}"><strong>${escapeHtml(label)}</strong>${when}${message}</p>`;
@@ -164,7 +164,7 @@ async function syncUpstreamFromAdmin() {
         showMessage(result.message || "Upstream sync failed", true);
       } else {
         showMessage(
-          "Sync läuft noch in GitHub Actions — gleich auf „Refresh status“ klicken; der Status aktualisiert sich automatisch, sobald der Merge durch ist.",
+          "Sync still running in GitHub Actions — click Refresh status; status updates automatically once the merge completes.",
           true
         );
       }
