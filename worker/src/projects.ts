@@ -623,6 +623,20 @@ export async function insertRun(
   if (!urlRow) {
     return json(request, env, { error: "Unknown url_id for project" }, 400);
   }
+  const reportKey = normalizeReportKey(payload.report_key);
+  const r2Object = await env.REPORTS.head(reportKey);
+  if (!r2Object) {
+    return json(
+      request,
+      env,
+      {
+        error: "Report object missing in R2",
+        report_key: reportKey,
+        hint: "GitHub Actions R2_BUCKET must match the Worker REPORTS binding (wrangler r2_buckets.bucket_name).",
+      },
+      400
+    );
+  }
   const triggerSource = payload.trigger_source === "cron" ? "cron" : "manual";
   await env.DB.prepare(
     `INSERT INTO runs (project_id, url_id, strategy, run_at, performance,
@@ -640,9 +654,9 @@ export async function insertRun(
       payload.fcp_ms,
       payload.tbt_ms,
       payload.speed_index,
-      payload.report_key,
+      reportKey,
       triggerSource
     )
     .run();
-  return json(request, env, { status: "ok", report_key: payload.report_key }, 201);
+  return json(request, env, { status: "ok", report_key: reportKey }, 201);
 }
