@@ -122,12 +122,12 @@ function initChartResize() {
 }
 
 const METRICS = [
-  { key: "performance", label: "Performance", chart: "performance", format: (v) => v },
-  { key: "fcp_ms", label: "FCP", chart: "fcp", format: (v) => formatMetric(v, "ms") },
-  { key: "lcp_ms", label: "LCP", chart: "lcp", format: (v) => formatMetric(v, "ms") },
-  { key: "tbt_ms", label: "TBT", chart: "tbt", format: (v) => formatMetric(v, "ms") },
-  { key: "cls", label: "CLS", chart: "cls", format: (v) => formatMetric(v, "", "cls") },
-  { key: "speed_index", label: "SI", chart: "si", format: (v) => formatMetric(v, "ms") },
+  { key: "performance", label: "Performance", title: "Performance", chart: "performance", format: (v) => v },
+  { key: "fcp_ms", label: "FCP", title: "First Contentful Paint", chart: "fcp", format: (v) => formatMetric(v, "ms") },
+  { key: "lcp_ms", label: "LCP", title: "Largest Contentful Paint", chart: "lcp", format: (v) => formatMetric(v, "ms") },
+  { key: "tbt_ms", label: "TBT", title: "Total Blocking Time", chart: "tbt", format: (v) => formatMetric(v, "ms") },
+  { key: "cls", label: "CLS", title: "Cumulative Layout Shift", chart: "cls", format: (v) => formatMetric(v, "", "cls") },
+  { key: "speed_index", label: "SI", title: "Speed Index", chart: "si", format: (v) => formatMetric(v, "ms") },
 ];
 
 let currentUser = null;
@@ -336,7 +336,7 @@ function renderMetricCards(runs, deviceLabel) {
     const value = latest[m.key];
     return `
     <div class="metric-card">
-      <div class="label">${m.label}</div>
+      <div class="label" title="${escapeHtml(m.title)}">${escapeHtml(m.label)}</div>
       <div class="value ${metricScoreClass(m.key, value)}">
         ${value != null ? (m.key === "performance" ? value : m.format(value)) : "—"}
       </div>
