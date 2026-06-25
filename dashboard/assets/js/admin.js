@@ -37,8 +37,10 @@ function renderUpstreamStatus(data) {
     `<p><strong>Upstream:</strong> <code>${escapeHtml(upstream)}</code>${data.is_fork ? " (fork)" : " (template / copy)"}</p>`,
     `<p><strong>Status:</strong> ${escapeHtml(formatUpstreamStatusLabel(data))}</p>`,
   ];
-  if (data.ahead_by > 0) {
-    parts.push(`<p>${data.ahead_by} local commit(s) ahead of upstream.</p>`);
+  if (data.ahead_by > 0 && data.behind_by > 0) {
+    parts.push(`<p>${data.ahead_by} local commit(s) not in upstream.</p>`);
+  } else if (data.ahead_by > 0 && data.behind_by === 0) {
+    parts.push(`<p>${data.ahead_by} local-only commit(s) (e.g. custom changes) — upstream is fully merged.</p>`);
   }
   if (data.behind_by > 0) {
     parts.push(`<p>${data.behind_by} commit(s) behind upstream — sync will merge them.</p>`);
@@ -57,8 +59,10 @@ function renderUpstreamStatus(data) {
 }
 
 function formatUpstreamStatusLabel(data) {
+  if (data.behind_by === 0) return "Up to date";
   switch (data.status) {
     case "identical":
+    case "synced":
       return "Up to date";
     case "ahead":
       return "Ahead of upstream";

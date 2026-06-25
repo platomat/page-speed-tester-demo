@@ -93,8 +93,28 @@ async function commitExistsInRepo(
   return res.ok;
 }
 
+async function fetchCommitMeta(
+  pat: string,
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<{ exists: boolean; is_merge: boolean }> {
+  const res = await ghRequest(
+    pat,
+    `https://api.github.com/repos/${owner}/${repo}/commits/${sha}`
+  );
+  if (!res.ok) return { exists: false, is_merge: false };
+  const data = (await res.json()) as GhJson;
+  const parents = data.parents;
+  return {
+    exists: true,
+    is_merge: Array.isArray(parents) && parents.length >= 2,
+  };
+}
+
 function deriveStatus(ahead_by: number, behind_by: number): string {
-  if (ahead_by === 0 && behind_by === 0) return "identical";
+  if (behind_by === 0 && ahead_by === 0) return "identical";
+  if (behind_by === 0) return "synced";
   if (ahead_by > 0 && behind_by > 0) return "diverged";
   if (behind_by > 0) return "behind";
   if (ahead_by > 0) return "ahead";
@@ -146,6 +166,8 @@ async function fetchTemplateCopyCompare(
 
   let ahead_by = 0;
   for (const commit of targetCommits) {
+    const meta = await fetchCommitMeta(pat, target.owner, target.repo, commit.sha);
+    if (meta.is_merge) continue;
     if (await commitExistsInRepo(pat, upstream.owner, upstream.repo, commit.sha)) break;
     ahead_by++;
   }
