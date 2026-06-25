@@ -5,8 +5,11 @@ import { getGitHubTarget, getUpstreamTarget, isUpstreamSyncEnabled } from "./set
 
 const SYNC_COOLDOWN_MS = 60_000;
 const SYNC_KV_KEY = "upstream-sync:last";
+const MAX_COMMITS_TO_WALK = 100;
 
 type GhJson = Record<string, unknown>;
+
+type GhCommit = { sha: string; html_url?: string };
 
 function ghHeaders(pat: string, withBody = false): HeadersInit {
   const headers: Record<string, string> = {
@@ -41,6 +44,121 @@ async function parseGhError(res: Response): Promise<string> {
   return text || `GitHub API error (${res.status})`;
 }
 
+async function fetchRepoInfo(
+  pat: string,
+  owner: string,
+  repo: string
+): Promise<GhJson | null> {
+  const res = await ghRequest(pat, `https://api.github.com/repos/${owner}/${repo}`);
+  if (!res.ok) return null;
+  return (await res.json()) as GhJson;
+}
+
+function isForkOfUpstream(
+  repoInfo: GhJson | null,
+  upstream: { owner: string; repo: string }
+): boolean {
+  if (!repoInfo?.fork) return false;
+  const parent = repoInfo.parent as GhJson | undefined;
+  const parentFullName = typeof parent?.full_name === "string" ? parent.full_name : "";
+  return parentFullName === `${upstream.owner}/${upstream.repo}`;
+}
+
+async function listBranchCommits(
+  pat: string,
+  owner: string,
+  repo: string,
+  branch: string,
+  perPage = MAX_COMMITS_TO_WALK
+): Promise<GhCommit[]> {
+  const res = await ghRequest(
+    pat,
+    `https://api.github.com/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(branch)}&per_page=${perPage}`
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as GhCommit[];
+  return Array.isArray(data) ? data : [];
+}
+
+async function commitExistsInRepo(
+  pat: string,
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<boolean> {
+  const res = await ghRequest(
+    pat,
+    `https://api.github.com/repos/${owner}/${repo}/commits/${sha}`
+  );
+  return res.ok;
+}
+
+function deriveStatus(ahead_by: number, behind_by: number): string {
+  if (ahead_by === 0 && behind_by === 0) return "identical";
+  if (ahead_by > 0 && behind_by > 0) return "diverged";
+  if (behind_by > 0) return "behind";
+  if (ahead_by > 0) return "ahead";
+  return "unknown";
+}
+
+/** Fork network compare — must run from the upstream repo, not the fork. */
+async function fetchForkNetworkCompare(
+  pat: string,
+  target: { owner: string; repo: string },
+  upstream: { owner: string; repo: string; branch: string },
+  branch: string
+): Promise<{ status: string; ahead_by: number; behind_by: number; compare_url: string | null } | { error: string }> {
+  const comparePath = `${branch}...${target.owner}:${branch}`;
+  const compareUrl = `https://api.github.com/repos/${upstream.owner}/${upstream.repo}/compare/${encodeURIComponent(comparePath)}`;
+  const compareRes = await ghRequest(pat, compareUrl);
+  if (!compareRes.ok) {
+    return { error: await parseGhError(compareRes) };
+  }
+  const compare = (await compareRes.json()) as GhJson;
+  return {
+    status: String(compare.status ?? "unknown"),
+    ahead_by: Number(compare.ahead_by ?? 0),
+    behind_by: Number(compare.behind_by ?? 0),
+    compare_url: typeof compare.html_url === "string" ? compare.html_url : null,
+  };
+}
+
+/**
+ * Template copies are not in GitHub's fork network — compare API with owner:branch
+ * resolves to the same repo when owner matches. Walk commits and check SHA presence instead.
+ */
+async function fetchTemplateCopyCompare(
+  pat: string,
+  target: { owner: string; repo: string },
+  upstream: { owner: string; repo: string; branch: string },
+  branch: string
+): Promise<{ status: string; ahead_by: number; behind_by: number; compare_url: string | null }> {
+  const [upstreamCommits, targetCommits] = await Promise.all([
+    listBranchCommits(pat, upstream.owner, upstream.repo, branch),
+    listBranchCommits(pat, target.owner, target.repo, branch),
+  ]);
+
+  let behind_by = 0;
+  for (const commit of upstreamCommits) {
+    if (await commitExistsInRepo(pat, target.owner, target.repo, commit.sha)) break;
+    behind_by++;
+  }
+
+  let ahead_by = 0;
+  for (const commit of targetCommits) {
+    if (await commitExistsInRepo(pat, upstream.owner, upstream.repo, commit.sha)) break;
+    ahead_by++;
+  }
+
+  const status = deriveStatus(ahead_by, behind_by);
+  const compare_url =
+    behind_by > 0 && upstreamCommits[0]?.html_url
+      ? upstreamCommits[0].html_url
+      : `https://github.com/${upstream.owner}/${upstream.repo}/commits/${branch}`;
+
+  return { status, ahead_by, behind_by, compare_url };
+}
+
 export type UpstreamCompare = {
   target: { owner: string; repo: string; branch: string };
   upstream: { owner: string; repo: string; branch: string };
@@ -48,6 +166,7 @@ export type UpstreamCompare = {
   ahead_by: number;
   behind_by: number;
   is_fork: boolean;
+  comparison_method: "fork-compare" | "commit-walk";
   compare_url: string | null;
   can_sync: boolean;
 };
@@ -69,31 +188,32 @@ export async function fetchUpstreamCompare(
   }
 
   const branch = upstream.branch;
-  const compareHead = `${upstream.owner}:${branch}`;
-  const comparePath = `${branch}...${compareHead}`;
-  const compareUrl = `https://api.github.com/repos/${target.owner}/${target.repo}/compare/${encodeURIComponent(comparePath)}`;
+  const repoInfo = await fetchRepoInfo(env.GH_PAT, target.owner, target.repo);
+  const isFork = isForkOfUpstream(repoInfo, upstream);
 
-  const [compareRes, repoRes] = await Promise.all([
-    ghRequest(env.GH_PAT, compareUrl),
-    ghRequest(env.GH_PAT, `https://api.github.com/repos/${target.owner}/${target.repo}`),
-  ]);
+  let compareResult:
+    | { status: string; ahead_by: number; behind_by: number; compare_url: string | null }
+    | { error: string };
 
-  if (!compareRes.ok) {
-    const msg = await parseGhError(compareRes);
-    return { error: msg, status: compareRes.status >= 500 ? 502 : compareRes.status };
+  let comparison_method: "fork-compare" | "commit-walk";
+
+  if (isFork) {
+    comparison_method = "fork-compare";
+    compareResult = await fetchForkNetworkCompare(env.GH_PAT, target, upstream, branch);
+    if ("error" in compareResult) {
+      comparison_method = "commit-walk";
+      compareResult = await fetchTemplateCopyCompare(env.GH_PAT, target, upstream, branch);
+    }
+  } else {
+    comparison_method = "commit-walk";
+    compareResult = await fetchTemplateCopyCompare(env.GH_PAT, target, upstream, branch);
   }
 
-  const compare = (await compareRes.json()) as GhJson;
-  const repoInfo = repoRes.ok ? ((await repoRes.json()) as GhJson) : null;
+  if ("error" in compareResult) {
+    return { error: String(compareResult.error), status: 502 };
+  }
 
-  const parent = repoInfo?.parent as GhJson | undefined;
-  const parentFullName = typeof parent?.full_name === "string" ? parent.full_name : "";
-  const upstreamFull = `${upstream.owner}/${upstream.repo}`;
-  const isFork = Boolean(repoInfo?.fork && parentFullName === upstreamFull);
-
-  const status = String(compare.status ?? "unknown");
-  const ahead_by = Number(compare.ahead_by ?? 0);
-  const behind_by = Number(compare.behind_by ?? 0);
+  const { status, ahead_by, behind_by, compare_url } = compareResult;
 
   return {
     target: { ...target, branch },
@@ -102,7 +222,8 @@ export async function fetchUpstreamCompare(
     ahead_by,
     behind_by,
     is_fork: isFork,
-    compare_url: typeof compare.html_url === "string" ? compare.html_url : null,
+    comparison_method,
+    compare_url,
     can_sync: behind_by > 0 || status === "diverged" || status === "behind",
   };
 }

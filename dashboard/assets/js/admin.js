@@ -43,6 +43,11 @@ function renderUpstreamStatus(data) {
   if (data.behind_by > 0) {
     parts.push(`<p>${data.behind_by} commit(s) behind upstream — sync will merge them.</p>`);
   }
+  if (data.comparison_method === "commit-walk") {
+    parts.push(
+      `<p class="upstream-method-hint">Template copy — status via commit check (not GitHub fork compare).</p>`
+    );
+  }
   if (data.compare_url) {
     parts.push(
       `<p><a href="${escapeHtml(data.compare_url)}" target="_blank" rel="noopener">View compare on GitHub</a></p>`

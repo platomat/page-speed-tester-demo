@@ -530,6 +530,8 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 
 **Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** auf deinem Repo. Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
 
+**Hinweis (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk. Der Status ermittelt fehlende Upstream-Commits per SHA-Abgleich (`commit-walk`), nicht über `owner:branch`-Compare (das würde fälschlich „Up to date“ anzeigen).
+
 API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream`.
 
 ---
