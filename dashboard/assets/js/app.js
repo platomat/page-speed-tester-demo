@@ -123,11 +123,11 @@ function initChartResize() {
 
 const METRICS = [
   { key: "performance", label: "Performance", title: "Performance", chart: "performance", format: (v) => v },
-  { key: "fcp_ms", label: "FCP", title: "First Contentful Paint", chart: "fcp", format: (v) => formatMetric(v, "ms") },
-  { key: "lcp_ms", label: "LCP", title: "Largest Contentful Paint", chart: "lcp", format: (v) => formatMetric(v, "ms") },
+  { key: "fcp_ms", label: "FCP", title: "First Contentful Paint", chart: "fcp", format: (v) => formatMetric(v, "", "fcp_ms") },
+  { key: "lcp_ms", label: "LCP", title: "Largest Contentful Paint", chart: "lcp", format: (v) => formatMetric(v, "", "lcp_ms") },
   { key: "tbt_ms", label: "TBT", title: "Total Blocking Time", chart: "tbt", format: (v) => formatMetric(v, "ms") },
   { key: "cls", label: "CLS", title: "Cumulative Layout Shift", chart: "cls", format: (v) => formatMetric(v, "", "cls") },
-  { key: "speed_index", label: "SI", title: "Speed Index", chart: "si", format: (v) => formatMetric(v, "ms") },
+  { key: "speed_index", label: "SI", title: "Speed Index", chart: "si", format: (v) => formatMetric(v, "", "speed_index") },
 ];
 
 let currentUser = null;
@@ -200,6 +200,16 @@ function formatDecimalPlaces(value, places) {
     .replace(/\.?0+$/, "");
 }
 
+/** Millisecond metrics shown as seconds with one decimal (FCP, LCP, SI). */
+function isDurationSecondsMetric(metricKey) {
+  return metricKey === "fcp_ms" || metricKey === "lcp_ms" || metricKey === "speed_index";
+}
+
+function formatDurationSecondsFromMs(value) {
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  return `${(Number(value) / 1000).toFixed(1)} s`;
+}
+
 /** Chart tooltips, y-axis, and cards — CLS uses 4 decimals (Lighthouse numericValue is float). */
 function formatChartValue(metricKey, value) {
   if (value == null || Number.isNaN(Number(value))) return "—";
@@ -209,8 +219,9 @@ function formatChartValue(metricKey, value) {
       return String(Math.round(v));
     case "fcp_ms":
     case "lcp_ms":
-    case "tbt_ms":
     case "speed_index":
+      return formatDurationSecondsFromMs(v);
+    case "tbt_ms":
       return `${Math.round(v)} ms`;
     case "cls":
       return formatDecimalPlaces(v, 4);
@@ -221,6 +232,7 @@ function formatChartValue(metricKey, value) {
 
 function formatMetric(value, unit = "", metricKey = null) {
   if (value == null) return "—";
+  if (metricKey && isDurationSecondsMetric(metricKey)) return formatDurationSecondsFromMs(value);
   if (metricKey === "cls") return formatDecimalPlaces(value, 4);
   if (unit === "ms") return `${Math.round(value)} ms`;
   if (typeof value === "number" && value < 10 && !unit) return value.toFixed(3);
@@ -269,12 +281,10 @@ function formatAverageNumber(value) {
 
 function formatChartAverage(metricKey, avg) {
   if (metricKey === "cls") return formatDecimalPlaces(avg, 4);
+  if (isDurationSecondsMetric(metricKey)) return formatDurationSecondsFromMs(avg);
   const n = formatAverageNumber(avg);
   switch (metricKey) {
-    case "fcp_ms":
-    case "lcp_ms":
     case "tbt_ms":
-    case "speed_index":
       return `${n} ms`;
     default:
       return n;
