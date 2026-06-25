@@ -293,7 +293,7 @@
           Merge updates from the upstream template into <strong>your</strong> GitHub repository
           (the owner/repo above). Works for repos created via <strong>Use this template</strong>
           or as a fork. Requires <code>GH_PAT</code> with <strong>Contents: Read and write</strong>
-          on your repo; the upstream repo must be readable (public upstream is fine).
+          on your repo and <strong>Pull requests: Read and write</strong> for template sync (cross-repo PR);
           Cloudflare redeploys Worker/Pages after a successful push to <code>main</code>.
           On merge conflicts, resolve manually on GitHub or with git.
         </p>
@@ -301,8 +301,8 @@
           Click <strong>Refresh status</strong> to compare your repo with upstream (GitHub API).
         </div>
         <div class="upstream-sync-actions">
-          <button type="button" id="upstream-sync-btn" disabled>Sync from upstream</button>
           <button type="button" id="upstream-refresh-btn" class="btn-secondary">Refresh status</button>
+          <button type="button" id="upstream-sync-btn" disabled>Sync from upstream</button>
         </div>
       </section>
     </main>
