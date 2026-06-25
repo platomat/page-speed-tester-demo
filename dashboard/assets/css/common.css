@@ -262,11 +262,6 @@ button[disabled] {
   color: var(--bad);
 }
 
-.icon-btn.btn-danger.btn-sm {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
