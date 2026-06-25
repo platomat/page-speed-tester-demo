@@ -184,28 +184,31 @@
               spellcheck="false"
               autocomplete="off"
             />
-            <label for="instance-upstream-owner">Upstream owner</label>
+            <label for="instance-upstream-owner" class="upstream-setting-item">Upstream owner</label>
             <input
               type="text"
               id="instance-upstream-owner"
+              class="upstream-setting-item"
               name="upstream_owner"
               placeholder="platomat"
               spellcheck="false"
               autocomplete="off"
             />
-            <label for="instance-upstream-repo">Upstream repository</label>
+            <label for="instance-upstream-repo" class="upstream-setting-item">Upstream repository</label>
             <input
               type="text"
               id="instance-upstream-repo"
+              class="upstream-setting-item"
               name="upstream_repo"
               placeholder="page-speed-tester-demo"
               spellcheck="false"
               autocomplete="off"
             />
-            <label for="instance-upstream-branch">Upstream branch</label>
+            <label for="instance-upstream-branch" class="upstream-setting-item">Upstream branch</label>
             <input
               type="text"
               id="instance-upstream-branch"
+              class="upstream-setting-item"
               name="upstream_branch"
               placeholder="main"
               spellcheck="false"
@@ -262,7 +265,7 @@
         </form>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section hidden" id="upstream-sync-section">
         <h2>Upstream sync</h2>
         <p class="admin-section-hint">
           Merge updates from the upstream template into <strong>your</strong> GitHub repository

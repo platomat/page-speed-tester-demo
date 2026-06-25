@@ -1,7 +1,7 @@
 import type { Env } from "./env";
 import { requireAdmin } from "./auth";
 import { json } from "./http";
-import { getGitHubTarget, getUpstreamTarget } from "./settings";
+import { getGitHubTarget, getUpstreamTarget, isUpstreamSyncEnabled } from "./settings";
 
 const SYNC_COOLDOWN_MS = 60_000;
 const SYNC_KV_KEY = "upstream-sync:last";
@@ -131,6 +131,10 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
 
+  if (!isUpstreamSyncEnabled(env)) {
+    return json(request, env, { error: "Upstream sync is not available on this instance" }, 404);
+  }
+
   const result = await fetchUpstreamCompare(env);
   if ("error" in result) {
     return json(request, env, { error: result.error }, result.status);
@@ -141,6 +145,10 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
 export async function syncUpstream(request: Request, env: Env): Promise<Response> {
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
+
+  if (!isUpstreamSyncEnabled(env)) {
+    return json(request, env, { error: "Upstream sync is not available on this instance" }, 404);
+  }
 
   if (!env.GH_PAT) {
     return json(request, env, { error: "GitHub PAT not configured" }, 503);

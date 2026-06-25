@@ -32,6 +32,16 @@ export function isValidGitHubBranch(value: string): boolean {
   return trimmed.length > 0 && trimmed.length <= 255 && GITHUB_BRANCH_RE.test(trimmed);
 }
 
+/** True when this Worker is the template/upstream source (not a customer deployment). */
+export function isUpstreamSourceInstance(env: Env): boolean {
+  const role = env.PST_INSTANCE_ROLE?.trim().toLowerCase();
+  return role === "upstream";
+}
+
+export function isUpstreamSyncEnabled(env: Env): boolean {
+  return !isUpstreamSourceInstance(env);
+}
+
 export function isValidGitHubSlug(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.length > 0 && trimmed.length <= 100 && GITHUB_SLUG_RE.test(trimmed);
@@ -133,6 +143,7 @@ async function buildSettingsPayload(env: Env) {
     upstream_owner: upstream.owner,
     upstream_repo: upstream.repo,
     upstream_branch: upstream.branch,
+    upstream_sync_enabled: isUpstreamSyncEnabled(env),
   };
 }
 
@@ -196,9 +207,10 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
   }
 
   if (
-    body.upstream_owner !== undefined ||
-    body.upstream_repo !== undefined ||
-    body.upstream_branch !== undefined
+    !isUpstreamSourceInstance(env) &&
+    (body.upstream_owner !== undefined ||
+      body.upstream_repo !== undefined ||
+      body.upstream_branch !== undefined)
   ) {
     const upstreamOwner = String(body.upstream_owner ?? "").trim() || DEFAULT_UPSTREAM_OWNER;
     const upstreamRepo = String(body.upstream_repo ?? "").trim() || DEFAULT_UPSTREAM_REPO;

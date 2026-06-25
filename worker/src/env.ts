@@ -12,6 +12,11 @@ export interface Env {
   COOKIE_DOMAIN?: string;
   /** Optional comma-separated dashboard origins for CORS (full URLs). */
   DASHBOARD_ORIGIN?: string;
+  /**
+   * Set to `upstream` on the public template/demo instance (the source repo others sync from).
+   * Hides upstream sync in Admin and disables sync API on that Worker.
+   */
+  PST_INSTANCE_ROLE?: string;
 }
 
 export interface User {

@@ -42,16 +42,20 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, upstream owner/repo/branch, cookie domain, `store_screenshots` |
+| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, upstream owner/repo/branch, cookie domain, `store_screenshots`, `upstream_sync_enabled` |
 | `PATCH` | `/api/settings` | Admin | Instance settings aktualisieren |
 
 `store_screenshots` (boolean, Default `false`): Wenn `true`, speichert der Lighthouse-Upload Viewport- und Full-Page-Screenshots im JSON (R2). Größere Dateien und höherer Speicherverbrauch; Screenshots erscheinen in der Report-Detailansicht. Gilt für Läufe nach dem Speichern der Einstellung.
 
 Upstream-Felder (optional, Defaults `platomat` / `page-speed-tester-demo` / `main`): Quelle für **Upstream sync** im Admin.
 
+`upstream_sync_enabled` (boolean): `false`, wenn am Worker `PST_INSTANCE_ROLE=upstream` gesetzt ist (öffentliche Demo/Template-Quelle — kein Sync-UI, Sync-API antwortet mit 404).
+
 ---
 
 ## GitHub / Upstream sync
+
+Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle mit `PST_INSTANCE_ROLE=upstream`).
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |

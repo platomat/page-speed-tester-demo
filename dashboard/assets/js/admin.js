@@ -113,6 +113,13 @@ async function syncUpstreamFromAdmin() {
   }
 }
 
+function applyUpstreamSyncVisibility(enabled) {
+  document.getElementById("upstream-sync-section")?.classList.toggle("hidden", !enabled);
+  for (const el of document.querySelectorAll(".upstream-setting-item")) {
+    el.classList.toggle("hidden", !enabled);
+  }
+}
+
 async function loadSettingsForm() {
   const data = await api("/api/settings");
   instanceTimezone = data.timezone ?? "UTC";
@@ -125,6 +132,8 @@ async function loadSettingsForm() {
   document.getElementById("instance-upstream-branch").value = data.upstream_branch ?? "main";
   document.getElementById("instance-cookie-domain").value = data.cookie_domain ?? "";
   document.getElementById("instance-store-screenshots").checked = Boolean(data.store_screenshots);
+  applyUpstreamSyncVisibility(data.upstream_sync_enabled !== false);
+  return data;
 }
 
 function showMessage(text, isError = false) {
@@ -312,7 +321,9 @@ async function init() {
 
   await loadSettingsForm();
   updateCronHint();
-  await loadUpstreamStatus();
+  if (document.getElementById("upstream-sync-section") && !document.getElementById("upstream-sync-section").classList.contains("hidden")) {
+    await loadUpstreamStatus();
+  }
   bindCronPreview(
     document.getElementById("project-cron"),
     document.getElementById("project-cron-preview")
@@ -330,7 +341,10 @@ async function init() {
       updateCronHint();
       refreshAllCronPreviews();
       showMessage("Settings saved");
-      await loadUpstreamStatus();
+      applyUpstreamSyncVisibility(data.upstream_sync_enabled !== false);
+      if (data.upstream_sync_enabled !== false) {
+        await loadUpstreamStatus();
+      }
     } catch (err) {
       showMessage(err.message, true);
     }
