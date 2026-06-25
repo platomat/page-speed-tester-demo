@@ -1,3 +1,8 @@
+-- Baseline schema (Page Speed Tester).
+-- Idempotent (IF NOT EXISTS / INSERT OR IGNORE) so it is safe to apply to both
+-- fresh databases and existing ones created before D1 migrations were introduced.
+-- Never edit an applied migration — add a new numbered migration instead.
+
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -87,8 +92,3 @@ CREATE TABLE IF NOT EXISTS annotations (
 );
 
 CREATE INDEX IF NOT EXISTS idx_annotations_project ON annotations(project_id, annotated_at);
-
--- Existing databases (add column once):
--- ALTER TABLE projects ADD COLUMN share_token TEXT UNIQUE;
--- ALTER TABLE runs ADD COLUMN trigger_source TEXT NOT NULL DEFAULT 'manual';
--- Annotations: run the CREATE TABLE / CREATE INDEX statements above once.

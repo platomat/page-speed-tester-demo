@@ -91,7 +91,7 @@ So siehst du Charts und Berichte, bevor du eine eigene Instanz aufsetzt.
 | -------------------------------------------- | -------------------------------------------------------------------------- |
 | [docs/INSTALLATION.md](docs/INSTALLATION.md) | Einrichtung Cloudflare + GitHub, Env-Variablen, FAQ, Checkliste            |
 | [docs/API.md](docs/API.md)                   | Worker-REST-Endpunkte (Auth, Projekte, Trigger, Share, intern für Actions) |
-| [schema.sql](schema.sql)                     | D1-Datenbankschema (neue Instanz)                                          |
+| [migrations/](migrations/)                   | D1-Schema & Migrationen (Wrangler D1 migrations); siehe `migrations/README.md` |
 | [docs/TODOs.md](docs/TODOs.md)               | Geplante Verbesserungen im Repo                                            |
 
 

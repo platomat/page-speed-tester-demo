@@ -179,109 +179,23 @@ Diese Werte kommen später in **GitHub Secrets** (Teil 2).
 2. Name: `page-speed-tester-db`
 3. **Database ID** notieren (UUID für `wrangler.toml`)
 
-#### Schema ausführen
+#### Schema anlegen (Migrationen)
 
-Die Datenbank muss **leer** sein (neue Installation). In der D1 Console (**Storage & databases → D1 → `page-speed-tester-db` → Console**) den gesamten Inhalt von `[schema.sql](../schema.sql)` einfügen und ausführen:
+Das Schema wird über **Wranglers D1-Migrationen** verwaltet (siehe `[migrations/](../migrations/)` und `[migrations/README.md](../migrations/README.md)`). Wrangler führt nur noch nicht angewandte Migrationen aus und merkt sich den Stand in der Tabelle `d1_migrations` (das ist die „DB-Version“).
 
-```sql
-CREATE TABLE IF NOT EXISTS projects (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  access_key TEXT NOT NULL UNIQUE,
-  share_token TEXT UNIQUE,
-  cron_expression TEXT NOT NULL DEFAULT '',
-  enabled INTEGER NOT NULL DEFAULT 1,
-  last_scheduled_at TEXT,
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS urls (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  url TEXT NOT NULL,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_urls_project ON urls(project_id);
-
-CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  email TEXT NOT NULL UNIQUE,
-  username TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('admin', 'user')),
-  created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS project_users (
-  project_id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  PRIMARY KEY (project_id, user_id),
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-
-INSERT OR IGNORE INTO settings (key, value) VALUES ('timezone', 'Europe/Berlin');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('cron_enabled', '1');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('store_screenshots', '0');
-
-CREATE TABLE IF NOT EXISTS runs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id TEXT NOT NULL,
-  url_id TEXT NOT NULL,
-  strategy TEXT NOT NULL,
-  run_at TEXT NOT NULL,
-  performance REAL,
-  lcp_ms REAL,
-  cls REAL,
-  fcp_ms REAL,
-  tbt_ms REAL,
-  speed_index REAL,
-  report_key TEXT NOT NULL,
-  trigger_source TEXT NOT NULL DEFAULT 'manual' CHECK(trigger_source IN ('cron', 'manual')),
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_runs_project_url ON runs(project_id, url_id, strategy, run_at);
-
-CREATE TABLE IF NOT EXISTS annotations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id TEXT NOT NULL,
-  annotated_at TEXT NOT NULL,
-  label TEXT NOT NULL,
-  link TEXT,
-  created_at TEXT NOT NULL,
-  created_by TEXT,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_annotations_project ON annotations(project_id, annotated_at);
-```
-
-**Alternativ per Wrangler** (lokal oder remote):
+**Empfohlen** — Schema remote anlegen/aktualisieren:
 
 ```bash
 npm run db:migrate:remote
 ```
 
+Das wendet alle offenen Migrationen auf die Remote-D1 an (auch auf eine leere, neue Datenbank). Die Baseline `migrations/0001_baseline.sql` ist idempotent (`IF NOT EXISTS`), läuft also auch auf bestehenden Datenbanken gefahrlos.
+
+**Manuell ohne Wrangler:** In der D1 Console (**Storage & databases → D1 → `page-speed-tester-db` → Console**) den Inhalt von `[migrations/0001_baseline.sql](../migrations/0001_baseline.sql)` einfügen und ausführen.
+
 Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sessions`, `runs`, `annotations` müssen erscheinen.
+
+> **Updates / spätere Schema-Änderungen:** Neue Migration mit `npm run db:migrate:new -- <name>` anlegen, SQL eintragen, mit `npm run db:migrate:remote` anwenden. **Kein** manuelles Schema-Pflegen mehr. Beim `npm run deploy` laufen die Remote-Migrationen automatisch **vor** dem Worker-Deploy.
 
 **Hinweis:** Projekte und URLs legst du danach im Dashboard unter **Admin** an — nicht per SQL. Der erste Admin-User wird beim ersten Login über **Initial setup** im Dashboard erstellt.
 
@@ -307,7 +221,8 @@ Prüfen unter **Tables** → `projects`, `urls`, `users`, `project_users`, `sess
 1. **Build → Compute → Workers & Pages →Create application → Continue with Github**
 2. **Worker-Name** in Cloudflare: `page-speed-tester-api` (erscheint auch als `*.workers.dev`-Subdomain)
 3. **Repo** (z. B. `meine-firma/page-speed-tester`), **Branch** `main`
-4. **Deploy command:** `node scripts/generate-wrangler.mjs && npx wrangler deploy`
+4. **Deploy command:** `node scripts/generate-wrangler.mjs && npx wrangler d1 migrations apply page-speed-tester-db --remote && npx wrangler deploy`
+   (führt offene D1-Migrationen vor dem Deploy aus; ohne Migrationen genügt `node scripts/generate-wrangler.mjs && npx wrangler deploy`)
 5. **API token:** neuen generieren (Name z.B:: `api-token-page-speed-tester`) oder bestehenden wählen
 6. **Path / Root directory:** leer oder `/` (Repo-Root) — **nicht** `dashboard`
 
@@ -656,7 +571,7 @@ Share-Key rotieren: Admin → Projekt → ↻ neben Share-Key (alte Links werden
 
 Bestehende Datenbanken: einmalig `ALTER TABLE projects ADD COLUMN share_token TEXT UNIQUE;` — fehlende Tokens werden beim ersten Admin-Aufruf automatisch erzeugt.
 
-**Annotations (bestehende Datenbanken):** einmalig die `CREATE TABLE annotations …` + `CREATE INDEX idx_annotations_project …` aus `schema.sql` ausführen (oder `npm run db:migrate:remote`).
+**Annotations & spätere Schema-Änderungen:** `npm run db:migrate:remote` ausführen — Wrangler wendet alle offenen Migrationen aus `migrations/` an (idempotent, auch auf bestehende Datenbanken). Siehe `[migrations/README.md](../migrations/README.md)`.
 
 ---
 
@@ -769,7 +684,7 @@ Logs unter **Actions → fehlgeschlagener Run**.
 ## Checkliste
 
 - R2 Bucket `page-speed-tester-reports` + API-Token
-- D1 `page-speed-tester-db` + Schema aus `[schema.sql](../schema.sql)` (D1 Console oder `npm run db:migrate:remote`)
+- D1 `page-speed-tester-db` + Schema via Migrationen (`npm run db:migrate:remote`; manuell: `[migrations/0001_baseline.sql](../migrations/0001_baseline.sql)`)
 - KV Namespace `page-speed-tester-worker-kv`
 - Worker `page-speed-tester-api` deployed, Bindings D1/R2/KV, Secrets (`SESSION_SECRET`, `GH_PAT`, `WORKER_API_SECRET`)
 - Workers Git deploy: Build-Env `D1_DATABASE_ID`, `KV_NAMESPACE_ID`; Secrets gesetzt; Build `node scripts/generate-wrangler.mjs && npx wrangler deploy`
