@@ -9,6 +9,7 @@ docs/sessions/
 .env.*
 !.env.example
 page-speed-tester.code-workspace
+.cursor/
 .dashboard-dist/
 dashboard/config.js
 dashboard/build-id.txt
