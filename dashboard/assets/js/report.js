@@ -265,12 +265,12 @@ function syncShareTokenFromUrl() {
 
 async function loadReport(reportKey) {
   syncShareTokenFromUrl();
-  const shareToken = getPublicShareKey();
-  const data = shareToken
+  const shareMode = usePublicShareApi();
+  const data = shareMode
     ? await apiPublic(
         `/api/public/share/report?report_key=${encodeURIComponent(reportKey)}`
       )
-    : await api(`/api/reports?key=${encodeURIComponent(reportKey)}`);
+    : await api(reportKeyApiPath(reportKey));
   if (data.timezone) setInstanceTimezone(data.timezone);
   const report = data.lighthouse ?? data;
   const run = data.run ?? null;
@@ -282,7 +282,7 @@ async function loadReport(reportKey) {
     return;
   }
 
-  const reportsData = shareToken
+  const reportsData = shareMode
     ? await apiPublic(
         `/api/public/share/${encodeURIComponent(run.project_id)}/reports?url_id=${encodeURIComponent(run.url_id)}`
       )
@@ -294,18 +294,30 @@ async function loadReport(reportKey) {
 
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  const shareToken = restorePublicShareKeyFromPage();
-  if (shareToken) {
-    document.getElementById("site-header")?.setAttribute("data-auth", "false");
-    await initSiteHeader();
-  } else {
-    const user = await initSiteHeader();
-    if (!user) return;
+  const reportKey = params.get("key");
+
+  let user = null;
+  try {
+    user = (await api("/api/auth/me")).user;
+    setSessionAuth(Boolean(user));
+  } catch {
+    setSessionAuth(false);
   }
 
-  await loadInstanceSettings();
+  if (user) {
+    clearPublicShareKey();
+  } else {
+    restorePublicShareKeyFromPage();
+    if (!getPublicShareKey()) {
+      window.location.href = "/login.html";
+      return;
+    }
+    document.getElementById("site-header")?.setAttribute("data-auth", "false");
+  }
 
-  const reportKey = params.get("key");
+  await initSiteHeader();
+
+  await loadInstanceSettings();
 
   if (!reportKey) {
     document.getElementById("report-root").innerHTML =

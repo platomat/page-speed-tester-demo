@@ -38,6 +38,7 @@ function setSessionToken(token) {
 
 let instanceTimezone = "UTC";
 let publicShareKey = null;
+let hasSessionAuth = false;
 
 function setPublicShareKey(key) {
   publicShareKey = key?.trim() || null;
@@ -48,6 +49,24 @@ function setPublicShareKey(key) {
       // ignore private mode / quota
     }
   }
+}
+
+function clearPublicShareKey() {
+  publicShareKey = null;
+  try {
+    sessionStorage.removeItem(PUBLIC_SHARE_KEY_STORAGE);
+  } catch {
+    // ignore
+  }
+}
+
+function setSessionAuth(active) {
+  hasSessionAuth = Boolean(active);
+  if (hasSessionAuth) clearPublicShareKey();
+}
+
+function usePublicShareApi() {
+  return !hasSessionAuth && Boolean(publicShareKey);
 }
 
 function getPublicShareKey() {
@@ -71,6 +90,10 @@ function readShareTokenFromPageUrl() {
 }
 
 function restorePublicShareKeyFromPage() {
+  if (hasSessionAuth) {
+    clearPublicShareKey();
+    return null;
+  }
   const fromUrl = readShareTokenFromPageUrl();
   if (fromUrl) {
     setPublicShareKey(fromUrl);
@@ -89,7 +112,15 @@ function restorePublicShareKeyFromPage() {
 }
 
 function isPublicShareMode() {
-  return Boolean(publicShareKey);
+  return usePublicShareApi();
+}
+
+function reportKeyApiPath(reportKey) {
+  const match = String(reportKey).match(/^reports\/([^/]+)\/(.+)$/);
+  if (!match) {
+    throw new Error(`Invalid report key: ${reportKey}`);
+  }
+  return `/api/reports/${encodeURIComponent(match[1])}/${encodeURIComponent(match[2])}`;
 }
 
 async function apiPublic(path, options = {}) {
@@ -158,13 +189,19 @@ async function api(path, options = {}) {
     data = { error: text };
   }
   if (!response.ok) {
-    if (response.status === 401) setSessionToken("");
+    if (response.status === 401) {
+      setSessionToken("");
+      setSessionAuth(false);
+    }
     const err = new Error(data?.error || `API ${response.status}`);
     err.status = response.status;
     err.data = data;
     throw err;
   }
-  if (data?.session_token) setSessionToken(data.session_token);
+  if (data?.session_token) {
+    setSessionToken(data.session_token);
+    setSessionAuth(true);
+  }
   return data;
 }
 
@@ -179,19 +216,14 @@ async function requireAuth() {
 }
 
 function reportJsonUrl(reportKey) {
-  if (publicShareKey) {
+  if (usePublicShareApi()) {
     const params = new URLSearchParams({
       share_key: publicShareKey,
       report_key: String(reportKey),
     });
     return `${API_URL}/api/public/share/report?${params}`;
   }
-  const match = String(reportKey).match(/^reports\/([^/]+)\/(.+)$/);
-  if (!match) {
-    throw new Error(`Invalid report key: ${reportKey}`);
-  }
-  const [, projectId, filename] = match;
-  return `${API_URL}/api/reports/${encodeURIComponent(projectId)}/${encodeURIComponent(filename)}`;
+  return `${API_URL}${reportKeyApiPath(reportKey)}`;
 }
 
 function reportDetailUrl(reportKey) {

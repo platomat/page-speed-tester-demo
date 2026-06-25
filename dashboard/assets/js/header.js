@@ -10,7 +10,9 @@ async function initSiteHeader() {
   if (requireAuth) {
     try {
       user = (await api("/api/auth/me")).user;
+      setSessionAuth(Boolean(user));
     } catch {
+      setSessionAuth(false);
       window.location.href = "/login.html";
       return null;
     }
@@ -50,6 +52,7 @@ async function initSiteHeader() {
       await api("/api/auth/logout", { method: "POST" });
     } finally {
       sessionStorage.removeItem("pst_session_token");
+      setSessionAuth(false);
       window.location.href = "/login.html";
     }
   });
