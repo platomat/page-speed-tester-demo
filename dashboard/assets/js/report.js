@@ -225,13 +225,16 @@ function renderReport(report, reportKey) {
   const categories = report.categories ?? {};
   const opportunities = getOpportunities(audits, categories);
   const formFactor = report.configSettings?.formFactor ?? "unknown";
+  const deviceLabel =
+    formFactor === "desktop" ? "Desktop" : formFactor === "mobile" ? "Mobile" : formFactor;
   const jsonUrl = reportJsonUrl(reportKey);
+  const pageUrl = report.finalUrl ?? report.requestedUrl ?? "";
 
-  document.title = `Report — ${report.finalUrl ?? report.requestedUrl ?? "Page Speed"}`;
+  document.title = `Report — ${pageUrl || "Page Speed"}`;
   document.getElementById("report-meta").innerHTML = `
-    <a href="${escapeHtml(report.finalUrl ?? report.requestedUrl ?? "#")}" target="_blank" rel="noopener">${escapeHtml(report.finalUrl ?? report.requestedUrl ?? "")}</a>
-    · ${formatDateTime(report.fetchTime)}
-    · ${escapeHtml(formFactor)}
+    ${formatDateTime(report.fetchTime)}
+    · ${escapeHtml(deviceLabel)}
+    · <a href="${escapeHtml(pageUrl || "#")}" target="_blank" rel="noopener">${escapeHtml(pageUrl)}</a>
     · <a href="${jsonUrl}" target="_blank" rel="noopener">Raw JSON</a>`;
 
   document.getElementById("report-root").innerHTML = `

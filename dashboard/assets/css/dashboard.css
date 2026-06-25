@@ -240,6 +240,14 @@
   margin: 0 0 1.25rem;
 }
 
+#report-root .latest-cards {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+#report-root .metric-card {
+  text-align: center;
+}
+
 .report-nav {
   display: flex;
   flex-wrap: wrap;
