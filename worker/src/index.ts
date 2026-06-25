@@ -64,6 +64,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     return publicTriggerProject(request, env, decodeURIComponent(publicTriggerMatch[1]));
   }
 
+  if (path === "/api/public/share/report" && method === "GET") {
+    return publicShareReportJson(request, env);
+  }
+
   const publicShareMatch = path.match(/^\/api\/public\/share\/([^/]+)$/);
   if (publicShareMatch && method === "GET") {
     return publicShareProject(request, env, decodeURIComponent(publicShareMatch[1]));
@@ -77,10 +81,6 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   const publicShareReportsMatch = path.match(/^\/api\/public\/share\/([^/]+)\/reports$/);
   if (publicShareReportsMatch && method === "GET") {
     return publicShareReports(request, env, decodeURIComponent(publicShareReportsMatch[1]));
-  }
-
-  if (path === "/api/public/share/report" && method === "GET") {
-    return publicShareReportJson(request, env);
   }
 
   // Auth
