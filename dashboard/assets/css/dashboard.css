@@ -185,11 +185,6 @@
   letter-spacing: -0.02em;
 }
 
-.icon-btn-danger:hover {
-  color: var(--bad);
-  border-color: var(--bad);
-}
-
 .report-actions-col {
   width: 3rem;
   text-align: center;

@@ -148,6 +148,19 @@ select {
   font-size: 14px;
 }
 
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+select,
+textarea {
+  outline: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-button);
+}
+
 select,
 button {
   font-family: inherit;
@@ -228,6 +241,24 @@ button[disabled] {
   color: var(--accent);
   border-color: var(--accent);
   text-decoration: none;
+}
+
+/* Icon delete — use: icon-btn btn-danger btn-sm (project-wide) */
+.icon-btn.btn-danger {
+  background: transparent;
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.icon-btn.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.icon-btn.btn-danger.btn-sm {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 table {

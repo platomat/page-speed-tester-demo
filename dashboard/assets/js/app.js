@@ -748,7 +748,7 @@ function renderReportsTable(reports, projectId, urlId) {
       const deleteCol = shareContext
         ? ""
         : `<td class="report-actions-col">
-        <button type="button" class="icon-btn icon-btn-danger" data-delete-run="${keysAttr}" title="Delete run" aria-label="Delete test run (desktop and mobile)">${ICON_DELETE}</button>
+        <button type="button" class="icon-btn btn-danger btn-sm" data-delete-run="${keysAttr}" title="Delete run" aria-label="Delete test run (desktop and mobile)">${ICON_DELETE}</button>
       </td>`;
       return `
     <tr>
