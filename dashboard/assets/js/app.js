@@ -182,6 +182,18 @@ function getScope() {
   return parsed;
 }
 
+/** Snapshot for guarding async UI updates after scope changes. */
+function getScopeSnapshot() {
+  const { projectId, urlId } = getScope();
+  return { projectId, urlId: urlId ?? null };
+}
+
+function scopeMatches(snapshot) {
+  if (!snapshot?.projectId) return false;
+  const current = getScopeSnapshot();
+  return current.projectId === snapshot.projectId && current.urlId === snapshot.urlId;
+}
+
 function formatDecimalPlaces(value, places) {
   return Number(value)
     .toFixed(places)
@@ -610,7 +622,8 @@ function showUrlMetricsView() {
 }
 
 async function loadData() {
-  const { projectId, urlId } = getScope();
+  const snapshot = getScopeSnapshot();
+  const { projectId, urlId } = snapshot;
   if (!projectId) return;
 
   if (shareContext) {
@@ -632,6 +645,7 @@ async function loadData() {
 
     const desktopRuns = desktopData.runs ?? [];
     const mobileRuns = mobileData.runs ?? [];
+    if (!scopeMatches(snapshot)) return;
     renderLatest(desktopRuns, mobileRuns);
     showUrlScopeView(desktopRuns, mobileRuns);
     if (desktopRuns.length > 0 || mobileRuns.length > 0) {
@@ -644,10 +658,12 @@ async function loadData() {
   if (!urlId) {
     try {
       const status = await api(`/api/projects/${encodeURIComponent(projectId)}/run-status`);
+      if (!scopeMatches(snapshot)) return;
       cachedRunStatus = status;
       wasRunStatusActive = Boolean(status.running);
       renderProjectScopeView(status);
     } catch {
+      if (!scopeMatches(snapshot)) return;
       renderProjectScopeView();
     }
     return;
@@ -663,6 +679,7 @@ async function loadData() {
 
   const desktopRuns = desktopData.runs ?? [];
   const mobileRuns = mobileData.runs ?? [];
+  if (!scopeMatches(snapshot)) return;
   renderLatest(desktopRuns, mobileRuns);
   showUrlScopeView(desktopRuns, mobileRuns);
   if (desktopRuns.length > 0 || mobileRuns.length > 0) {
@@ -749,11 +766,14 @@ async function dismissRunStatus() {
 
 async function pollRunStatus(projectId) {
   if (projectId !== runStatusProjectId) return;
-  if (projectId !== getScope().projectId) return;
+  const snapshot = getScopeSnapshot();
+  if (projectId !== snapshot.projectId) return;
   try {
     const status = await api(`/api/projects/${encodeURIComponent(projectId)}/run-status`);
+    if (projectId !== runStatusProjectId) return;
+    if (!scopeMatches(snapshot)) return;
     const active = Boolean(status.running);
-    const { urlId } = getScope();
+    const { urlId } = snapshot;
     let justFinished = false;
 
     if (wasRunStatusActive && !active) {
@@ -775,7 +795,8 @@ async function pollRunStatus(projectId) {
 }
 
 async function onScopeChange() {
-  const { projectId, urlId } = getScope();
+  const snapshot = getScopeSnapshot();
+  const { projectId, urlId } = snapshot;
   if (!projectId) return;
 
   const previousProjectId = runStatusProjectId;
@@ -787,19 +808,24 @@ async function onScopeChange() {
 
   if (urlId) {
     await loadData();
+    if (!scopeMatches(snapshot)) return;
     try {
       const status = await api(`/api/projects/${encodeURIComponent(projectId)}/run-status`);
+      if (!scopeMatches(snapshot)) return;
       cachedRunStatus = status;
       wasRunStatusActive = Boolean(status.running);
       renderRunStatus(status);
     } catch {
+      if (!scopeMatches(snapshot)) return;
       renderRunStatus({ running: false });
     }
   } else {
     renderProjectScopeView({ running: false });
     await loadData();
+    if (!scopeMatches(snapshot)) return;
   }
 
+  if (!scopeMatches(snapshot)) return;
   startRunStatusPolling(projectId);
 }
 
