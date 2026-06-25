@@ -49,7 +49,7 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 
 Upstream-Felder (optional, Defaults `platomat` / `page-speed-tester-demo` / `main`): Quelle für **Upstream sync** im Admin.
 
-`upstream_sync_enabled` (boolean): `false` auf der Demo/Template-Quelle — wenn `PST_INSTANCE_ROLE=upstream` gesetzt ist **oder** GitHub owner/repo mit dem Upstream übereinstimmen (Instanz ist die Quelle, kein Sync von sich selbst).
+`upstream_sync_enabled` (boolean): `false`, wenn `PST_INSTANCE_ROLE=upstream` (Demo — per Build-Env in `wrangler.toml` `[vars]`, nicht manuell zur Laufzeit).
 
 ---
 

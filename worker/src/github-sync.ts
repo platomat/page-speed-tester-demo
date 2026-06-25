@@ -382,7 +382,7 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
 
-  if (!(await isUpstreamSyncEnabled(env))) {
+  if (!isUpstreamSyncEnabled(env)) {
     return json(request, env, { error: "Upstream sync is not available on this instance" }, 404);
   }
 
@@ -397,7 +397,7 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;
 
-  if (!(await isUpstreamSyncEnabled(env))) {
+  if (!isUpstreamSyncEnabled(env)) {
     return json(request, env, { error: "Upstream sync is not available on this instance" }, 404);
   }
 

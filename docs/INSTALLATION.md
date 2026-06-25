@@ -33,7 +33,7 @@ Lighthouse läuft **nicht** direkt in Cloudflare Workers (kein Chrome dort).
 | `**PST_API_URL`**                           | Text   | **Pages → Build environment variables**                      | Beim Pages-Deploy (Build-Schritt) | Worker-URL in `dashboard/config.js` (optional bei Custom Domain — Fallback `api.<host>`) |
 | `COOKIE_DOMAIN`                             | Text   | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | Session-Cookie für Dashboard + API (z. B. `.page-speed-tester.mydomain.tld`)             |
 | `DASHBOARD_ORIGIN`                          | Text   | optional Worker `[vars]`                                     | Worker-Laufzeit                   | Zusätzliche Dashboard-Origins für CORS (kommagetrennt, volle URLs)                       |
-| `PST_INSTANCE_ROLE`                         | Text   | **Auto** beim Worker-Build, wenn Repo `page-speed-tester-demo` heißt (`generate-wrangler.mjs` → `wrangler.toml` `[vars]`); optional manuell überschreiben | Worker-Laufzeit                   | Demo/Template-Quelle: Wert `upstream` — blendet Admin **Upstream sync** aus (Kunden-Repos **nicht** `page-speed-tester-demo`) |
+| `PST_INSTANCE_ROLE`                         | Text   | **Workers → Git deploy → Build environment variables** (nur Demo-Worker) | Worker-Build → `wrangler.toml` `[vars]` | Demo/Template-Quelle: Wert `upstream` — blendet Admin **Upstream sync** aus. Kunden-Worker: **nicht** setzen |
 | `GH_OWNER`, `GH_REPO`                       | Text   | **Admin → Instance settings** (D1); optional Worker `[vars]` | Worker-Laufzeit                   | GitHub `repository_dispatch`-Ziel                                                        |
 | `SESSION_SECRET`                            | Secret | **Worker → Secrets**                                         | Worker-Laufzeit                   | Session-Verschlüsselung                                                                  |
 | `GH_PAT`                                    | Secret | **Worker → Secrets**                                         | Worker-Laufzeit                   | GitHub API                                                                               |
@@ -309,11 +309,12 @@ Unter **Workers → dein Worker → Settings → Build** (nicht Runtime) **→**
 | `KV_NAMESPACE_ID` | Text | ✅        | KV → `page-speed-tester-worker-kv` → Namespace ID                                            |
 | `WORKER_NAME`     | Text | optional | `page-speed-tester-api` (Default im Script; Demo-Staging z. B. `page-speed-tester-demo-api`) |
 | `CRON_EXPRESSION` | Text | optional | `*/5` * * * *                                                                                |
+| `PST_INSTANCE_ROLE` | Text | **nur Demo-Worker** | `upstream` — wird in `wrangler.toml` `[vars]` geschrieben; Kunden-Instanzen **weg** lassen |
 
 
 Das Script `[scripts/generate-wrangler.mjs](../scripts/generate-wrangler.mjs)` schreibt daraus `wrangler.toml` (gitignored, nicht committen). **Kein** manuelles Bearbeiten der Datei nötig — Fork auf GitHub, IDs nur in Cloudflare.
 
-**Demo-Erkennung beim Worker-Build:** Wenn das verbundene Git-Repo `page-speed-tester-demo` heißt (`GITHUB_REPOSITORY`, `CF_PAGES_REPO_NAME` oder `git remote`), setzt das Script automatisch `PST_INSTANCE_ROLE=upstream` in `wrangler.toml` `[vars]`. Template-Kopien (z. B. `page-speed-tester`) bekommen das nicht. Zusätzlich blendet der Worker Upstream-Sync aus, wenn in den Instance settings **GitHub owner/repo** mit dem Upstream übereinstimmen.
+**Demo vs. Kunde:** Am **öffentlichen Demo-Worker** in den **Build**-Variablen zusätzlich `PST_INSTANCE_ROLE=upstream` setzen (neben `D1_DATABASE_ID` / `KV_NAMESPACE_ID`). Das Script übernimmt den Wert in `wrangler.toml` `[vars]`; der Worker liest ihn zur Laufzeit — **keine** separate Runtime-Variable in Cloudflare nötig. Kunden-Worker (private Template-Kopie): `PST_INSTANCE_ROLE` **nicht** setzen.
 
 #### Worker Secrets (Runtime)
 
@@ -522,7 +523,7 @@ Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo hab
 
 Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/behind/diverged) und Button **Sync from upstream** — merged Änderungen aus dem Upstream-Repo in **dein** GitHub-Repo (ohne lokales `git fetch`/`merge`).
 
-**Nicht auf der öffentlichen Demo/Template-Instanz:** Dort ist dieses Repo die **Quelle** für andere. Upstream-Sync wird automatisch ausgeblendet, wenn **GitHub owner/repository** mit dem Upstream übereinstimmen (Demo: beides `platomat` / `page-speed-tester-demo`) — auch ohne Worker-Variable. Zusätzlich optional **`PST_INSTANCE_ROLE=upstream`** als **Runtime**-Variable (Workers → Settings → Variables & Secrets → Environment Variables, **nicht** Build). Kunden-Instanzen (eigenes Repo, z. B. `page-speed-tester`) lassen die Variable **weg**.
+**Nicht auf der öffentlichen Demo/Template-Instanz:** Dort ist dieses Repo die **Quelle** für andere. Am Demo-Worker **`PST_INSTANCE_ROLE=upstream`** in den **Build**-Umgebungsvariablen setzen (siehe oben) — dann fehlen Upstream-Felder und Sync im Admin. Kunden-Instanzen lassen die Variable **weg**.
 
 | Feld | Default | Zweck |
 | ---- | ------- | ----- |
@@ -534,7 +535,7 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 
 **Hinweis (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk. Der Status ermittelt fehlende Upstream-Commits per SHA-Abgleich (`commit-walk`), nicht über `owner:branch`-Compare (das würde fälschlich „Up to date“ anzeigen). Der Sync erstellt dafür einen Pull Request mit `head_repo` (gleiche GitHub-Organisation) und merged ihn — nicht die veraltete Merges-API mit `owner:branch` (Fehler „Head does not exist“).
 
-API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream` **oder** wenn dein konfiguriertes GitHub-Repo dasselbe ist wie der Upstream (kein Sync von dir selbst).
+API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream` (vom Build in `wrangler.toml` `[vars]`).
 
 ---
 
