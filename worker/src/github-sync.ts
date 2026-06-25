@@ -33,15 +33,28 @@ async function ghRequest(pat: string, url: string, init?: RequestInit): Promise<
 }
 
 async function parseGhError(res: Response): Promise<string> {
+  const { message } = await parseGhErrorDetails(res);
+  return message;
+}
+
+async function parseGhErrorDetails(
+  res: Response
+): Promise<{ message: string; details: GhJson | null }> {
+  const text = await res.text().catch(() => "");
   try {
-    const data = (await res.json()) as GhJson;
-    if (typeof data.message === "string") return data.message;
-    if (typeof data.error === "string") return data.error;
+    const data = text ? (JSON.parse(text) as GhJson) : null;
+    if (data) {
+      if (typeof data.message === "string") {
+        return { message: data.message, details: data };
+      }
+      if (typeof data.error === "string") {
+        return { message: data.error, details: data };
+      }
+    }
   } catch {
     // ignore JSON parse errors
   }
-  const text = await res.text().catch(() => "");
-  return text || `GitHub API error (${res.status})`;
+  return { message: text || `GitHub API error (${res.status})`, details: null };
 }
 
 async function fetchRepoInfo(
@@ -256,13 +269,15 @@ type PullRequestSummary = {
   mergeable_state?: string;
   html_url?: string;
   title?: string;
-  head?: { ref?: string; repo?: { full_name?: string } };
+  head?: { ref?: string; sha?: string; repo?: { full_name?: string } };
 };
 
 const SYNC_PR_TITLE_PREFIX = "Sync from upstream ";
-const MERGE_POLL_MS = 1_500;
-const MERGE_POLL_MAX = 24;
-const MERGE_RETRY_DELAYS_MS = [0, 2_000, 4_000];
+const MERGE_POLL_MS = 2_000;
+const MERGE_POLL_MAX = 30;
+const MERGE_RETRY_DELAYS_MS = [0, 3_000, 6_000, 12_000];
+const MERGE_METHODS = ["merge", "squash", "rebase"] as const;
+const POST_CREATE_PR_DELAY_MS = 3_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -308,18 +323,6 @@ async function listOpenUpstreamPullRequests(
   const data = (await res.json()) as PullRequestSummary[];
   if (!Array.isArray(data)) return [];
   return data.filter((pr) => isUpstreamSyncPullRequest(pr, upstream));
-}
-
-async function closePullRequest(
-  pat: string,
-  target: { owner: string; repo: string },
-  pullNumber: number
-): Promise<void> {
-  await ghRequest(
-    pat,
-    `https://api.github.com/repos/${target.owner}/${target.repo}/pulls/${pullNumber}`,
-    { method: "PATCH", body: JSON.stringify({ state: "closed" }) }
-  );
 }
 
 async function waitForMergeablePullRequest(
@@ -401,17 +404,21 @@ async function mergePullRequest(
   pat: string,
   target: { owner: string; repo: string },
   pullNumber: number,
-  commitTitle: string
+  commitTitle: string,
+  options?: { merge_method?: (typeof MERGE_METHODS)[number]; sha?: string }
 ): Promise<Response> {
+  const body: Record<string, string> = {
+    commit_title: commitTitle,
+    merge_method: options?.merge_method ?? "merge",
+  };
+  if (options?.sha) body.sha = options.sha;
+
   return ghRequest(
     pat,
     `https://api.github.com/repos/${target.owner}/${target.repo}/pulls/${pullNumber}/merge`,
     {
       method: "PUT",
-      body: JSON.stringify({
-        commit_title: commitTitle,
-        merge_method: "merge",
-      }),
+      body: JSON.stringify(body),
     }
   );
 }
@@ -421,18 +428,45 @@ async function mergePullRequestWithRetry(
   target: { owner: string; repo: string },
   pullNumber: number,
   commitTitle: string
-): Promise<Response> {
+): Promise<{ response: Response; lastMethod?: string; github?: GhJson | null }> {
   let lastRes: Response | null = null;
+  let lastMethod: string | undefined;
+  let lastGithub: GhJson | null = null;
+
   for (const delayMs of MERGE_RETRY_DELAYS_MS) {
     if (delayMs > 0) await sleep(delayMs);
-    const res = await mergePullRequest(pat, target, pullNumber, commitTitle);
-    if (res.ok) return res;
-    lastRes = res;
-    if (res.status !== 500 && res.status !== 502 && res.status !== 503) {
-      return res;
+
+    const pr = await fetchPullRequest(pat, target, pullNumber);
+    const headSha = pr?.head?.sha;
+
+    for (const mergeMethod of MERGE_METHODS) {
+      lastMethod = mergeMethod;
+      const res = await mergePullRequest(pat, target, pullNumber, commitTitle, {
+        merge_method: mergeMethod,
+        sha: headSha,
+      });
+      if (res.ok) {
+        return { response: res, lastMethod: mergeMethod };
+      }
+
+      const { message, details } = await parseGhErrorDetails(res.clone());
+      lastGithub = details;
+      lastRes = new Response(JSON.stringify(details ?? { message }), {
+        status: res.status,
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.status !== 500 && res.status !== 502 && res.status !== 503) {
+        return { response: lastRes, lastMethod: mergeMethod, github: details };
+      }
     }
   }
-  return lastRes ?? new Response(null, { status: 500 });
+
+  return {
+    response: lastRes ?? new Response(null, { status: 500 }),
+    lastMethod,
+    github: lastGithub,
+  };
 }
 
 /** Fork network only — merges API accepts owner:branch as head. */
@@ -469,7 +503,15 @@ async function crossRepoPullRequestSync(
     pullNumber: number
   ): Promise<
     | { ok: true; response: Response }
-    | { ok: false; response?: Response; error: string; status: number; pr?: PullRequestSummary }
+    | {
+        ok: false;
+        response?: Response;
+        error: string;
+        status: number;
+        pr?: PullRequestSummary;
+        merge_method?: string;
+        github?: GhJson;
+      }
   > => {
     const ready = await waitForMergeablePullRequest(pat, target, pullNumber);
     if ("error" in ready) {
@@ -481,17 +523,21 @@ async function crossRepoPullRequestSync(
       };
     }
 
-    const mergeRes = await mergePullRequestWithRetry(pat, target, pullNumber, commitTitle);
-    if (mergeRes.ok) {
-      return { ok: true, response: mergeRes };
+    const mergeAttempt = await mergePullRequestWithRetry(pat, target, pullNumber, commitTitle);
+    if (mergeAttempt.response.ok) {
+      return { ok: true, response: mergeAttempt.response };
     }
+
+    const { message, details } = await parseGhErrorDetails(mergeAttempt.response.clone());
 
     return {
       ok: false,
-      response: mergeRes,
-      error: await parseGhError(mergeRes),
-      status: mergeRes.status,
+      response: mergeAttempt.response,
+      error: message,
+      status: mergeAttempt.response.status,
       pr: ready.pr,
+      merge_method: mergeAttempt.lastMethod,
+      github: details ?? mergeAttempt.github ?? undefined,
     };
   };
 
@@ -500,28 +546,48 @@ async function crossRepoPullRequestSync(
     const result = await tryMergePullRequest(pr.number);
     if (result.ok) return result.response;
     if (result.status === 409) {
-      return ghErrorResponse(result.error, result.status);
+      return ghErrorResponse(
+        {
+          message: result.error,
+          pull_request_url: result.pr?.html_url ?? null,
+          pull_request_number: result.pr?.number ?? null,
+        },
+        result.status
+      );
     }
-    if (result.status >= 500 && result.pr) {
-      await closePullRequest(pat, target, pr.number);
-    }
+    // Keep the open PR on transient GitHub 5xx — closing and recreating often makes it worse.
   }
 
   const created = await createUpstreamPullRequest(pat, target, upstream, branch);
   if ("error" in created) {
-    return ghErrorResponse(created.error, created.status);
+    return ghErrorResponse({ message: created.error }, created.status);
   }
+
+  await sleep(POST_CREATE_PR_DELAY_MS);
 
   const merged = await tryMergePullRequest(created.pr.number);
   if (merged.ok) return merged.response;
 
   const prUrl = merged.pr?.html_url;
   const detail = prUrl ? ` Open PR: ${prUrl}` : "";
-  return ghErrorResponse(`${merged.error}.${detail}`, merged.status >= 500 ? 502 : merged.status);
+  return ghErrorResponse(
+    {
+      message: `${merged.error}.${detail}`,
+      pull_request_url: merged.pr?.html_url ?? null,
+      pull_request_number: merged.pr?.number ?? null,
+      github_status: merged.status,
+      merge_method: merged.merge_method ?? null,
+      github: merged.github ?? null,
+      hint: prUrl
+        ? "GitHub could not auto-merge — open the pull request on GitHub and merge manually."
+        : null,
+    },
+    merged.status >= 500 ? 502 : merged.status
+  );
 }
 
-function ghErrorResponse(message: string, status: number): Response {
-  return new Response(JSON.stringify({ message }), {
+function ghErrorResponse(body: GhJson, status: number): Response {
+  return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
   });
@@ -627,7 +693,16 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
     });
   }
 
-  const errMsg = await parseGhError(mergeRes);
+  const errBody = (await mergeRes.json().catch(() => ({}))) as GhJson;
+  const errMsg =
+    typeof errBody.message === "string"
+      ? errBody.message
+      : await parseGhError(
+          new Response(JSON.stringify(errBody), {
+            status: mergeRes.status,
+            headers: { "Content-Type": "application/json" },
+          })
+        );
   const conflict = mergeRes.status === 409 || mergeRes.status === 405;
   return json(
     request,
@@ -640,6 +715,12 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
       method,
       conflict,
       compare: compareResult,
+      pull_request_url: errBody.pull_request_url ?? null,
+      pull_request_number: errBody.pull_request_number ?? null,
+      github_status: errBody.github_status ?? mergeRes.status,
+      merge_method: errBody.merge_method ?? null,
+      github: errBody.github ?? null,
+      hint: errBody.hint ?? null,
     },
     conflict ? 409 : 502
   );

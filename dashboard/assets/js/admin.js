@@ -115,9 +115,14 @@ async function syncUpstreamFromAdmin() {
     }
   } catch (err) {
     showMessage(err.message, true);
-    if (err.data?.compare) {
-      document.getElementById("upstream-status").innerHTML = renderUpstreamStatus(err.data.compare);
-      syncBtn.disabled = !err.data.compare.can_sync;
+    const statusEl = document.getElementById("upstream-status");
+    if (statusEl && err.data) {
+      const compareHtml = err.data.compare ? renderUpstreamStatus(err.data.compare) : "";
+      statusEl.innerHTML =
+        `<p class="error">${escapeHtml(err.message)}</p>` +
+        renderUpstreamSyncError(err.data) +
+        compareHtml;
+      syncBtn.disabled = err.data.compare ? !err.data.compare.can_sync : true;
     } else {
       await loadUpstreamStatus();
     }
@@ -155,14 +160,31 @@ function showMessage(text, isError = false) {
     clearTimeout(adminMessageTimer);
     adminMessageTimer = null;
   }
-  el.textContent = text;
+  el.innerHTML = escapeHtml(text);
   el.className = isError ? "admin-message error" : "admin-message success";
   el.classList.remove("hidden");
-  const durationMs = isError ? 8000 : 5000;
+  const durationMs = isError ? 12000 : 5000;
   adminMessageTimer = setTimeout(() => {
     el.classList.add("hidden");
     adminMessageTimer = null;
   }, durationMs);
+}
+
+function renderUpstreamSyncError(data) {
+  if (!data || typeof data !== "object") return "";
+  const parts = [];
+  if (data.hint) {
+    parts.push(`<p>${escapeHtml(String(data.hint))}</p>`);
+  }
+  if (data.pull_request_url) {
+    parts.push(
+      `<p><a href="${escapeHtml(String(data.pull_request_url))}" target="_blank" rel="noopener">Open sync pull request on GitHub</a></p>`
+    );
+  }
+  parts.push(
+    `<pre class="upstream-error-json">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`
+  );
+  return parts.join("");
 }
 
 function openFormPanel(panelId, toggleId) {
