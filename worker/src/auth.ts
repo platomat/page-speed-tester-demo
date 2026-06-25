@@ -1,5 +1,13 @@
 import type { Env, User } from "./env";
 import { json } from "./http";
+import {
+  checkLoginRateLimit,
+  clearLoginRateLimit,
+  clientIp,
+  DUMMY_PASSWORD_HASH,
+  normalizeLoginId,
+  recordLoginFailure,
+} from "./login-rate-limit";
 import { hashPassword, verifyPassword } from "./password-hash";
 import { getCookieDomain } from "./settings";
 
@@ -131,15 +139,39 @@ export async function handleLogin(
   if (!body.login || !body.password) {
     return json(request, env, { error: "login and password required" }, 400);
   }
+
+  const ip = clientIp(request);
+  const loginId = normalizeLoginId(body.login);
+  const rateLimit = await checkLoginRateLimit(env, ip, loginId);
+  if (!rateLimit.allowed) {
+    return json(
+      request,
+      env,
+      {
+        error: "Too many login attempts",
+        retry_after_seconds: rateLimit.retry_after_seconds,
+      },
+      429
+    );
+  }
+
   const row = await env.DB.prepare(
     `SELECT id, email, username, role, password_hash FROM users
      WHERE email = ? OR username = ?`
   )
     .bind(body.login, body.login)
     .first<User & { password_hash: string }>();
-  if (!row || !(await verifyPassword(body.password, row.password_hash))) {
+
+  const passwordOk = await verifyPassword(
+    body.password,
+    row?.password_hash ?? DUMMY_PASSWORD_HASH
+  );
+  if (!row || !passwordOk) {
+    await recordLoginFailure(env, ip, loginId);
     return json(request, env, { error: "Invalid credentials" }, 401);
   }
+
+  await clearLoginRateLimit(env, ip, loginId);
   const sessionId = crypto.randomUUID();
   await env.DB.prepare(
     `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)`

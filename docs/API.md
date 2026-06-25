@@ -32,7 +32,7 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 | ------- | ---- | ---- | ------------ |
 | `GET` | `/api/auth/setup` | — | `{ needs_bootstrap: true/false }` — ob Initial setup nötig ist |
 | `POST` | `/api/auth/bootstrap` | — | Ersten Admin anlegen (nur wenn noch keine User in D1) |
-| `POST` | `/api/auth/login` | — | Login → `{ user, session_token }` + Session-Cookie |
+| `POST` | `/api/auth/login` | — | Login → `{ user, session_token }` + Session-Cookie. Bei wiederholten Fehlversuchen **429** mit `{ error, retry_after_seconds }` (progressives Backoff in KV, pro IP und Login-Identifier). Falsche Zugangsdaten: **401** `{ error: "Invalid credentials" }` (gleiche Antwort unabhängig davon, ob User existiert). |
 | `POST` | `/api/auth/logout` | Session | Session beenden |
 | `GET` | `/api/auth/me` | Session | Aktueller User `{ user }` |
 
