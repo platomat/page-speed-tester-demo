@@ -708,6 +708,25 @@ const ICON_DETAILS = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none
 
 const ICON_JSON = `<span class="json-label" aria-hidden="true">{}</span>`;
 
+function renderReportMediaBadges(report) {
+  if (!report) return "";
+  const hasScreenshots = Number(report.has_screenshots) === 1;
+  const hasTiming = Number(report.has_timing_screenshots) === 1;
+  if (!hasScreenshots && !hasTiming) return "";
+  const badges = [];
+  if (hasScreenshots) {
+    badges.push(
+      `<span class="report-media-badge report-media-badge--screenshot" title="Viewport / full-page screenshots">IMG</span>`
+    );
+  }
+  if (hasTiming) {
+    badges.push(
+      `<span class="report-media-badge report-media-badge--timing" title="Timing screenshots (filmstrip)">T</span>`
+    );
+  }
+  return `<div class="report-media-badges">${badges.join("")}</div>`;
+}
+
 function renderDeviceCell(report, deviceLabel) {
   if (!report) {
     return '<td class="report-device-col"><span class="report-missing">—</span></td>';
@@ -722,6 +741,7 @@ function renderDeviceCell(report, deviceLabel) {
           <a href="${reportDetailUrl(report.report_key)}" class="icon-btn" title="Details" aria-label="${detailLabel}">${ICON_DETAILS}</a>
           <a href="${reportJsonUrl(report.report_key)}" class="icon-btn icon-btn-json" target="_blank" rel="noopener" title="JSON" aria-label="${jsonLabel}">${ICON_JSON}</a>
         </div>
+        ${renderReportMediaBadges(report)}
       </div>
     </td>`;
 }

@@ -199,6 +199,33 @@
   vertical-align: middle;
 }
 
+.report-media-badges {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.report-media-badge {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  font-family: ui-monospace, monospace;
+}
+
+.report-media-badge--screenshot {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}
+
+.report-media-badge--timing {
+  background: rgba(168, 85, 247, 0.15);
+  color: #7c3aed;
+}
+
 .trigger-badge {
   display: inline-block;
   font-size: 0.75rem;

@@ -19,3 +19,16 @@ export function slimLighthouseReport(lighthouseJson, options = {}) {
   }
   return out;
 }
+
+/** Detect screenshot content remaining in stored Lighthouse JSON. */
+export function reportMediaFlags(lighthouseJson) {
+  const audits = lighthouseJson.audits ?? {};
+  const hasScreenshots =
+    Boolean(lighthouseJson.fullPageScreenshot) ||
+    Boolean(audits["final-screenshot"]?.details?.data) ||
+    Boolean(audits["full-page-screenshot"]?.details?.data);
+  const timingItems = audits["screenshot-thumbnails"]?.details?.items;
+  const hasTimingScreenshots =
+    Array.isArray(timingItems) && timingItems.some((item) => Boolean(item?.data));
+  return { has_screenshots: hasScreenshots, has_timing_screenshots: hasTimingScreenshots };
+}

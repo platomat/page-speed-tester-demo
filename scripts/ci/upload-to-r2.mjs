@@ -7,7 +7,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { urlSlug } from "./url-slug.mjs";
-import { slimLighthouseReport } from "./slim-lighthouse-report.mjs";
+import { slimLighthouseReport, reportMediaFlags } from "./slim-lighthouse-report.mjs";
 
 const REPORTS_DIR = process.argv[2] ?? "reports";
 const PROJECT_ID = process.env.PROJECT_ID;
@@ -162,6 +162,7 @@ async function main() {
       storeScreenshots,
       storeTimingScreenshots,
     });
+    const media = reportMediaFlags(lighthouseJson);
     const metrics = extractMetrics(lighthouseJson);
     const body = JSON.stringify(lighthouseJson);
     const reportBytes = Buffer.byteLength(body, "utf8");
@@ -180,6 +181,8 @@ async function main() {
       report_key: reportKey,
       trigger_source: triggerSource,
       report_bytes: reportBytes,
+      has_screenshots: media.has_screenshots,
+      has_timing_screenshots: media.has_timing_screenshots,
       ...metrics,
     });
     console.log(`Registered run for ${urlEntry.url} (${parsed.strategy})`);
