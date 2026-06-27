@@ -707,14 +707,15 @@ function renderReportMediaBadges(report) {
 }
 
 function renderDeviceCell(report, deviceLabel) {
+  const device = deviceLabel.toLowerCase();
   if (!report) {
-    return '<td class="report-device-col"><span class="report-missing">—</span></td>';
+    return `<td class="report-device-col" data-device="${device}"><span class="report-missing">—</span></td>`;
   }
   const detailLabel = `${deviceLabel} report details`;
   const jsonLabel = `${deviceLabel} raw JSON`;
   const fileSize = formatFileSize(report.report_bytes);
   return `
-    <td class="report-device-col">
+    <td class="report-device-col" data-device="${device}">
       <div class="report-device-cell">
         <span class="report-score ${scoreClass(report.performance)}">${report.performance ?? "—"}</span>
         <div class="report-actions">

@@ -157,6 +157,12 @@
   width: 38%;
 }
 
+.report-device-col[data-device="desktop"],
+#reports-table thead th[data-device="desktop"] {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
 .report-device-cell {
   display: flex;
   align-items: center;
