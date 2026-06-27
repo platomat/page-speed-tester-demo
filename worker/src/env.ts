@@ -73,4 +73,5 @@ export interface RunPayload {
   speed_index: number | null;
   report_key: string;
   trigger_source?: "cron" | "manual";
+  report_bytes?: number | null;
 }

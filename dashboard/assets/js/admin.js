@@ -30,6 +30,7 @@ function collectSettingsFromForm() {
     upstream_branch: document.getElementById("instance-upstream-branch").value.trim(),
     cookie_domain: document.getElementById("instance-cookie-domain").value.trim(),
     store_screenshots: document.getElementById("instance-store-screenshots").checked,
+    store_timing_screenshots: document.getElementById("instance-store-timing-screenshots").checked,
   };
 }
 
@@ -219,6 +220,9 @@ async function loadSettingsForm() {
   document.getElementById("instance-upstream-branch").value = data.upstream_branch ?? "main";
   document.getElementById("instance-cookie-domain").value = data.cookie_domain ?? "";
   document.getElementById("instance-store-screenshots").checked = Boolean(data.store_screenshots);
+  document.getElementById("instance-store-timing-screenshots").checked = Boolean(
+    data.store_timing_screenshots
+  );
   applyUpstreamSyncVisibility(data.upstream_sync_enabled !== false);
   return data;
 }

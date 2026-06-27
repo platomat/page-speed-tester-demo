@@ -732,10 +732,18 @@ function renderTriggerCell(report) {
   return `<td><span class="trigger-badge trigger-badge--${source}">${label}</span></td>`;
 }
 
+function pairedReportBytes(row) {
+  const sizes = [row.desktop?.report_bytes, row.mobile?.report_bytes]
+    .map((n) => Number(n))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (!sizes.length) return null;
+  return sizes.reduce((sum, n) => sum + n, 0);
+}
+
 function renderReportsTable(reports, projectId, urlId) {
   const tbody = document.querySelector("#reports-table tbody");
   const paired = pairReports(reports);
-  const colCount = shareContext ? 4 : 5;
+  const colCount = shareContext ? 5 : 6;
   if (!paired.length) {
     tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty">No reports available</td></tr>`;
     return;
@@ -756,6 +764,7 @@ function renderReportsTable(reports, projectId, urlId) {
       ${renderTriggerCell(ref)}
       ${renderDeviceCell(row.desktop, "Desktop")}
       ${renderDeviceCell(row.mobile, "Mobile")}
+      <td class="report-size-col">${escapeHtml(formatFileSize(pairedReportBytes(row)))}</td>
       ${deleteCol}
     </tr>`;
     })

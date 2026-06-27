@@ -1,6 +1,6 @@
 import type { Env } from "./env";
 import { setRunPending } from "./run-status";
-import { getGitHubTarget, getStoreScreenshots } from "./settings";
+import { getGitHubTarget, getStoreScreenshots, getStoreTimingScreenshots } from "./settings";
 
 const RATE_LIMIT_MS = 5 * 60 * 1000;
 
@@ -38,6 +38,7 @@ export async function dispatchProject(
   }
 
   const storeScreenshots = await getStoreScreenshots(env);
+  const storeTimingScreenshots = await getStoreTimingScreenshots(env);
 
   const ghResponse = await fetch(
     `https://api.github.com/repos/${gh.owner}/${gh.repo}/dispatches`,
@@ -56,6 +57,7 @@ export async function dispatchProject(
           project_id: projectId,
           trigger_source: options?.triggerSource ?? "manual",
           store_screenshots: storeScreenshots,
+          store_timing_screenshots: storeTimingScreenshots,
           ...(urlIds?.length ? { url_ids: urlIds } : {}),
         },
       }),

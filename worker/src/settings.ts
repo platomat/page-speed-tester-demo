@@ -8,6 +8,7 @@ const GH_OWNER_KEY = "gh_owner";
 const GH_REPO_KEY = "gh_repo";
 const COOKIE_DOMAIN_KEY = "cookie_domain";
 const STORE_SCREENSHOTS_KEY = "store_screenshots";
+const STORE_TIMING_SCREENSHOTS_KEY = "store_timing_screenshots";
 const UPSTREAM_OWNER_KEY = "upstream_owner";
 const UPSTREAM_REPO_KEY = "upstream_repo";
 const UPSTREAM_BRANCH_KEY = "upstream_branch";
@@ -83,6 +84,15 @@ export async function getStoreScreenshots(env: Env): Promise<boolean> {
   return value === "1" || value === "true" || value === "yes";
 }
 
+export async function getStoreTimingScreenshots(env: Env): Promise<boolean> {
+  const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`)
+    .bind(STORE_TIMING_SCREENSHOTS_KEY)
+    .first<{ value: string }>();
+  const value = row?.value?.trim().toLowerCase();
+  if (!value) return false;
+  return value === "1" || value === "true" || value === "yes";
+}
+
 async function getSettingValue(env: Env, key: string): Promise<string> {
   const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`)
     .bind(key)
@@ -132,6 +142,7 @@ async function buildSettingsPayload(env: Env) {
   const gh_repo = await getSettingValue(env, GH_REPO_KEY);
   const cookie_domain = await getSettingValue(env, COOKIE_DOMAIN_KEY);
   const store_screenshots = await getStoreScreenshots(env);
+  const store_timing_screenshots = await getStoreTimingScreenshots(env);
   const upstream = await getUpstreamTarget(env);
   return {
     timezone,
@@ -140,6 +151,7 @@ async function buildSettingsPayload(env: Env) {
     gh_repo,
     cookie_domain,
     store_screenshots,
+    store_timing_screenshots,
     upstream_owner: upstream.owner,
     upstream_repo: upstream.repo,
     upstream_branch: upstream.branch,
@@ -204,6 +216,10 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
 
   if (body.store_screenshots !== undefined) {
     updates[STORE_SCREENSHOTS_KEY] = body.store_screenshots ? "1" : "0";
+  }
+
+  if (body.store_timing_screenshots !== undefined) {
+    updates[STORE_TIMING_SCREENSHOTS_KEY] = body.store_timing_screenshots ? "1" : "0";
   }
 
   if (

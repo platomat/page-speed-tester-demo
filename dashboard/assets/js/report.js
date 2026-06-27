@@ -111,6 +111,39 @@ function renderScreenshots(report) {
     </section>`;
 }
 
+function renderTimingScreenshots(report) {
+  const items = report.audits?.["screenshot-thumbnails"]?.details?.items;
+  if (!Array.isArray(items) || !items.length) return "";
+
+  const frames = items
+    .map((item, index) => {
+      const url = safeDataImageUrl(item?.data);
+      if (!url) return null;
+      const timingMs = item.timing != null ? Math.round(Number(item.timing)) : null;
+      const label = Number.isFinite(timingMs) ? `${timingMs} ms` : `#${index + 1}`;
+      return { url, label };
+    })
+    .filter(Boolean);
+
+  if (!frames.length) return "";
+
+  return `
+    <section class="report-section">
+      <h2>Timing screenshots</h2>
+      <div class="report-timing-screenshots">
+        ${frames
+          .map(
+            ({ url, label }) => `
+          <figure class="report-timing-frame">
+            <img src="${url}" alt="" loading="lazy" decoding="async" />
+            <figcaption>${escapeHtml(label)}</figcaption>
+          </figure>`
+          )
+          .join("")}
+      </div>
+    </section>`;
+}
+
 function renderOpportunities(opportunities) {
   if (!opportunities.length) {
     return '<p class="empty">No major opportunities flagged in this run.</p>';
@@ -246,6 +279,7 @@ function renderReport(report, reportKey) {
     </section>
 
     ${renderScreenshots(report)}
+    ${renderTimingScreenshots(report)}
 
     <section class="report-section">
       <h2>Opportunities</h2>

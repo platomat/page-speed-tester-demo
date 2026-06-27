@@ -1,14 +1,21 @@
 /**
- * Remove bulky screenshot data from Lighthouse JSON before storage (default).
- * Skipped when storeScreenshots is true.
+ * Remove bulky screenshot data from Lighthouse JSON before storage.
+ * storeScreenshots: viewport + full-page (final-screenshot, full-page-screenshot).
+ * storeTimingScreenshots: filmstrip frames (screenshot-thumbnails audit).
  */
 export function slimLighthouseReport(lighthouseJson, options = {}) {
-  if (options.storeScreenshots) return lighthouseJson;
   const out = structuredClone(lighthouseJson);
-  delete out.fullPageScreenshot;
-  if (out.audits) {
-    delete out.audits["full-page-screenshot"];
-    delete out.audits["final-screenshot"];
+  if (!options.storeScreenshots) {
+    delete out.fullPageScreenshot;
+    if (out.audits) {
+      delete out.audits["full-page-screenshot"];
+      delete out.audits["final-screenshot"];
+    }
+  }
+  if (!options.storeTimingScreenshots) {
+    if (out.audits) {
+      delete out.audits["screenshot-thumbnails"];
+    }
   }
   return out;
 }

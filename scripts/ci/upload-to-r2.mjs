@@ -155,9 +155,16 @@ async function main() {
     const raw = await readFile(join(REPORTS_DIR, file), "utf8");
     const storeScreenshots =
       process.env.STORE_SCREENSHOTS === "1" || process.env.STORE_SCREENSHOTS === "true";
-    const lighthouseJson = slimLighthouseReport(JSON.parse(raw), { storeScreenshots });
+    const storeTimingScreenshots =
+      process.env.STORE_TIMING_SCREENSHOTS === "1" ||
+      process.env.STORE_TIMING_SCREENSHOTS === "true";
+    const lighthouseJson = slimLighthouseReport(JSON.parse(raw), {
+      storeScreenshots,
+      storeTimingScreenshots,
+    });
     const metrics = extractMetrics(lighthouseJson);
     const body = JSON.stringify(lighthouseJson);
+    const reportBytes = Buffer.byteLength(body, "utf8");
 
     const reportKey = `reports/${PROJECT_ID}/${file}`;
     await uploadToR2(s3, process.env.R2_BUCKET, reportKey, body);
@@ -172,6 +179,7 @@ async function main() {
       run_at: runAt,
       report_key: reportKey,
       trigger_source: triggerSource,
+      report_bytes: reportBytes,
       ...metrics,
     });
     console.log(`Registered run for ${urlEntry.url} (${parsed.strategy})`);

@@ -1,17 +1,26 @@
-/** Strip screenshot data from Lighthouse JSON when store_screenshots is off. */
+/** Strip screenshot data from Lighthouse JSON when store flags are off. */
 export function slimLighthouseReport(
   lighthouse: Record<string, unknown>,
-  options?: { storeScreenshots?: boolean }
+  options?: { storeScreenshots?: boolean; storeTimingScreenshots?: boolean }
 ): Record<string, unknown> {
-  if (options?.storeScreenshots) return lighthouse;
   const out = { ...lighthouse };
-  delete out.fullPageScreenshot;
-  const audits = out.audits;
-  if (audits && typeof audits === "object") {
-    const trimmed = { ...(audits as Record<string, unknown>) };
-    delete trimmed["full-page-screenshot"];
-    delete trimmed["final-screenshot"];
-    out.audits = trimmed;
+  if (!options?.storeScreenshots) {
+    delete out.fullPageScreenshot;
+    const audits = out.audits;
+    if (audits && typeof audits === "object") {
+      const trimmed = { ...(audits as Record<string, unknown>) };
+      delete trimmed["full-page-screenshot"];
+      delete trimmed["final-screenshot"];
+      out.audits = trimmed;
+    }
+  }
+  if (!options?.storeTimingScreenshots) {
+    const audits = out.audits;
+    if (audits && typeof audits === "object") {
+      const trimmed = { ...(audits as Record<string, unknown>) };
+      delete trimmed["screenshot-thumbnails"];
+      out.audits = trimmed;
+    }
   }
   return out;
 }

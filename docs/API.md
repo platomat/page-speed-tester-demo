@@ -42,10 +42,12 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, upstream owner/repo/branch, cookie domain, `store_screenshots`, `upstream_sync_enabled` |
+| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, upstream owner/repo/branch, cookie domain, `store_screenshots`, `store_timing_screenshots`, `upstream_sync_enabled` |
 | `PATCH` | `/api/settings` | Admin | Instance settings aktualisieren |
 
 `store_screenshots` (boolean, Default `false`): Wenn `true`, speichert der Lighthouse-Upload Viewport- und Full-Page-Screenshots im JSON (R2). Größere Dateien und höherer Speicherverbrauch; Screenshots erscheinen in der Report-Detailansicht. Gilt für Läufe nach dem Speichern der Einstellung.
+
+`store_timing_screenshots` (boolean, Default `false`): Wenn `true`, bleiben Filmstrip-Timing-Screenshots (`screenshot-thumbnails` Audit) im JSON — Fortschrittsframes während des Ladens. Off by default (kann die JSON-Größe deutlich erhöhen). Gilt für Läufe nach dem Speichern.
 
 Upstream-Felder (optional, Defaults `platomat` / `page-speed-tester-demo` / `main`): Quelle für **Upstream sync** im Admin.
 

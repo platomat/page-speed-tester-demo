@@ -186,7 +186,7 @@ export async function publicShareReports(
   }
 
   const { results } = await env.DB.prepare(
-    `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source
+    `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source, report_bytes
      FROM runs WHERE project_id = ? AND url_id = ?
      ORDER BY run_at DESC LIMIT 50`
   )

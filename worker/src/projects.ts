@@ -521,7 +521,7 @@ export async function getReports(
   const access = await requireProjectAccess(request, env, user, projectId);
   if (access instanceof Response) return access;
   const { results } = await env.DB.prepare(
-    `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source
+    `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source, report_bytes
      FROM runs WHERE project_id = ? AND url_id = ?
      ORDER BY run_at DESC LIMIT 50`
   )
@@ -662,9 +662,17 @@ export async function insertRun(
   // Never fail registration on a miss — the upload already succeeded; a true
   // bucket mismatch surfaces later via the report loader's diagnostics.
   let r2Visible = false;
+  let reportBytes: number | null =
+    payload.report_bytes != null && Number.isFinite(payload.report_bytes)
+      ? Math.max(0, Math.round(payload.report_bytes))
+      : null;
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (await env.REPORTS.head(reportKey)) {
+    const head = await env.REPORTS.head(reportKey);
+    if (head) {
       r2Visible = true;
+      if (reportBytes == null && head.size != null) {
+        reportBytes = head.size;
+      }
       break;
     }
     if (attempt < 2) await new Promise((r) => setTimeout(r, 750));
@@ -673,8 +681,8 @@ export async function insertRun(
   const triggerSource = payload.trigger_source === "cron" ? "cron" : "manual";
   await env.DB.prepare(
     `INSERT INTO runs (project_id, url_id, strategy, run_at, performance,
-                       lcp_ms, cls, fcp_ms, tbt_ms, speed_index, report_key, trigger_source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                       lcp_ms, cls, fcp_ms, tbt_ms, speed_index, report_key, trigger_source, report_bytes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       payload.project_id,
@@ -688,7 +696,8 @@ export async function insertRun(
       payload.tbt_ms,
       payload.speed_index,
       reportKey,
-      triggerSource
+      triggerSource,
+      reportBytes
     )
     .run();
   return json(

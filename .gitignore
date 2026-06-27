@@ -8,7 +8,7 @@ docs/sessions/
 .env
 .env.*
 !.env.example
-page-speed-tester.code-workspace
+*.code-workspace
 .cursor/
 .dashboard-dist/
 dashboard/config.js

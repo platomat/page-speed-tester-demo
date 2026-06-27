@@ -191,6 +191,14 @@
   vertical-align: middle;
 }
 
+.report-size-col {
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
 .trigger-badge {
   display: inline-block;
   font-size: 0.75rem;
@@ -343,6 +351,36 @@
   max-height: 80vh;
   object-fit: contain;
   background: #0d1117;
+}
+
+.report-timing-screenshots {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.report-timing-frame {
+  flex: 0 0 auto;
+  margin: 0;
+  max-width: 140px;
+}
+
+.report-timing-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: #0d1117;
+}
+
+.report-timing-frame figcaption {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .category-scores {
