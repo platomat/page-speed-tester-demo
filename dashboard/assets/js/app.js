@@ -701,8 +701,8 @@ function renderReportMediaBadges(report) {
   const hasFullpage = Number(report.has_fullpage_screenshots) === 1;
   const hasTiming = Number(report.has_timing_screenshots) === 1;
   return `<div class="report-media-badges" aria-label="Report media flags">
-    <span class="report-media-badge ${hasFullpage ? "report-media-badge--fullpage" : "report-media-badge--off"}" title="Full-page screenshots: ${hasFullpage ? "yes" : "no"}">IMG</span>
-    <span class="report-media-badge ${hasTiming ? "report-media-badge--timing" : "report-media-badge--off"}" title="Timing screenshots: ${hasTiming ? "yes" : "no"}">T</span>
+    <span class="report-media-badge" data-has-image="${hasFullpage}" title="Full-page screenshots: ${hasFullpage ? "yes" : "no"}">FP IMG</span>
+    <span class="report-media-badge" data-has-image="${hasTiming}" title="Timing screenshots: ${hasTiming ? "yes" : "no"}">T IMG</span>
   </div>`;
 }
 
@@ -719,12 +719,10 @@ function renderDeviceCell(report, deviceLabel) {
         <span class="report-score ${scoreClass(report.performance)}">${report.performance ?? "—"}</span>
         <div class="report-actions">
           <a href="${reportDetailUrl(report.report_key)}" class="icon-btn" title="Details" aria-label="${detailLabel}">${ICON_DETAILS}</a>
-          <span class="report-json-group">
-            <a href="${reportJsonUrl(report.report_key)}" class="icon-btn icon-btn-json" target="_blank" rel="noopener" title="JSON (${fileSize})" aria-label="${jsonLabel}">${ICON_JSON}</a>
-            <span class="report-file-size">${escapeHtml(fileSize)}</span>
-          </span>
+          <a href="${reportJsonUrl(report.report_key)}" class="icon-btn icon-btn-json" target="_blank" rel="noopener" title="JSON (${fileSize})" aria-label="${jsonLabel}">${ICON_JSON}</a>
+          ${renderReportMediaBadges(report)}
         </div>
-        ${renderReportMediaBadges(report)}
+        <span class="report-file-size">${escapeHtml(fileSize)}</span>
       </div>
     </td>`;
 }

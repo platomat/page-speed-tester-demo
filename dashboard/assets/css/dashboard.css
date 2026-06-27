@@ -167,6 +167,7 @@
   font-weight: 600;
   font-size: 1.1rem;
   min-width: 2.25rem;
+  flex-shrink: 0;
 }
 
 .report-missing {
@@ -177,15 +178,13 @@
   display: flex;
   gap: 0.35rem;
   align-items: center;
-}
-
-.report-json-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
+  min-width: 0;
 }
 
 .report-file-size {
+  margin-left: auto;
+  flex-shrink: 0;
+  text-align: right;
   font-size: 0.75rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -208,34 +207,29 @@
 .report-media-badges {
   display: flex;
   gap: 0.25rem;
-  margin-left: auto;
+  align-items: center;
 }
 
 .report-media-badge {
   display: inline-block;
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
   font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: 0.03em;
   line-height: 1.2;
-  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.report-media-badge--fullpage {
-  background: rgba(59, 130, 246, 0.15);
-  color: #2563eb;
+.report-media-badge[data-has-image="true"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
-.report-media-badge--timing {
-  background: rgba(168, 85, 247, 0.15);
-  color: #7c3aed;
-}
-
-.report-media-badge--off {
-  background: color-mix(in srgb, var(--muted) 10%, transparent);
+.report-media-badge[data-has-image="false"] {
   color: var(--muted);
-  opacity: 0.55;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
 }
 
 .trigger-badge {
