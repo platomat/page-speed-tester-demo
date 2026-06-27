@@ -191,15 +191,16 @@
 
 .reports-meta-head {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.35rem;
+  align-items: center;
 }
 
 .reports-meta {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.35rem;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .report-date {
@@ -318,19 +319,24 @@
   line-height: 1;
 }
 
-@media (max-width: 768px) {
-  .reports-grid-header {
-    display: none;
-  }
-
+@media (max-width: 999px) {
+  .reports-grid-header,
   .reports-row {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "meta actions"
       "desktop mobile";
-    gap: 0;
   }
 
+  .reports-grid--no-actions .reports-grid-header,
+  .reports-grid--no-actions .reports-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "meta meta"
+      "desktop mobile";
+  }
+
+  .reports-meta-head,
   .reports-meta {
     grid-area: meta;
   }
@@ -355,12 +361,31 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 680px) {
+  .reports-grid-header,
   .reports-row {
+    grid-template-columns: 2fr 1fr;
     grid-template-areas:
       "meta actions"
       "desktop desktop"
       "mobile mobile";
+  }
+
+  .reports-grid--no-actions .reports-grid-header,
+  .reports-grid--no-actions .reports-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "meta"
+      "desktop"
+      "mobile";
+  }
+
+  .reports-row {
+    margin-bottom: 2rem;
+  }
+
+  .reports-grid-body .reports-row:last-child {
+    margin-bottom: 0;
   }
 
   .report-device-col[data-device="desktop"] {
