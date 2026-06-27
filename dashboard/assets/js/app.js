@@ -67,91 +67,19 @@ function syncChartAverageLabel(chart) {
 
   if (avg == null) {
     badge?.remove();
-    chart.$averageValue = null;
-    chart.$averageMetricKey = null;
     return;
   }
 
-  chart.$averageValue = avg;
-  chart.$averageMetricKey = metricKey;
-
   const formatted = formatChartAverage(metricKey, avg);
+  const ratingClass = metricScoreClass(metricKey, avg);
   if (!badge) {
     badge = document.createElement("span");
-    badge.className = "chart-avg-badge";
     h2.appendChild(badge);
   }
+  badge.className = ratingClass ? `chart-avg-badge ${ratingClass}` : "chart-avg-badge";
   badge.textContent = `Ø ${formatted}`;
   badge.title = `Average: ${formatted}`;
 }
-
-function ensureChartAvgTooltip() {
-  let el = document.getElementById("chart-avg-tooltip");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "chart-avg-tooltip";
-    el.className = "chart-avg-tooltip hidden";
-    document.body.appendChild(el);
-  }
-  return el;
-}
-
-function showChartAvgTooltip(chart, event, text) {
-  const el = ensureChartAvgTooltip();
-  el.textContent = text;
-  el.classList.remove("hidden");
-  const rect = chart.canvas.getBoundingClientRect();
-  el.style.left = `${rect.left + event.x + 12}px`;
-  el.style.top = `${rect.top + event.y - 28}px`;
-}
-
-function hideChartAvgTooltip() {
-  ensureChartAvgTooltip().classList.add("hidden");
-}
-
-const chartAverageLineHoverPlugin = {
-  id: "chartAverageLineHover",
-  afterEvent(chart, args) {
-    const event = args.event;
-    if (event.type === "mouseout") {
-      hideChartAvgTooltip();
-      chart.$avgLineHover = false;
-      chart.canvas.style.cursor = "";
-      return;
-    }
-    if (event.type !== "mousemove") return;
-
-    const avg = chart.$averageValue;
-    const metricKey =
-      chart.$averageMetricKey ?? chart.options.plugins?.chartAverageLabel?.metricKey;
-    if (avg == null || !metricKey) {
-      hideChartAvgTooltip();
-      return;
-    }
-
-    const yScale = chart.scales?.y;
-    const { chartArea } = chart;
-    if (!yScale || !chartArea) return;
-
-    const lineY = yScale.getPixelForValue(avg);
-    const nearLine =
-      event.x >= chartArea.left &&
-      event.x <= chartArea.right &&
-      event.y >= chartArea.top &&
-      event.y <= chartArea.bottom &&
-      Math.abs(event.y - lineY) <= 10;
-
-    if (nearLine) {
-      chart.$avgLineHover = true;
-      chart.canvas.style.cursor = "help";
-      showChartAvgTooltip(chart, event, `Average: ${formatChartAverage(metricKey, avg)}`);
-    } else if (chart.$avgLineHover) {
-      chart.$avgLineHover = false;
-      chart.canvas.style.cursor = "";
-      hideChartAvgTooltip();
-    }
-  },
-};
 
 const chartAverageLabelPlugin = {
   id: "chartAverageLabel",
@@ -246,7 +174,6 @@ const annotationsPlugin = {
 
 if (typeof Chart !== "undefined") {
   Chart.register(chartAverageLabelPlugin);
-  Chart.register(chartAverageLineHoverPlugin);
   Chart.register(annotationsPlugin);
 }
 
