@@ -98,24 +98,40 @@
   height: clamp(180px, 28vw, 280px);
 }
 
-.chart-avg-label {
-  position: absolute;
-  right: 0.35rem;
-  z-index: 1;
-  transform: translateY(-50%);
-  font-size: 0.75rem;
+.chart-avg-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--muted);
-  pointer-events: none;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart-card h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
   margin: 0 0 1rem;
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--muted);
+}
+
+.chart-avg-tooltip {
+  position: fixed;
+  z-index: 1000;
+  padding: 0.35rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  font-size: 0.8125rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .chart-device {
