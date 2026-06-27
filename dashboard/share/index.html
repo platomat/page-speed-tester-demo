@@ -96,18 +96,18 @@
 
       <section class="reports-section url-metrics-panel hidden">
         <h2>Reports</h2>
-        <table id="reports-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Trigger</th>
-              <th class="report-device-col" data-device="desktop">Desktop</th>
-              <th class="report-device-col" data-device="mobile">Mobile</th>
-              <th class="report-actions-col hidden"></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div id="reports-grid" class="reports-grid">
+          <div class="reports-grid-header" role="row">
+            <div class="reports-grid-cell reports-meta-head">
+              <span>Date</span>
+              <span>Trigger</span>
+            </div>
+            <div class="reports-grid-cell report-device-col" data-device="desktop">Desktop</div>
+            <div class="reports-grid-cell report-device-col" data-device="mobile">Mobile</div>
+            <div class="reports-grid-cell reports-actions-col hidden"></div>
+          </div>
+          <div class="reports-grid-body" role="rowgroup"></div>
+        </div>
       </section>
     </main>
 

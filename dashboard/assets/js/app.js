@@ -706,16 +706,26 @@ function renderReportMediaBadges(report) {
   </div>`;
 }
 
+function renderReportMetaCell(report) {
+  const source = report?.trigger_source === "cron" ? "cron" : "manual";
+  const label = source === "cron" ? "Cron" : "Manual";
+  return `
+    <div class="reports-grid-cell reports-meta">
+      <time class="report-date">${formatDateTime(report)}</time>
+      <span class="trigger-badge trigger-badge--${source}">${label}</span>
+    </div>`;
+}
+
 function renderDeviceCell(report, deviceLabel) {
   const device = deviceLabel.toLowerCase();
   if (!report) {
-    return `<td class="report-device-col" data-device="${device}"><span class="report-missing">—</span></td>`;
+    return `<div class="reports-grid-cell report-device-col" data-device="${device}"><span class="report-missing">—</span></div>`;
   }
   const detailLabel = `${deviceLabel} report details`;
   const jsonLabel = `${deviceLabel} raw JSON`;
   const fileSize = formatFileSize(report.report_bytes);
   return `
-    <td class="report-device-col" data-device="${device}">
+    <div class="reports-grid-cell report-device-col" data-device="${device}">
       <div class="report-device-cell">
         <span class="report-score ${scoreClass(report.performance)}">${report.performance ?? "—"}</span>
         <div class="report-actions">
@@ -725,47 +735,44 @@ function renderDeviceCell(report, deviceLabel) {
         </div>
         <span class="report-file-size">${escapeHtml(fileSize)}</span>
       </div>
-    </td>`;
+    </div>`;
 }
 
-function renderTriggerCell(report) {
-  const source = report?.trigger_source === "cron" ? "cron" : "manual";
-  const label = source === "cron" ? "Cron" : "Manual";
-  return `<td><span class="trigger-badge trigger-badge--${source}">${label}</span></td>`;
+function renderReportActionsCell(reportKeys) {
+  if (shareContext) {
+    return `<div class="reports-grid-cell reports-actions-col hidden" aria-hidden="true"></div>`;
+  }
+  const keysAttr = escapeHtml(JSON.stringify(reportKeys));
+  return `
+    <div class="reports-grid-cell reports-actions-col">
+      <button type="button" class="icon-btn btn-danger btn-sm" data-delete-run="${keysAttr}" title="Delete run" aria-label="Delete test run (desktop and mobile)">${ICON_DELETE}</button>
+    </div>`;
 }
 
 function renderReportsTable(reports, projectId, urlId) {
-  const tbody = document.querySelector("#reports-table tbody");
+  const body = document.querySelector("#reports-grid .reports-grid-body");
   const paired = pairReports(reports);
-  const colCount = shareContext ? 4 : 5;
   if (!paired.length) {
-    tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty">No reports available</td></tr>`;
+    body.innerHTML = `<div class="reports-grid-empty empty">No reports available</div>`;
     return;
   }
-  tbody.innerHTML = paired
+  body.innerHTML = paired
     .map((row) => {
       const ref = row.desktop ?? row.mobile;
       const reportKeys = [row.desktop?.report_key, row.mobile?.report_key].filter(Boolean);
-      const keysAttr = escapeHtml(JSON.stringify(reportKeys));
-      const deleteCol = shareContext
-        ? ""
-        : `<td class="report-actions-col">
-        <button type="button" class="icon-btn btn-danger btn-sm" data-delete-run="${keysAttr}" title="Delete run" aria-label="Delete test run (desktop and mobile)">${ICON_DELETE}</button>
-      </td>`;
       return `
-    <tr>
-      <td>${formatDateTime(ref)}</td>
-      ${renderTriggerCell(ref)}
+    <div class="reports-row" role="row">
+      ${renderReportMetaCell(ref)}
       ${renderDeviceCell(row.desktop, "Desktop")}
       ${renderDeviceCell(row.mobile, "Mobile")}
-      ${deleteCol}
-    </tr>`;
+      ${renderReportActionsCell(reportKeys)}
+    </div>`;
     })
     .join("");
 
   if (shareContext) return;
 
-  tbody.querySelectorAll("[data-delete-run]").forEach((btn) => {
+  body.querySelectorAll("[data-delete-run]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const keys = JSON.parse(btn.getAttribute("data-delete-run"));
       if (
@@ -1164,7 +1171,8 @@ async function initShareDashboard(ctx) {
   document.getElementById("run-btn")?.classList.add("hidden");
   document.getElementById("run-status")?.classList.add("hidden");
   document.getElementById("project-scope-panel")?.classList.add("hidden");
-  document.querySelector("#reports-table .report-actions-col")?.classList.add("hidden");
+  document.getElementById("reports-grid")?.classList.add("reports-grid--no-actions");
+  document.querySelector("#reports-grid .reports-actions-col")?.classList.add("hidden");
 
   const scopeLabel = document.querySelector('label[for="scope-select"]');
   if (scopeLabel) scopeLabel.textContent = "URL";

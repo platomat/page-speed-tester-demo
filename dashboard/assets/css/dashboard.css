@@ -153,13 +153,65 @@
   margin-bottom: 1rem;
 }
 
-.report-device-col {
-  width: 38%;
+.reports-grid {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.report-device-col[data-device="desktop"],
-#reports-table thead th[data-device="desktop"] {
+.reports-grid-header,
+.reports-row {
+  display: grid;
+  grid-template-columns: 2fr 3fr 3fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.reports-grid-body .reports-row:last-child {
+  border-bottom: none;
+}
+
+.reports-grid--no-actions .reports-grid-header,
+.reports-grid--no-actions .reports-row {
+  grid-template-columns: 2fr 3fr 3fr;
+}
+
+.reports-grid-cell {
+  padding: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.reports-grid-header .reports-grid-cell {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.reports-meta-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.reports-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.report-date {
+  font-variant-numeric: tabular-nums;
+}
+
+.report-device-col[data-device="desktop"] {
   border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.report-device-col[data-device="mobile"] {
   border-right: 1px solid var(--border);
 }
 
@@ -204,10 +256,14 @@
   letter-spacing: -0.02em;
 }
 
-.report-actions-col {
-  width: 3rem;
-  text-align: center;
-  vertical-align: middle;
+.reports-actions-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reports-grid-empty {
+  padding: 0.75rem 1rem;
 }
 
 .report-media-badges {
@@ -258,12 +314,62 @@
   background: color-mix(in srgb, var(--muted) 12%, transparent);
 }
 
-.report-actions-col .icon-btn {
-  margin: 0 auto;
-}
-
 .json-label {
   line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .reports-grid-header {
+    display: none;
+  }
+
+  .reports-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "meta actions"
+      "desktop mobile";
+    gap: 0;
+  }
+
+  .reports-meta {
+    grid-area: meta;
+  }
+
+  .reports-actions-col {
+    grid-area: actions;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+
+  .report-device-col[data-device="desktop"] {
+    grid-area: desktop;
+    border-left: none;
+    border-right: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+  }
+
+  .report-device-col[data-device="mobile"] {
+    grid-area: mobile;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 480px) {
+  .reports-row {
+    grid-template-areas:
+      "meta actions"
+      "desktop desktop"
+      "mobile mobile";
+  }
+
+  .report-device-col[data-device="desktop"] {
+    border-right: none;
+  }
+
+  .report-device-col[data-device="mobile"] {
+    border-top: 1px solid var(--border);
+  }
 }
 
 .back-link {
