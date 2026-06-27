@@ -212,6 +212,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+@media (min-width: 1000px) {
+  .reports-meta {
+    justify-content: space-between;
+  }
+}
+
 .report-device-col[data-device="desktop"] {
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
