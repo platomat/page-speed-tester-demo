@@ -74,10 +74,10 @@ jobs:
             exit 0
           fi
 
-          COMMITS_JSON="$(git log HEAD.."$UPSTREAM_REF" --reverse --format=$'%h\x1f%s' | jq -R -s '
+          COMMITS_JSON="$(git log HEAD.."$UPSTREAM_REF" --reverse --format=$'%h\x1f%s' | jq -Rs '
             split("\n") | map(select(length > 0)) |
-            map(split("\u001f"; 2)) | map(select(length == 2)) |
-            map({sha: .[0], subject: .[1]})
+            map(split("\u001f")) | map(select(length >= 1)) |
+            map({sha: .[0], subject: (if length > 1 then .[1:] | join("\u001f") else "" end)})
           ')"
           {
             echo 'sync_commits_json<<EOF'
