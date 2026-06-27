@@ -175,12 +175,14 @@ async function syncUpstreamFromAdmin() {
 
   syncBtn.disabled = true;
   syncBtn.textContent = "Syncing…";
+  let keepDisabled = false;
 
   try {
     const data = await api("/api/github/sync-upstream", { method: "POST" });
     showMessage(data.message || "Upstream synced");
 
     if (data.started) {
+      keepDisabled = true;
       // Workflow dispatched — poll until the GitHub Action reports a result.
       const result = await pollUpstreamSyncResult();
       if (result?.status === "success") {
@@ -220,6 +222,9 @@ async function syncUpstreamFromAdmin() {
     }
   } finally {
     syncBtn.textContent = "Sync from upstream";
+    if (keepDisabled) {
+      await loadUpstreamStatus();
+    }
   }
 }
 

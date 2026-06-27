@@ -527,6 +527,28 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
     return json(request, env, { error: "GitHub PAT not configured" }, 503);
   }
 
+  const pendingSync = await getUpstreamSyncResult(env);
+  if (pendingSync?.status === "pending") {
+    const startedAt = Date.parse(pendingSync.updated_at);
+    if (Number.isFinite(startedAt) && Date.now() - startedAt < SYNC_PENDING_MAX_MS) {
+      const compareEarly = await fetchUpstreamCompare(env);
+      const compare =
+        "error" in compareEarly
+          ? null
+          : await attachIncomingCommits(env, compareEarly);
+      return json(
+        request,
+        env,
+        {
+          error: "Upstream sync already in progress — wait for the GitHub Action to finish",
+          last_sync: pendingSync,
+          compare,
+        },
+        409
+      );
+    }
+  }
+
   const last = await env.KV.get(SYNC_KV_KEY);
   if (last) {
     const elapsed = Date.now() - Number(last);

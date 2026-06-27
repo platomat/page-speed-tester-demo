@@ -296,7 +296,7 @@ Fine-grained PAT (kann derselbe Account sein, **anderes** Token):
 
 **Alternative Classic PAT:** Scope `repo` auf dem Ziel-Repo.
 
-Ohne dieses Secret nutzt `upstream-sync.yml` den eingebauten **`GITHUB_TOKEN`**. Der darf Workflow-Dateien nur pushen, wenn die Workflow-Datei `permissions: workflows: write` setzt (ab aktuellem Template-Stand). Sobald der Upstream `.github/workflows/` ändert, schlägt der Push sonst fehl — siehe [Fehler: Push nach Merge verweigert](#fehler-push-nach-upstream-merge-verweigert) unten.
+Ohne **`UPSTREAM_SYNC_TOKEN`** nutzt der Workflow den eingebauten **`GITHUB_TOKEN`**. Der kann **keine** Workflow-Dateien (`.github/workflows/`) pushen — dafür brauchst du ein PAT als Actions Secret (Fine-grained: **Workflows: Read and write**, oder Classic: Scope `repo`). In der Workflow-YAML selbst gibt es **keine** gültige `workflows`-Permission — siehe [Fehler: Push nach Merge verweigert](#fehler-push-nach-upstream-merge-verweigert) unten.
 
 **Nicht** als Plain-Text Build-Variable — nur Secrets. Kein `[vars]` in `wrangler.toml` nötig; GitHub-Repo und Cookie-Domain → **Admin → Instance settings** (D1).
 
@@ -556,14 +556,14 @@ Merge succeeded (…). Pushing to origin/main…
 error: failed to push some refs to 'https://github.com/…/page-speed-tester'
 ```
 
-**Ursache:** Der Upstream-Stand enthält Änderungen unter `.github/workflows/`. Der Push läuft ohne **`UPSTREAM_SYNC_TOKEN`** über den **`GITHUB_TOKEN`** — der darf Workflow-Dateien nicht ändern, wenn `workflows: write` fehlt (ältere `upstream-sync.yml` im Ziel-Repo) oder das Token keine Workflow-Rechte hat.
+**Ursache:** Der Upstream-Stand enthält Änderungen unter `.github/workflows/`. Ohne **`UPSTREAM_SYNC_TOKEN`** (PAT mit Workflow-Schreibrecht) versucht der Push über den **`GITHUB_TOKEN`** — GitHub lehnt das ab. **`workflows: write` in der Workflow-YAML ist ungültig** und führt zu `Unexpected value 'workflows'` — nicht verwenden.
 
 **Wichtig:** Der Merge-Commit liegt nur auf dem ephemeral Runner — **`main` auf GitHub ist unverändert**. Du musst den Sync **nach dem Fix erneut** ausführen.
 
 **Lösung (eine davon):**
 
 1. **`UPSTREAM_SYNC_TOKEN`** setzen (siehe oben) → Admin **Sync from upstream** erneut klicken, oder Actions → **Sync from upstream** → **Run workflow**
-2. **`upstream-sync.yml` aktualisieren** — aktueller Template-Stand enthält `permissions: workflows: write`; einmalig per manuellem Merge holen, dann reicht ggf. `GITHUB_TOKEN` ohne extra Secret
+2. Falls `upstream-sync.yml` wegen `workflows: write` in der YAML ungültig ist: Zeile entfernen (nur `contents: write` belassen) und committen — aktueller Template-Stand ist korrigiert
 3. **Manuell per Git** (Workaround):
 
 ```bash

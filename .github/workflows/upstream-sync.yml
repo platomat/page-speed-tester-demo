@@ -22,9 +22,12 @@ on:
   repository_dispatch:
     types: [sync-upstream]
 
+concurrency:
+  group: upstream-sync-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   sync:
