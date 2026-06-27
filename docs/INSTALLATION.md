@@ -483,7 +483,7 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 | **Upstream repository** | `page-speed-tester-demo` | Upstream-Repo-Name |
 | **Upstream branch** | `main` | Branch zum Vergleichen und Mergen |
 
-**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** und **Actions: Read and write** auf deinem Repo (der Sync löst einen Workflow aus). Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
+**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** und **Actions: Read and write** auf deinem Repo (der Sync löst einen Workflow aus). Im Ziel-Repo optional **`UPSTREAM_SYNC_TOKEN`** (PAT mit **Contents** + **Workflows** write), falls der Sync Workflow-Dateien mitliefert oder `GITHUB_TOKEN` den Push verweigert. Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
 
 **Wie der Sync funktioniert (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk; GitHubs Merge-/PR-API liefert dafür sporadisch **500**. Der Sync löst deshalb den Workflow **`.github/workflows/upstream-sync.yml`** in deinem Repo aus (`repository_dispatch`, Event `sync-upstream`). Der Workflow macht einen echten `git fetch upstream` + `git merge --no-edit` + `git push origin` und meldet das Ergebnis (`success` / `conflict` / `error`) an den Worker zurück. Der Admin-Button pollt den Status, bis das Ergebnis vorliegt.
 
@@ -492,7 +492,7 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 | Secret | Zweck |
 | ------ | ----- |
 | `WORKER_API_URL`, `WORKER_API_SECRET` | bereits für Lighthouse vorhanden — der Workflow meldet damit das Sync-Ergebnis zurück |
-| `UPSTREAM_SYNC_TOKEN` *(optional, empfohlen)* | PAT mit **Contents: write** auf dem Ziel-Repo und **Lesezugriff** auf das Upstream-Repo. Nötig, wenn das Upstream **privat** ist und/oder der Push Pages/Worker-Auto-Deploy auslösen soll. Ohne dieses Secret nutzt der Workflow `GITHUB_TOKEN` (Push nach origin ok; privates Upstream nicht erreichbar, Deploy-Hooks lösen nicht aus). |
+| `UPSTREAM_SYNC_TOKEN` *(optional, empfohlen)* | PAT mit **Contents: write** und **Workflows: write** auf dem Ziel-Repo sowie **Lesezugriff** auf das Upstream-Repo. Nötig, wenn das Upstream **privat** ist, der Push **Workflow-Dateien** (`.github/workflows/`) ändert und/oder Pages/Worker-Auto-Deploy auslösen soll. Ohne dieses Secret nutzt der Workflow `GITHUB_TOKEN` — dafür braucht `upstream-sync.yml` die Permission `workflows: write` (ab Template-Stand mit diesem Fix). |
 
 **Wichtig (Erststart):** Der Workflow muss bereits im **Default-Branch deines Ziel-Repos** liegen, damit er per Dispatch startbar ist. Bei einem bestehenden Repo ohne die Datei einmalig manuell mergen:
 
