@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Stable slug for Lighthouse report filenames from a page URL.
- * Usage: node scripts/ci/url-slug.mjs "https://example.com/"
+ * Usage: node scripts/ci/url-slug.mjs "https://www.mydomain.tld/"
  */
 
 function transliterateGerman(value) {

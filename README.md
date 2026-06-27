@@ -113,7 +113,7 @@ Wenn du dieses **öffentliche** Repo forkest oder als Template nutzt, betreibst 
 
 ### URLs in Logs und Artefakten
 
-- In Action-Logs und Report-Dateinamen erscheinen die **von dir konfigurierten Seiten-URLs** (z. B. `https://kunde.example/…`). Bei einem **öffentlichen** Fork können Mitleser mit Repo-Zugriff die Actions-Historie sehen — also keine geheimen Ziel-URLs in ein öffentliches Repo legen, wenn das für dich problematisch ist. **Privates Repo** + private Instanz ist der übliche Weg für Kundenprojekte.
+- In Action-Logs und Report-Dateinamen erscheinen die **von dir konfigurierten Seiten-URLs** (z. B. `https://www.mydomain.tld/…`). Bei einem **öffentlichen** Fork können Mitleser mit Repo-Zugriff die Actions-Historie sehen — also keine geheimen Ziel-URLs in ein öffentliches Repo legen, wenn das für dich problematisch ist. **Privates Repo** + private Instanz ist der übliche Weg für Kundenprojekte.
 - Lighthouse-JSON landet in **deinem** R2-Bucket; Metriken in **deiner** D1 — nicht im Git-Commit.
 
 ### Cloudflare & Domains

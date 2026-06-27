@@ -282,7 +282,7 @@ Nicht nötig: `workflow`, `actions:write`, `admin:`*
 
 IDs in `.env` (`D1_DATABASE_ID`, `KV_NAMESPACE_ID`), dann `npm run deploy` — dasselbe Script wie auf Cloudflare.
 
-**Instanz-Einstellungen (Admin):** GitHub owner/repo, cookie domain (z. B. `.kunde.de`), timezone — alles kundenspezifisch, nicht in `wrangler.toml`.
+**Instanz-Einstellungen (Admin):** GitHub owner/repo, cookie domain (z. B. `.mydomain.tld`), timezone — alles kundenspezifisch, nicht in `wrangler.toml`.
 
 Die **Cookie domain** muss Parent-Domain von Dashboard **und** API sein (z. B. `.page-speed-tester.mydomain.tld` für `page-speed-tester.mydomain.tld` + `api.page-speed-tester.mydomain.tld`). Leer lassen bei `*.pages.dev`.
 
@@ -366,7 +366,7 @@ Erwartung: `{"status":"ok","service":"page-speed-tester"}`
 | Variable      | Typ  | Wann setzen?                                                                | Beispiel                                                      |
 | ------------- | ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `PST_API_URL` | Text | **Pflicht** bei `*.pages.dev` / `*.workers.dev`                             | `https://page-speed-tester-api.<account>.workers.dev`         |
-| `PST_API_URL` | Text | **Optional** bei Custom Domain (Dashboard auf `page-speed-tester.kunde.de`) | leer → Browser nutzt `https://api.page-speed-tester.kunde.de` |
+| `PST_API_URL` | Text | **Optional** bei Custom Domain (Dashboard auf `page-speed-tester.mydomain.tld`) | leer → Browser nutzt `https://api.page-speed-tester.mydomain.tld` |
 
 
 1. Deploy → URL z. B. `https://page-speed-tester.mydomain.tld` (Pages) + Worker-Custom-Domain `https://api.page-speed-tester.mydomain.tld`
@@ -380,14 +380,14 @@ Erwartung: `{"status":"ok","service":"page-speed-tester"}`
 
 | Dienst                | URL                                      |
 | --------------------- | ---------------------------------------- |
-| **Dashboard (Pages)** | `https://page-speed-tester.kunde.de`     |
-| **Worker API**        | `https://api.page-speed-tester.kunde.de` |
+| **Dashboard (Pages)** | `https://page-speed-tester.mydomain.tld`     |
+| **Worker API**        | `https://api.page-speed-tester.mydomain.tld` |
 
 
 Cloudflare: Custom Domain auf **Pages** = Dashboard-Host; Custom Domain auf **Worker** = `api.`-Subdomain.
 
 `PST_API_URL` optional — Fallback: `https://api.<dashboard-host>`.  
-**Cookie domain** in **Admin → Instance settings** z. B. `.page-speed-tester.kunde.de` (nicht `.kunde.de`, wenn Dashboard nur auf Subdomain liegt).
+**Cookie domain** in **Admin → Instance settings** z. B. `.page-speed-tester.mydomain.tld` (nicht `.mydomain.tld`, wenn Dashboard nur auf Subdomain liegt).
 
 **Variante B — Cloudflare-Standarddomains (ohne Custom Domain)**
 
@@ -436,7 +436,7 @@ Diese Werte liegen in **D1** (`settings`-Tabelle) — **nicht** in `wrangler.tom
 | --------------------- | ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **GitHub owner**      | ✅ für Lighthouse-Läufe                         | `meine-firma`                 | GitHub-Organisation oder Benutzername — Ziel für `repository_dispatch`                                                                                                                                                                     |
 | **GitHub repository** | ✅ für Lighthouse-Läufe                         | `page-speed-tester`           | Repo mit `.github/workflows/lighthouse.yml` — **dasselbe Repo**, aus dem Worker und Pages deployen                                                                                                                                         |
-| **Cookie domain**     | Custom Domain: empfohlen · `*.pages.dev`: leer | `.page-speed-tester.kunde.de` | Gemeinsame Parent-Domain für Dashboard **und** API (Session-Cookie). Punkt am Anfang (`.kunde.de` = alle Subdomains). Bei `*.pages.dev` **leer lassen** — Login nutzt dann `session_token` im Browser (`sessionStorage`), nicht das Cookie |
+| **Cookie domain**     | Custom Domain: empfohlen · `*.pages.dev`: leer | `.page-speed-tester.mydomain.tld` | Gemeinsame Parent-Domain für Dashboard **und** API (Session-Cookie). Punkt am Anfang (`.mydomain.tld` = alle Subdomains). Bei `*.pages.dev` **leer lassen** — Login nutzt dann `session_token` im Browser (`sessionStorage`), nicht das Cookie |
 | **Timezone**          | ✅                                              | `Europe/Berlin`               | Anzeige von Datum/Uhrzeit im Dashboard; **Cron pro Projekt** wird in dieser Zeitzone ausgewertet (IANA, z. B. `UTC`, `America/New_York`)                                                                                                   |
 | **Scheduled runs**    | optional                                       | aktiviert                     | Globaler Schalter: Cron-Läufe aller Projekte ein/aus. Aus = nur manueller Trigger („Run now“, Trigger-URL). Pro Projekt zusätzlich eigenes Cron-Feld (leer = nur manuell)                                                                  |
 
@@ -460,7 +460,7 @@ Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo hab
 
 | Setup                                                                                       | **Cookie domain**             | Hinweis                                                                                         |
 | ------------------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| Custom Domain: Dashboard `page-speed-tester.kunde.de`, API `api.page-speed-tester.kunde.de` | `.page-speed-tester.kunde.de` | Parent-Domain von beiden Hosts; nicht `.kunde.de`, wenn Dashboard nur auf einer Subdomain liegt |
+| Custom Domain: Dashboard `page-speed-tester.mydomain.tld`, API `api.page-speed-tester.mydomain.tld` | `.page-speed-tester.mydomain.tld` | Parent-Domain von beiden Hosts; nicht `.mydomain.tld`, wenn Dashboard nur auf einer Subdomain liegt |
 | Nur `*.pages.dev` / `*.workers.dev`                                                         | *leer*                        | Cross-Site-Cookies funktionieren nicht zuverlässig; Auth per Bearer-Token nach Login            |
 | Lokal (`npm run dev`)                                                                       | *leer*                        | API unter `localhost:8787`                                                                      |
 
