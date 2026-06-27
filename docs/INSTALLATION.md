@@ -266,15 +266,37 @@ Unter **Workers → Settings → Variables & Secrets** (verschlüsselt, bleiben 
 
 #### GitHub PAT — welche Permissions?
 
+Es gibt **zwei getrennte Tokens** — nicht verwechseln:
+
+| Token | Wo speichern | Aufgabe |
+| ----- | ------------ | ------- |
+| **`GH_PAT`** | Cloudflare Worker → **Secrets** | Worker ruft GitHub-API auf: `repository_dispatch` (Lighthouse), Upstream-Status, Sync-Button startet Workflow |
+| **`UPSTREAM_SYNC_TOKEN`** | GitHub → Repo → **Actions Secrets** | Workflow `upstream-sync.yml` merged und **pusht** nach `main` (inkl. `.github/workflows/`) |
+
+##### Worker: `GH_PAT`
+
 **Empfohlen: Fine-grained PAT**
 
-- Repository access: nur `page-speed-tester`
+- Repository access: nur **dein** Ziel-Repo (z. B. `page-speed-tester`)
 - **Contents: Read and write** (für `repository_dispatch`)
+- **Actions: Read and write** (Upstream-Sync per Admin-Button — Workflow starten)
 - Metadata: Read (automatisch)
 
 **Alternative Classic PAT:** Scope `repo` (privat) oder `public_repo` (öffentlich) — breitere Rechte als nötig.
 
-Nicht nötig: `workflow`, `actions:write`, `admin:`*
+Für **`GH_PAT` allein** reichen keine Workflow-Schreibrechte — der Worker pusht nicht selbst.
+
+##### Actions: `UPSTREAM_SYNC_TOKEN` *(empfohlen für Upstream sync)*
+
+Fine-grained PAT (kann derselbe Account sein, **anderes** Token):
+
+- Repository access: **dein Ziel-Repo** (Schreiben) + Upstream-Repo (Lesen, falls privat)
+- Auf dem **Ziel-Repo:** **Contents: Read and write**, **Workflows: Read and write**
+- Auf dem **Upstream-Repo** (falls privat): **Contents: Read**
+
+**Alternative Classic PAT:** Scope `repo` auf dem Ziel-Repo.
+
+Ohne dieses Secret nutzt `upstream-sync.yml` den eingebauten **`GITHUB_TOKEN`**. Der darf Workflow-Dateien nur pushen, wenn die Workflow-Datei `permissions: workflows: write` setzt (ab aktuellem Template-Stand). Sobald der Upstream `.github/workflows/` ändert, schlägt der Push sonst fehl — siehe [Fehler: Push nach Merge verweigert](#fehler-push-nach-upstream-merge-verweigert) unten.
 
 **Nicht** als Plain-Text Build-Variable — nur Secrets. Kein `[vars]` in `wrangler.toml` nötig; GitHub-Repo und Cookie-Domain → **Admin → Instance settings** (D1).
 
@@ -420,8 +442,10 @@ In Pages **Build-Env** `PST_API_URL` = volle Worker-URL (**Pflicht** — von Pag
 | `R2_ENDPOINT`          | Text   | `https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com` |
 | `WORKER_API_URL`       | Secret | `https://api.page-speed-tester.mydomain.tld`       |
 | `WORKER_API_SECRET`    | Secret | gleicher Wert wie Worker-Secret                    |
+| `UPSTREAM_SYNC_TOKEN`  | Secret | PAT mit **Contents** + **Workflows** write auf **diesem** Repo — siehe [Upstream sync](#upstream-sync-template-updates) und [GitHub PAT](#github-pat--welche-permissions) |
 
 
+> **`UPSTREAM_SYNC_TOKEN`:** Empfohlen, sobald du **Admin → Sync from upstream** nutzt. Ohne dieses Secret kann der Merge im Action-Log erfolgreich sein, der **Push** aber scheitern, wenn der Upstream Workflow-Dateien ändert.
 ---
 
 ### Schritt 8: Admin — Instance settings (Dashboard)
@@ -452,7 +476,7 @@ Genau das Repo, in dem der Lighthouse-Workflow liegt und das du mit Cloudflare v
 | Demo-Staging       | `dein-user`      | `page-speed-tester-demo` |
 
 
-Der Worker-Secret `**GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo haben (Fine-grained: **Contents: Read and write**).  
+Der Worker-Secret **`GH_PAT`** muss Lese-/Schreibzugriff auf **dieses** Repo haben (Fine-grained: **Contents: Read and write**, für Upstream sync zusätzlich **Actions: Read and write**). Für den Push nach dem Merge brauchst du zusätzlich **`UPSTREAM_SYNC_TOKEN`** als Actions Secret — siehe [Upstream sync](#upstream-sync-template-updates).
 `WORKER_API_URL` / `WORKER_API_SECRET` in GitHub Secrets zeigen auf die Worker-API — das ist unabhängig von owner/repo, aber Actions und Worker müssen zum **selben** GitHub-Repo passen wie hier in den Instance settings.
 
 #### Cookie domain — wann was?
@@ -483,18 +507,64 @@ Unter **Admin → Upstream sync** (unterhalb Instance settings): Status (ahead/b
 | **Upstream repository** | `page-speed-tester-demo` | Upstream-Repo-Name |
 | **Upstream branch** | `main` | Branch zum Vergleichen und Mergen |
 
-**Voraussetzungen:** Instance settings mit **deinem** GitHub owner/repository; Worker-Secret `GH_PAT` mit **Contents: Read and write** und **Actions: Read and write** auf deinem Repo (der Sync löst einen Workflow aus). Im Ziel-Repo optional **`UPSTREAM_SYNC_TOKEN`** (PAT mit **Contents** + **Workflows** write), falls der Sync Workflow-Dateien mitliefert oder `GITHUB_TOKEN` den Push verweigert. Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen. Nach erfolgreichem Sync deployt Cloudflare Worker/Pages automatisch neu (Git-Integration).
+##### Ablauf (Template-Kopien)
 
-**Wie der Sync funktioniert (Template-Kopien):** Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk; GitHubs Merge-/PR-API liefert dafür sporadisch **500**. Der Sync löst deshalb den Workflow **`.github/workflows/upstream-sync.yml`** in deinem Repo aus (`repository_dispatch`, Event `sync-upstream`). Der Workflow macht einen echten `git fetch upstream` + `git merge --no-edit` + `git push origin` und meldet das Ergebnis (`success` / `conflict` / `error`) an den Worker zurück. Der Admin-Button pollt den Status, bis das Ergebnis vorliegt.
+Repos aus **Use this template** hängen nicht im GitHub-Fork-Netzwerk; GitHubs Merge-/PR-API liefert dafür sporadisch **500**. Der Sync löst deshalb den Workflow **`.github/workflows/upstream-sync.yml`** in deinem Repo aus (`repository_dispatch`, Event `sync-upstream`):
 
-**Benötigte GitHub-Secrets im Ziel-Repo** (Settings → Secrets and variables → Actions):
+1. Admin-Button → Worker (`GH_PAT`) dispatcht den Workflow
+2. GitHub Actions: `git fetch upstream` + `git merge --no-edit` + `git push origin`
+3. Workflow meldet Ergebnis (`success` / `conflict` / `error`) an den Worker zurück
+4. Admin-Button pollt den Status, bis das Ergebnis vorliegt
+5. Nach erfolgreichem Push deployt Cloudflare Worker/Pages automatisch neu (Git-Integration)
 
-| Secret | Zweck |
-| ------ | ----- |
-| `WORKER_API_URL`, `WORKER_API_SECRET` | bereits für Lighthouse vorhanden — der Workflow meldet damit das Sync-Ergebnis zurück |
-| `UPSTREAM_SYNC_TOKEN` *(optional, empfohlen)* | PAT mit **Contents: write** und **Workflows: write** auf dem Ziel-Repo sowie **Lesezugriff** auf das Upstream-Repo. Nötig, wenn das Upstream **privat** ist, der Push **Workflow-Dateien** (`.github/workflows/`) ändert und/oder Pages/Worker-Auto-Deploy auslösen soll. Ohne dieses Secret nutzt der Workflow `GITHUB_TOKEN` — dafür braucht `upstream-sync.yml` die Permission `workflows: write` (ab Template-Stand mit diesem Fix). |
+##### Zwei Tokens — wer macht was?
 
-**Wichtig (Erststart):** Der Workflow muss bereits im **Default-Branch deines Ziel-Repos** liegen, damit er per Dispatch startbar ist. Bei einem bestehenden Repo ohne die Datei einmalig manuell mergen:
+| Schritt | Token | Wo konfiguriert |
+| ------- | ----- | --------------- |
+| Workflow **starten** | `GH_PAT` | Cloudflare Worker Secret |
+| Merge **pushen** | `UPSTREAM_SYNC_TOKEN` (empfohlen) oder `GITHUB_TOKEN` | GitHub Actions Secret bzw. eingebaut |
+
+Der Worker-PAT reicht **nicht** für den Push im Action-Job.
+
+##### GitHub-Secrets im Ziel-Repo
+
+**GitHub → dein Repo → Settings → Secrets and variables → Actions:**
+
+| Secret | Pflicht? | Zweck |
+| ------ | -------- | ----- |
+| `WORKER_API_URL`, `WORKER_API_SECRET` | ✅ (Lighthouse) | Sync-Workflow meldet Ergebnis an Worker zurück |
+| `UPSTREAM_SYNC_TOKEN` | **Empfohlen** | PAT zum Pushen nach `main`; siehe [Worker vs. Actions PAT](#github-pat--welche-permissions) |
+
+**`UPSTREAM_SYNC_TOKEN` anlegen (Fine-grained PAT):**
+
+1. GitHub → **Settings → Developer settings → Fine-grained tokens → Generate new token**
+2. Repository: **dein Ziel-Repo** (z. B. `platomat/page-speed-tester`)
+3. Permissions auf dem Ziel-Repo: **Contents: Read and write**, **Workflows: Read and write**, Metadata: Read
+4. Falls Upstream **privat**: zusätzlich **Contents: Read** auf dem Upstream-Repo
+5. Token kopieren → Repo → **Settings → Secrets → Actions → New repository secret** → Name **`UPSTREAM_SYNC_TOKEN`**
+
+*(Classic PAT mit Scope `repo` auf dem Ziel-Repo funktioniert ebenfalls.)*
+
+##### Fehler: Push nach Upstream-Merge verweigert
+
+Symptom im Action-Log (Merge ok, Push fehlgeschlagen):
+
+```text
+Merge succeeded (…). Pushing to origin/main…
+! [remote rejected] HEAD -> main (refusing to allow a GitHub App to create or
+  update workflow `.github/workflows/lighthouse.yml` without `workflows` permission)
+error: failed to push some refs to 'https://github.com/…/page-speed-tester'
+```
+
+**Ursache:** Der Upstream-Stand enthält Änderungen unter `.github/workflows/`. Der Push läuft ohne **`UPSTREAM_SYNC_TOKEN`** über den **`GITHUB_TOKEN`** — der darf Workflow-Dateien nicht ändern, wenn `workflows: write` fehlt (ältere `upstream-sync.yml` im Ziel-Repo) oder das Token keine Workflow-Rechte hat.
+
+**Wichtig:** Der Merge-Commit liegt nur auf dem ephemeral Runner — **`main` auf GitHub ist unverändert**. Du musst den Sync **nach dem Fix erneut** ausführen.
+
+**Lösung (eine davon):**
+
+1. **`UPSTREAM_SYNC_TOKEN`** setzen (siehe oben) → Admin **Sync from upstream** erneut klicken, oder Actions → **Sync from upstream** → **Run workflow**
+2. **`upstream-sync.yml` aktualisieren** — aktueller Template-Stand enthält `permissions: workflows: write`; einmalig per manuellem Merge holen, dann reicht ggf. `GITHUB_TOKEN` ohne extra Secret
+3. **Manuell per Git** (Workaround):
 
 ```bash
 git remote add upstream https://github.com/platomat/page-speed-tester-demo.git
@@ -503,7 +573,11 @@ git merge --no-edit upstream/main
 git push origin main
 ```
 
-Danach laufen alle weiteren Syncs über den Admin-Button.
+##### Erststart / Workflow fehlt im Ziel-Repo
+
+Der Workflow muss im **Default-Branch deines Ziel-Repos** liegen, damit der Dispatch startet. Fehlt die Datei noch, einmalig manuell mergen (siehe Git-Befehle oben). Danach laufen weitere Syncs über den Admin-Button.
+
+Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen.
 
 API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream` (vom Build in `wrangler.toml` `[vars]`).
 
@@ -679,6 +753,7 @@ Logs unter **Actions → fehlgeschlagener Run**.
 | Wert                                   | Typ    | Erlaubt                                                     | Verboten                     |
 | -------------------------------------- | ------ | ----------------------------------------------------------- | ---------------------------- |
 | `GH_PAT`                               | Secret | Worker Secret                                               | `wrangler.toml`, Git         |
+| `UPSTREAM_SYNC_TOKEN`                  | Secret | GitHub Actions Secret (Ziel-Repo)                           | Worker Secret, Git             |
 | `SESSION_SECRET`                       | Secret | Worker Secret                                               | Git                          |
 | `WORKER_API_SECRET`                    | Secret | Worker Secret + GitHub Secret                               | öffentliche Vars             |
 | `GH_OWNER`, `GH_REPO`, `COOKIE_DOMAIN` | Text   | Admin (D1) oder optional `wrangler.toml` [vars]             | —                            |
@@ -696,7 +771,7 @@ Logs unter **Actions → fehlgeschlagener Run**.
 - Workers Git deploy: Build-Env `D1_DATABASE_ID`, `KV_NAMESPACE_ID`; Secrets gesetzt; Build `node scripts/generate-wrangler.mjs && npx wrangler deploy`
 - Admin → Instance settings (Schritt 8): GitHub owner/repo, timezone, cookie domain (Custom Domain) bzw. leer (`*.pages.dev`)
 - Pages `page-speed-tester-dashboard` deployed (`PST_API_URL` als **Pages Build-Env**, nicht Worker)
-- GitHub Secrets (6 Stück)
+- GitHub Actions Secrets: R2 (3), `WORKER_API_URL`, `WORKER_API_SECRET`, **`UPSTREAM_SYNC_TOKEN`** (empfohlen für Upstream sync)
 - Admin-Account angelegt, mindestens ein Projekt mit URLs (Schritt 9)
 - `/health` OK
 - Erster Workflow-Lauf erfolgreich
