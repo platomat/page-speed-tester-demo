@@ -238,7 +238,7 @@
   font-family: ui-monospace, monospace;
 }
 
-.report-media-badge--screenshot {
+.report-media-badge--fullpage {
   background: rgba(59, 130, 246, 0.15);
   color: #2563eb;
 }
@@ -246,6 +246,12 @@
 .report-media-badge--timing {
   background: rgba(168, 85, 247, 0.15);
   color: #7c3aed;
+}
+
+.report-media-badge--off {
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+  color: var(--muted);
+  opacity: 0.55;
 }
 
 .trigger-badge {

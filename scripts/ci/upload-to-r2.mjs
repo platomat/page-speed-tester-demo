@@ -181,7 +181,7 @@ async function main() {
       report_key: reportKey,
       trigger_source: triggerSource,
       report_bytes: reportBytes,
-      has_screenshots: media.has_screenshots,
+      has_fullpage_screenshots: media.has_fullpage_screenshots,
       has_timing_screenshots: media.has_timing_screenshots,
       ...metrics,
     });

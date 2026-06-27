@@ -74,6 +74,6 @@ export interface RunPayload {
   report_key: string;
   trigger_source?: "cron" | "manual";
   report_bytes?: number | null;
-  has_screenshots?: boolean | number;
+  has_fullpage_screenshots?: boolean | number;
   has_timing_screenshots?: boolean | number;
 }

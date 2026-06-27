@@ -771,21 +771,12 @@ const ICON_JSON = `<span class="json-label" aria-hidden="true">{}</span>`;
 
 function renderReportMediaBadges(report) {
   if (!report) return "";
-  const hasScreenshots = Number(report.has_screenshots) === 1;
+  const hasFullpage = Number(report.has_fullpage_screenshots) === 1;
   const hasTiming = Number(report.has_timing_screenshots) === 1;
-  if (!hasScreenshots && !hasTiming) return "";
-  const badges = [];
-  if (hasScreenshots) {
-    badges.push(
-      `<span class="report-media-badge report-media-badge--screenshot" title="Viewport / full-page screenshots">IMG</span>`
-    );
-  }
-  if (hasTiming) {
-    badges.push(
-      `<span class="report-media-badge report-media-badge--timing" title="Timing screenshots (filmstrip)">T</span>`
-    );
-  }
-  return `<div class="report-media-badges">${badges.join("")}</div>`;
+  return `<div class="report-media-badges" aria-label="Report media flags">
+    <span class="report-media-badge ${hasFullpage ? "report-media-badge--fullpage" : "report-media-badge--off"}" title="Full-page screenshots: ${hasFullpage ? "yes" : "no"}">IMG</span>
+    <span class="report-media-badge ${hasTiming ? "report-media-badge--timing" : "report-media-badge--off"}" title="Timing screenshots: ${hasTiming ? "yes" : "no"}">T</span>
+  </div>`;
 }
 
 function renderDeviceCell(report, deviceLabel) {
