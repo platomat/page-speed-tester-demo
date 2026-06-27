@@ -57,22 +57,60 @@ jobs:
         run: |
           set -euo pipefail
           UPSTREAM_URL="https://x-access-token:${SYNC_TOKEN}@github.com/${UPSTREAM_OWNER}/${UPSTREAM_REPO}.git"
+          UPSTREAM_REF="upstream/${UPSTREAM_BRANCH}"
           echo "Fetching ${UPSTREAM_OWNER}/${UPSTREAM_REPO}@${UPSTREAM_BRANCH}…"
           git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
           git fetch upstream "$UPSTREAM_BRANCH"
 
-          if git merge --no-edit "upstream/${UPSTREAM_BRANCH}"; then
+          COMMIT_COUNT="$(git rev-list --count HEAD.."$UPSTREAM_REF" || echo 0)"
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "Already up to date."
+            echo "sync_status=success" >> "$GITHUB_OUTPUT"
+            echo "sync_message=Already up to date" >> "$GITHUB_OUTPUT"
+            echo 'sync_commits_json=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          COMMITS_JSON="$(git log HEAD.."$UPSTREAM_REF" --reverse --format=$'%h\x1f%s' | jq -R -s '
+            split("\n") | map(select(length > 0)) |
+            map(split("\u001f"; 2)) | map(select(length == 2)) |
+            map({sha: .[0], subject: .[1]})
+          ')"
+          {
+            echo 'sync_commits_json<<EOF'
+            echo "$COMMITS_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "Merge upstream ${UPSTREAM_OWNER}/${UPSTREAM_REPO}@${UPSTREAM_BRANCH}"
+            echo
+            echo "Upstream commits (${COMMIT_COUNT}):"
+            git log --format='- %s (%h)' HEAD.."$UPSTREAM_REF" --reverse
+          } > /tmp/merge-msg.txt
+
+          SYNC_SUMMARY="Merged ${COMMIT_COUNT} commit(s) from ${UPSTREAM_OWNER}/${UPSTREAM_REPO}@${UPSTREAM_BRANCH}"
+          {
+            echo 'sync_message<<EOF'
+            echo "$SYNC_SUMMARY"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          if git merge --no-edit -F /tmp/merge-msg.txt "$UPSTREAM_REF"; then
             SHA="$(git rev-parse HEAD)"
             echo "Merge succeeded ($SHA). Pushing to origin/${TARGET_BRANCH}…"
             git push origin "HEAD:${TARGET_BRANCH}"
             echo "sync_status=success" >> "$GITHUB_OUTPUT"
             echo "sync_sha=$SHA" >> "$GITHUB_OUTPUT"
-            echo "sync_message=Upstream merged and pushed" >> "$GITHUB_OUTPUT"
           else
             echo "Merge conflict — aborting."
             git merge --abort || true
             echo "sync_status=conflict" >> "$GITHUB_OUTPUT"
-            echo "sync_message=Merge conflict — resolve manually with git" >> "$GITHUB_OUTPUT"
+            {
+              echo 'sync_message<<EOF'
+              echo "Merge conflict — resolve manually with git"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -84,6 +122,7 @@ jobs:
           SYNC_STATUS: ${{ steps.merge.outputs.sync_status || 'error' }}
           SYNC_SHA: ${{ steps.merge.outputs.sync_sha || '' }}
           SYNC_MESSAGE: ${{ steps.merge.outputs.sync_message || 'Upstream sync failed before merge' }}
+          SYNC_COMMITS_JSON: ${{ steps.merge.outputs.sync_commits_json || '[]' }}
         run: |
           if [ -z "${WORKER_API_URL:-}" ] || [ -z "${WORKER_API_SECRET:-}" ]; then
             echo "WORKER_API_URL / WORKER_API_SECRET not set — skipping result report."
@@ -96,7 +135,8 @@ jobs:
               --arg status "$SYNC_STATUS" \
               --arg sha "$SYNC_SHA" \
               --arg message "$SYNC_MESSAGE" \
+              --argjson upstream_commits "$SYNC_COMMITS_JSON" \
               --arg github_run_id "${{ github.run_id }}" \
-              '{status:$status, sha:$sha, message:$message, github_run_id:$github_run_id}')" \
+              '{status:$status, sha:$sha, message:$message, upstream_commits:$upstream_commits, github_run_id:$github_run_id}')" \
             "$WORKER_API_URL/api/internal/upstream-sync/result" \
             || echo "Warning: failed to report sync result to Worker"

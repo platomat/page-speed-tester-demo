@@ -10,17 +10,20 @@ const SYNC_RESULT_TTL = 24 * 60 * 60;
 const SYNC_PENDING_MAX_MS = 10 * 60 * 1000;
 const MAX_COMMITS_TO_WALK = 100;
 
+export type UpstreamCommitSummary = { sha: string; subject: string };
+
 export type UpstreamSyncResult = {
   status: "pending" | "success" | "conflict" | "error";
   message: string;
   sha?: string | null;
   github_run_id?: string | null;
   updated_at: string;
+  upstream_commits?: UpstreamCommitSummary[];
 };
 
 type GhJson = Record<string, unknown>;
 
-type GhCommit = { sha: string; html_url?: string };
+type GhCommit = { sha: string; html_url?: string; subject: string };
 
 function ghHeaders(pat: string, withBody = false): HeadersInit {
   const headers: Record<string, string> = {
@@ -100,8 +103,17 @@ async function listBranchCommits(
     `https://api.github.com/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(branch)}&per_page=${perPage}`
   );
   if (!res.ok) return [];
-  const data = (await res.json()) as GhCommit[];
-  return Array.isArray(data) ? data : [];
+  const data = (await res.json()) as Array<{
+    sha: string;
+    html_url?: string;
+    commit?: { message?: string };
+  }>;
+  if (!Array.isArray(data)) return [];
+  return data.map((entry) => ({
+    sha: entry.sha,
+    html_url: entry.html_url,
+    subject: (entry.commit?.message ?? "").split("\n")[0].trim() || entry.sha.slice(0, 7),
+  }));
 }
 
 async function commitExistsInRepo(
@@ -205,6 +217,64 @@ async function fetchTemplateCopyCompare(
   return { status, ahead_by, behind_by, compare_url };
 }
 
+function shortSha(sha: string): string {
+  return sha.length > 7 ? sha.slice(0, 7) : sha;
+}
+
+function formatUpstreamMergeMessage(
+  upstream: { owner: string; repo: string; branch: string },
+  commits: UpstreamCommitSummary[]
+): string {
+  if (!commits.length) return "Upstream merged";
+  return `Merged ${commits.length} commit(s) from ${upstream.owner}/${upstream.repo}@${upstream.branch}`;
+}
+
+function sanitizeUpstreamCommits(value: unknown): UpstreamCommitSummary[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const commits = value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const row = entry as { sha?: unknown; subject?: unknown };
+      const sha = String(row.sha ?? "").trim();
+      const subject = String(row.subject ?? "").trim();
+      if (!sha || !subject) return null;
+      return { sha: sha.slice(0, 40), subject: subject.slice(0, 500) };
+    })
+    .filter((entry): entry is UpstreamCommitSummary => entry != null);
+  return commits.length ? commits.slice(0, 50) : undefined;
+}
+
+/** Upstream commits not yet present in the target repo (oldest first). */
+async function listIncomingUpstreamCommits(
+  pat: string,
+  target: { owner: string; repo: string },
+  upstream: { owner: string; repo: string; branch: string },
+  branch: string,
+  max = 50
+): Promise<UpstreamCommitSummary[]> {
+  const upstreamCommits = await listBranchCommits(pat, upstream.owner, upstream.repo, branch, max);
+  const incoming: UpstreamCommitSummary[] = [];
+  for (const commit of upstreamCommits) {
+    if (await commitExistsInRepo(pat, target.owner, target.repo, commit.sha)) break;
+    incoming.push({ sha: shortSha(commit.sha), subject: commit.subject });
+  }
+  return incoming.reverse();
+}
+
+async function attachIncomingCommits(
+  env: Env,
+  compare: UpstreamCompare
+): Promise<UpstreamCompare> {
+  if (compare.behind_by <= 0 || !env.GH_PAT) return compare;
+  const incoming_commits = await listIncomingUpstreamCommits(
+    env.GH_PAT,
+    compare.target,
+    compare.upstream,
+    compare.upstream.branch
+  );
+  return { ...compare, incoming_commits };
+}
+
 export type UpstreamCompare = {
   target: { owner: string; repo: string; branch: string };
   upstream: { owner: string; repo: string; branch: string };
@@ -215,6 +285,7 @@ export type UpstreamCompare = {
   comparison_method: "fork-compare" | "commit-walk";
   compare_url: string | null;
   can_sync: boolean;
+  incoming_commits?: UpstreamCommitSummary[];
 };
 
 export async function fetchUpstreamCompare(
@@ -362,6 +433,7 @@ export async function registerUpstreamSyncResult(
     message?: string;
     sha?: string;
     github_run_id?: string;
+    upstream_commits?: unknown;
   };
 
   const status: UpstreamSyncResult["status"] =
@@ -375,6 +447,7 @@ export async function registerUpstreamSyncResult(
     sha: body.sha?.trim() || null,
     github_run_id: body.github_run_id?.trim() || null,
     updated_at: new Date().toISOString(),
+    upstream_commits: sanitizeUpstreamCommits(body.upstream_commits),
   });
 
   return json(request, env, { ok: true });
@@ -392,8 +465,9 @@ export async function getUpstreamStatus(request: Request, env: Env): Promise<Res
   if ("error" in result) {
     return json(request, env, { error: result.error }, result.status);
   }
-  const last_sync = await reconcileSyncResult(env, result);
-  return json(request, env, { ...result, last_sync });
+  const compare = await attachIncomingCommits(env, result);
+  const last_sync = await reconcileSyncResult(env, compare);
+  return json(request, env, { ...compare, last_sync });
 }
 
 /**
@@ -469,10 +543,12 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
     }
   }
 
-  const compareResult = await fetchUpstreamCompare(env);
-  if ("error" in compareResult) {
-    return json(request, env, { error: compareResult.error }, compareResult.status);
+  const compareRaw = await fetchUpstreamCompare(env);
+  if ("error" in compareRaw) {
+    return json(request, env, { error: compareRaw.error }, compareRaw.status);
   }
+  const compareResult = await attachIncomingCommits(env, compareRaw);
+  const incomingBefore = compareResult.incoming_commits ?? [];
 
   const { target, upstream, is_fork, behind_by, status } = compareResult;
   const branch = target.branch;
@@ -507,7 +583,10 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
     await env.KV.put(SYNC_KV_KEY, String(Date.now()));
     await setUpstreamSyncResult(env, {
       status: "pending",
-      message: "Sync workflow dispatched — merging upstream via GitHub Actions",
+      message: incomingBefore.length
+        ? `Merging ${incomingBefore.length} commit(s) from ${upstream.owner}/${upstream.repo}@${upstream.branch}`
+        : "Sync workflow dispatched — merging upstream via GitHub Actions",
+      upstream_commits: incomingBefore.length ? incomingBefore : undefined,
       updated_at: new Date().toISOString(),
     });
     return json(request, env, {
@@ -540,15 +619,21 @@ export async function syncUpstream(request: Request, env: Env): Promise<Response
   if (mergeRes.ok) {
     await env.KV.put(SYNC_KV_KEY, String(Date.now()));
     const body = (await mergeRes.json().catch(() => ({}))) as GhJson;
-    const updatedCompare = await fetchUpstreamCompare(env);
+    const mergeSha = typeof body.sha === "string" ? body.sha : null;
+    await setUpstreamSyncResult(env, {
+      status: "success",
+      message: formatUpstreamMergeMessage(upstream, incomingBefore),
+      sha: mergeSha,
+      github_run_id: null,
+      updated_at: new Date().toISOString(),
+      upstream_commits: incomingBefore.length ? incomingBefore : undefined,
+    });
+    const updatedCompare = await attachIncomingCommits(env, compareRaw);
     return json(request, env, {
       ok: true,
-      message:
-        method === "merge-upstream"
-          ? "Upstream merged (fork sync)"
-          : "Upstream merged into repository",
+      message: formatUpstreamMergeMessage(upstream, incomingBefore),
       method,
-      sha: typeof body.sha === "string" ? body.sha : null,
+      sha: mergeSha,
       compare: "error" in updatedCompare ? compareResult : updatedCompare,
     });
   }

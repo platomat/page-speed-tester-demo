@@ -34,6 +34,21 @@ function collectSettingsFromForm() {
   };
 }
 
+function renderUpstreamCommitList(commits, title) {
+  if (!Array.isArray(commits) || !commits.length) return "";
+  const items = commits
+    .map(
+      (commit) =>
+        `<li><code>${escapeHtml(String(commit.sha ?? ""))}</code> ${escapeHtml(String(commit.subject ?? ""))}</li>`
+    )
+    .join("");
+  return `
+    <div class="upstream-commit-list">
+      <p class="upstream-commit-list-title"><strong>${escapeHtml(title)}</strong></p>
+      <ul>${items}</ul>
+    </div>`;
+}
+
 function renderUpstreamStatus(data) {
   const target = `${data.target.owner}/${data.target.repo}@${data.target.branch}`;
   const upstream = `${data.upstream.owner}/${data.upstream.repo}@${data.upstream.branch}`;
@@ -49,6 +64,9 @@ function renderUpstreamStatus(data) {
   }
   if (data.behind_by > 0) {
     parts.push(`<p>${data.behind_by} commit(s) behind upstream — sync will merge them.</p>`);
+    if (data.incoming_commits?.length) {
+      parts.push(renderUpstreamCommitList(data.incoming_commits, "Incoming upstream commits"));
+    }
   }
   if (data.comparison_method === "commit-walk") {
     parts.push(
@@ -82,8 +100,12 @@ function renderLastSync(sync) {
         : "upstream-sync-error";
   const label = labels[sync.status] ?? "Last sync";
   const when = sync.updated_at ? ` (${escapeHtml(formatDateTime(sync.updated_at))})` : "";
-  const message = sync.message ? `: ${escapeHtml(String(sync.message))}` : "";
-  return `<p class="upstream-last-sync ${cls}"><strong>${escapeHtml(label)}</strong>${when}${message}</p>`;
+  const message = sync.message ? `<span class="upstream-last-sync-summary">${escapeHtml(String(sync.message))}</span>` : "";
+  const commits =
+    sync.status === "pending"
+      ? renderUpstreamCommitList(sync.upstream_commits, "Commits being merged")
+      : renderUpstreamCommitList(sync.upstream_commits, "Merged upstream commits");
+  return `<div class="upstream-last-sync ${cls}"><p><strong>${escapeHtml(label)}</strong>${when}${message ? ` — ${message}` : ""}</p>${commits}</div>`;
 }
 
 function formatUpstreamStatusLabel(data) {

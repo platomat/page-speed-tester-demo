@@ -244,6 +244,41 @@ input[type="checkbox"] {
   border: 1px solid var(--border);
 }
 
+.upstream-last-sync p {
+  margin: 0 0 0.35rem;
+}
+
+.upstream-last-sync-summary {
+  font-weight: 400;
+}
+
+.upstream-commit-list {
+  margin-top: 0.35rem;
+}
+
+.upstream-commit-list-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.upstream-commit-list ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.upstream-commit-list li {
+  margin: 0.15rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.upstream-commit-list code {
+  font-size: 0.75rem;
+}
+
 .upstream-last-sync.upstream-sync-ok {
   border-color: var(--success, #1a7f37);
   color: var(--success, #1a7f37);
