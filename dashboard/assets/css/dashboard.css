@@ -192,6 +192,20 @@
 .report-actions {
   display: flex;
   gap: 0.35rem;
+  align-items: center;
+}
+
+.report-json-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.report-file-size {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .icon-btn-json {
@@ -204,14 +218,6 @@
 .report-actions-col {
   width: 3rem;
   text-align: center;
-  vertical-align: middle;
-}
-
-.report-size-col {
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
   vertical-align: middle;
 }
 

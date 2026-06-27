@@ -794,13 +794,17 @@ function renderDeviceCell(report, deviceLabel) {
   }
   const detailLabel = `${deviceLabel} report details`;
   const jsonLabel = `${deviceLabel} raw JSON`;
+  const fileSize = formatFileSize(report.report_bytes);
   return `
     <td class="report-device-col">
       <div class="report-device-cell">
         <span class="report-score ${scoreClass(report.performance)}">${report.performance ?? "—"}</span>
         <div class="report-actions">
           <a href="${reportDetailUrl(report.report_key)}" class="icon-btn" title="Details" aria-label="${detailLabel}">${ICON_DETAILS}</a>
-          <a href="${reportJsonUrl(report.report_key)}" class="icon-btn icon-btn-json" target="_blank" rel="noopener" title="JSON" aria-label="${jsonLabel}">${ICON_JSON}</a>
+          <span class="report-json-group">
+            <a href="${reportJsonUrl(report.report_key)}" class="icon-btn icon-btn-json" target="_blank" rel="noopener" title="JSON (${fileSize})" aria-label="${jsonLabel}">${ICON_JSON}</a>
+            <span class="report-file-size">${escapeHtml(fileSize)}</span>
+          </span>
         </div>
         ${renderReportMediaBadges(report)}
       </div>
@@ -813,18 +817,10 @@ function renderTriggerCell(report) {
   return `<td><span class="trigger-badge trigger-badge--${source}">${label}</span></td>`;
 }
 
-function pairedReportBytes(row) {
-  const sizes = [row.desktop?.report_bytes, row.mobile?.report_bytes]
-    .map((n) => Number(n))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  if (!sizes.length) return null;
-  return sizes.reduce((sum, n) => sum + n, 0);
-}
-
 function renderReportsTable(reports, projectId, urlId) {
   const tbody = document.querySelector("#reports-table tbody");
   const paired = pairReports(reports);
-  const colCount = shareContext ? 5 : 6;
+  const colCount = shareContext ? 4 : 5;
   if (!paired.length) {
     tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty">No reports available</td></tr>`;
     return;
@@ -845,7 +841,6 @@ function renderReportsTable(reports, projectId, urlId) {
       ${renderTriggerCell(ref)}
       ${renderDeviceCell(row.desktop, "Desktop")}
       ${renderDeviceCell(row.mobile, "Mobile")}
-      <td class="report-size-col">${escapeHtml(formatFileSize(pairedReportBytes(row)))}</td>
       ${deleteCol}
     </tr>`;
     })
