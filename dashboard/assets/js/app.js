@@ -811,7 +811,7 @@ async function loadAllProjectUrls() {
   );
 }
 
-function renderScopeSelect(selectedValue) {
+function renderScopeSelect(selectedValue, { focus = false } = {}) {
   const select = document.getElementById("scope-select");
   if (!select) return;
 
@@ -834,6 +834,7 @@ function renderScopeSelect(selectedValue) {
     } else {
       select.value = fallback;
     }
+    if (focus && select.options.length) select.focus();
     return;
   }
 
@@ -857,6 +858,7 @@ function renderScopeSelect(selectedValue) {
   } else {
     select.value = fallback;
   }
+  if (focus && select.options.length) select.focus();
 }
 
 function setUrlMetricsPanelsVisible(visible) {
@@ -1188,7 +1190,7 @@ async function initShareDashboard(ctx) {
     return;
   }
 
-  renderScopeSelect();
+  renderScopeSelect(undefined, { focus: true });
   showUrlScopeView([], []);
   document.getElementById("scope-select").addEventListener("change", () => {
     void loadData();
@@ -1211,7 +1213,7 @@ async function init() {
   projects = data.projects ?? [];
 
   await loadAllProjectUrls();
-  renderScopeSelect();
+  renderScopeSelect(undefined, { focus: true });
 
   document.getElementById("scope-select").addEventListener("change", () => {
     void onScopeChange();
