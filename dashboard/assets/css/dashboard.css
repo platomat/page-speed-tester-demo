@@ -98,8 +98,15 @@
   height: clamp(180px, 28vw, 280px);
 }
 
-.chart-avg-badge {
+.chart-stat-badges {
   margin-left: auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.chart-stat-badge {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.02em;

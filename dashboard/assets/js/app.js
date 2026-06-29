@@ -7,7 +7,7 @@ const chartDefaults = {
     legend: { display: false },
     tooltip: {
       filter(item) {
-        return item.dataset.label !== "Average";
+        return item.dataset.label !== "Average" && item.dataset.label !== "Median";
       },
     },
     chartAverageLabel: { metricKey: null },
@@ -55,36 +55,57 @@ function chartOptions(metricKey) {
   };
 }
 
-function syncChartAverageLabel(chart) {
+function syncChartStatLabels(chart) {
   const metricKey = chart.options.plugins?.chartAverageLabel?.metricKey;
   const canvas = chart.canvas;
   const h2 = canvas?.closest(".chart-card")?.querySelector("h2");
   if (!h2 || !metricKey) return;
 
   const avgDataset = chart.data.datasets.find((d) => d.label === "Average");
+  const medianDataset = chart.data.datasets.find((d) => d.label === "Median");
   const avg = avgDataset?.data?.[0];
-  let badge = h2.querySelector(".chart-avg-badge");
+  const median = medianDataset?.data?.[0];
+  let container = h2.querySelector(".chart-stat-badges");
 
-  if (avg == null) {
+  if (avg == null && median == null) {
+    container?.remove();
+    return;
+  }
+
+  if (!container) {
+    container = document.createElement("span");
+    container.className = "chart-stat-badges";
+    h2.appendChild(container);
+  }
+
+  updateChartStatBadge(container, "avg", avg, metricKey, "Ø", "Average");
+  updateChartStatBadge(container, "median", median, metricKey, "Md", "Median");
+}
+
+function updateChartStatBadge(container, kind, value, metricKey, prefix, titlePrefix) {
+  let badge = container.querySelector(`.chart-${kind}-badge`);
+  if (value == null) {
     badge?.remove();
     return;
   }
 
-  const formatted = formatChartAverage(metricKey, avg);
-  const ratingClass = metricScoreClass(metricKey, avg);
+  const formatted = formatChartAverage(metricKey, value);
+  const ratingClass = metricScoreClass(metricKey, value);
   if (!badge) {
     badge = document.createElement("span");
-    h2.appendChild(badge);
+    container.appendChild(badge);
   }
-  badge.className = ratingClass ? `chart-avg-badge ${ratingClass}` : "chart-avg-badge";
-  badge.textContent = `Ø ${formatted}`;
-  badge.title = `Average: ${formatted}`;
+  badge.className = ratingClass
+    ? `chart-stat-badge chart-${kind}-badge ${ratingClass}`
+    : `chart-stat-badge chart-${kind}-badge`;
+  badge.textContent = `${prefix} ${formatted}`;
+  badge.title = `${titlePrefix}: ${formatted}`;
 }
 
 const chartAverageLabelPlugin = {
   id: "chartAverageLabel",
   afterUpdate(chart) {
-    syncChartAverageLabel(chart);
+    syncChartStatLabels(chart);
   },
 };
 
@@ -442,6 +463,17 @@ function chartAverage(values) {
   return nums.reduce((sum, v) => sum + v, 0) / nums.length;
 }
 
+function chartMedian(values) {
+  const nums = values
+    .map((v) => (v == null || Number.isNaN(Number(v)) ? null : Number(v)))
+    .filter((v) => v != null)
+    .sort((a, b) => a - b);
+  if (nums.length < 2) return null;
+  const mid = Math.floor(nums.length / 2);
+  if (nums.length % 2 === 0) return (nums[mid - 1] + nums[mid]) / 2;
+  return nums[mid];
+}
+
 function roundAverage(value) {
   return Math.round(value * 100) / 100;
 }
@@ -482,10 +514,30 @@ function buildAverageDataset(data) {
   };
 }
 
+function buildMedianDataset(data) {
+  const median = chartMedian(data);
+  if (median == null) return null;
+  return {
+    label: "Median",
+    data: data.map(() => median),
+    borderColor: "rgba(167, 139, 250, 0.9)",
+    borderWidth: 1.5,
+    borderDash: [2, 4],
+    pointRadius: 0,
+    pointHoverRadius: 0,
+    fill: false,
+    tension: 0,
+    order: 2,
+    tooltip: { enabled: false },
+  };
+}
+
 function buildChartDatasets(data, metricKey) {
   const datasets = [buildChartDataset(data, metricKey)];
   const average = buildAverageDataset(data);
+  const median = buildMedianDataset(data);
   if (average) datasets.push(average);
+  if (median) datasets.push(median);
   return datasets;
 }
 
