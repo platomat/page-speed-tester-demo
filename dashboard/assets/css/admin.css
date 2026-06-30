@@ -360,6 +360,18 @@ input[type="checkbox"] {
   min-width: 10rem;
 }
 
+.key-field-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.admin-field-hint {
+  grid-column: 2;
+  margin-top: -0.35rem;
+}
+
 .project-screenshots-cell {
   white-space: nowrap;
 }

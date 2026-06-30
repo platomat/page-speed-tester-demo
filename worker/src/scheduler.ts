@@ -10,7 +10,7 @@ export async function runScheduledProjects(env: Env): Promise<void> {
   const now = new Date();
   const timezone = await getTimezone(env);
   const { results } = await env.DB.prepare(
-    `SELECT id, cron_expression, last_scheduled_at FROM projects WHERE enabled = 1`
+    `SELECT id, cron_expression, last_scheduled_at FROM projects`
   ).all<{
     id: string;
     cron_expression: string;

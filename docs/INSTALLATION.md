@@ -650,7 +650,7 @@ Gäste sehen Metriken, Charts und Berichte **nur für dieses Projekt**. Tests st
 
 Share-Key rotieren: Admin → Projekt → ↻ neben Share-Key (alte Links werden ungültig).
 
-Bestehende Datenbanken: einmalig `ALTER TABLE projects ADD COLUMN share_token TEXT UNIQUE;` — fehlende Tokens werden beim ersten Admin-Aufruf automatisch erzeugt.
+**Share-Links:** Share-Token pro Projekt im Admin setzen (↻ generieren). Feld leer lassen und speichern = Share deaktiviert. Gleiches für Trigger-Key und Cron (leer = aus).
 
 **Annotations & spätere Schema-Änderungen:** `npm run db:migrate:remote` ausführen — Wrangler wendet alle offenen Migrationen aus `migrations/` an (idempotent, auch auf bestehende Datenbanken). Siehe `[migrations/README.md](../migrations/README.md)`.
 

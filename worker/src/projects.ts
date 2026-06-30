@@ -5,7 +5,7 @@ import { requireAdmin, requireUser } from "./auth";
 import { dispatchProject } from "./github";
 import { isValidCronExpression, normalizeCronExpression } from "./cron";
 import { json } from "./http";
-import { ensureShareToken, normalizeShareToken } from "./share";
+import { normalizeShareToken } from "./share";
 import { slugifyId } from "./slug";
 import {
   diagnoseReportLookup,
@@ -13,6 +13,20 @@ import {
   reportKeyParts,
   resolveReportObject,
 } from "./report-storage";
+
+const KEY_FORMAT_ERROR = "Key must be 1–64 characters (letters, numbers, _ -)";
+
+function resolveKeyUpdate(
+  raw: string | undefined,
+  normalize: (value: string) => string | null
+): { value: string | null } | { error: string } | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === "generate") return { value: generateAccessKey() };
+  if (raw.trim() === "") return { value: null };
+  const value = normalize(raw);
+  if (!value) return { error: KEY_FORMAT_ERROR };
+  return { value };
+}
 
 /** Default bucket name on the REPORTS binding; real value comes from env (see generate-wrangler). */
 const DEFAULT_REPORTS_BUCKET_NAME = "page-speed-tester-reports";
@@ -114,21 +128,13 @@ export async function listProjects(
   const placeholders = ids.map(() => "?").join(",");
   const cols =
     user.role === "admin"
-      ? "id, name, access_key, share_token, cron_expression, enabled, store_fullpage_screenshots, store_timing_screenshots, lh_warmup, last_scheduled_at, created_at"
-      : "id, name, cron_expression, enabled, last_scheduled_at, created_at";
+      ? "id, name, access_key, share_token, cron_expression, store_fullpage_screenshots, store_timing_screenshots, lh_warmup, last_scheduled_at, created_at"
+      : "id, name, cron_expression, last_scheduled_at, created_at";
   const { results } = await env.DB.prepare(
     `SELECT ${cols} FROM projects WHERE id IN (${placeholders}) ORDER BY name`
   )
     .bind(...ids)
     .all<Project>();
-
-  if (user.role === "admin" && results?.length) {
-    for (const project of results) {
-      if (!project.share_token) {
-        project.share_token = await ensureShareToken(env, project.id);
-      }
-    }
-  }
 
   return json(request, env, { projects: results ?? [] });
 }
@@ -154,32 +160,23 @@ export async function createProject(
   if (!isValidCronExpression(cron)) {
     return json(request, env, { error: "cron_expression must have 5 fields or be empty" }, 400);
   }
-  const accessKey = body.access_key?.trim()
-    ? normalizeAccessKey(body.access_key)
-    : generateAccessKey();
-  if (!accessKey) {
-    return json(
-      request,
-      env,
-      { error: "access_key must be 1–64 characters (letters, numbers, _ -)" },
-      400
-    );
+  const accessKey = body.access_key?.trim() ? normalizeAccessKey(body.access_key) : null;
+  if (body.access_key?.trim() && !accessKey) {
+    return json(request, env, { error: KEY_FORMAT_ERROR }, 400);
   }
-  const shareToken = generateAccessKey();
   const storeFullpageScreenshots = body.store_fullpage_screenshots ? 1 : 0;
   const storeTimingScreenshots = body.store_timing_screenshots ? 1 : 0;
   const lhWarmup = body.lh_warmup ? 1 : 0;
   try {
     await env.DB.prepare(
-      `INSERT INTO projects (id, name, access_key, share_token, cron_expression, enabled,
+      `INSERT INTO projects (id, name, access_key, share_token, cron_expression,
                              store_fullpage_screenshots, store_timing_screenshots, lh_warmup, created_at)
-       VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)`
     )
       .bind(
         id,
         body.name,
         accessKey,
-        shareToken,
         cron,
         storeFullpageScreenshots,
         storeTimingScreenshots,
@@ -197,7 +194,7 @@ export async function createProject(
       id,
       name: body.name,
       access_key: accessKey,
-      share_token: shareToken,
+      share_token: null,
       cron_expression: cron,
       store_fullpage_screenshots: storeFullpageScreenshots,
       store_timing_screenshots: storeTimingScreenshots,
@@ -219,7 +216,6 @@ export async function updateProject(
     access_key?: string;
     share_token?: string;
     cron_expression?: string;
-    enabled?: boolean;
     store_fullpage_screenshots?: boolean;
     store_timing_screenshots?: boolean;
     lh_warmup?: boolean;
@@ -234,42 +230,28 @@ export async function updateProject(
       .run();
   }
   if (body.access_key != null) {
-    const accessKey =
-      body.access_key === "generate" || body.access_key.trim() === ""
-        ? generateAccessKey()
-        : normalizeAccessKey(body.access_key);
-    if (!accessKey) {
-      return json(
-        request,
-        env,
-        { error: "access_key must be 1–64 characters (letters, numbers, _ -)" },
-        400
-      );
+    const resolved = resolveKeyUpdate(body.access_key, normalizeAccessKey);
+    if (resolved && "error" in resolved) {
+      return json(request, env, { error: resolved.error }, 400);
     }
-    try {
-      await env.DB.prepare(`UPDATE projects SET access_key = ? WHERE id = ?`)
-        .bind(accessKey, projectId)
-        .run();
-    } catch {
-      return json(request, env, { error: "access_key already in use" }, 409);
+    if (resolved && "value" in resolved) {
+      try {
+        await env.DB.prepare(`UPDATE projects SET access_key = ? WHERE id = ?`)
+          .bind(resolved.value, projectId)
+          .run();
+      } catch {
+        return json(request, env, { error: "access_key already in use" }, 409);
+      }
     }
   }
   if (body.share_token != null) {
-    const shareToken =
-      body.share_token === "generate" || body.share_token.trim() === ""
-        ? generateAccessKey()
-        : normalizeShareToken(body.share_token);
-    if (!shareToken) {
-      return json(
-        request,
-        env,
-        { error: "share_token must be 1–64 characters (letters, numbers, _ -)" },
-        400
-      );
+    const resolved = resolveKeyUpdate(body.share_token, normalizeShareToken);
+    if (!resolved || "error" in resolved) {
+      return json(request, env, { error: resolved?.error ?? KEY_FORMAT_ERROR }, 400);
     }
     try {
       await env.DB.prepare(`UPDATE projects SET share_token = ? WHERE id = ?`)
-        .bind(shareToken, projectId)
+        .bind(resolved.value, projectId)
         .run();
     } catch {
       return json(request, env, { error: "share_token already in use" }, 409);
@@ -282,11 +264,6 @@ export async function updateProject(
     }
     await env.DB.prepare(`UPDATE projects SET cron_expression = ? WHERE id = ?`)
       .bind(cron, projectId)
-      .run();
-  }
-  if (body.enabled != null) {
-    await env.DB.prepare(`UPDATE projects SET enabled = ? WHERE id = ?`)
-      .bind(body.enabled ? 1 : 0, projectId)
       .run();
   }
   if (body.store_fullpage_screenshots != null) {
@@ -472,16 +449,13 @@ export async function publicTriggerProject(
   }
 
   const project = await env.DB.prepare(
-    `SELECT id, access_key, enabled FROM projects WHERE id = ?`
+    `SELECT id, access_key FROM projects WHERE id = ?`
   )
     .bind(projectId)
-    .first<{ id: string; access_key: string; enabled: number }>();
+    .first<{ id: string; access_key: string | null }>();
 
-  if (!project || !constantTimeEqual(project.access_key, key)) {
+  if (!project?.access_key || !constantTimeEqual(project.access_key, key)) {
     return json(request, env, { error: "Invalid project or access key" }, 403);
-  }
-  if (!project.enabled) {
-    return json(request, env, { error: "Project is disabled" }, 403);
   }
 
   if (urlId) {

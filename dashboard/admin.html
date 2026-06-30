@@ -23,8 +23,7 @@
       <section class="admin-section">
         <h2>Projects</h2>
         <p class="admin-section-hint">
-          Schedule automatic Lighthouse runs and manage access keys for triggering
-          tests without login. The <strong>Trigger URL</strong> uses the access key.
+          Create and edit projects: name, cron schedule, trigger and share keys, and run options.
         </p>
         <table id="projects-table">
           <thead></thead>
@@ -40,13 +39,14 @@
               <input type="text" id="project-id" placeholder="Optional slug" />
               <label for="project-name">Name</label>
               <input type="text" id="project-name" placeholder="Project name" required />
-              <label for="project-access-key">Access key</label>
+              <label for="project-access-key">Trigger key</label>
               <input
                 type="text"
                 id="project-access-key"
-                placeholder="Optional, auto-generated"
+                placeholder="Optional — clear to disable public trigger"
                 maxlength="64"
               />
+              <p class="key-field-hint admin-field-hint">Leave empty to disable the public trigger URL.</p>
               <label for="project-cron">Cron</label>
               <input
                 type="text"

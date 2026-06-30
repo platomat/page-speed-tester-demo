@@ -6,6 +6,27 @@ const ICON_SAVE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" s
 
 const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
+const ICON_OPEN_LINK = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+
+const ICON_SHARE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+
+function renderProjectKeyBlock({ label, field, keyValue, buildUrl, projectId, regenerateAction, openIcon = ICON_OPEN_LINK }) {
+  const hasKey = Boolean(keyValue);
+  const openLink = hasKey
+    ? `<a href="${escapeHtml(buildUrl(projectId, keyValue))}" class="icon-btn btn-sm" target="_blank" rel="noopener" title="Open ${label} URL" aria-label="Open ${label} URL">${openIcon}</a>`
+    : "";
+  return `
+    <div class="key-block">
+      <span class="key-label">${label}</span>
+      <div class="access-key-row">
+        <input type="text" class="access-key-input" maxlength="64" value="${escapeHtml(keyValue ?? "")}" data-field="${field}" spellcheck="false" autocomplete="off" placeholder="Disabled when empty" />
+        <button type="button" class="btn-secondary btn-sm" data-action="${regenerateAction}" title="Generate new ${label.toLowerCase()} key">↻</button>
+        ${openLink}
+      </div>
+      <p class="key-field-hint">Clear and save to disable.</p>
+    </div>`;
+}
+
 function updateCronHint() {
   const tz = getInstanceTimezone();
   const hint = document.getElementById("cron-hint");
@@ -328,10 +349,9 @@ async function loadProjects(selectProjectId) {
     <tr>
       <th>ID</th>
       <th>Name</th>
-      <th>Keys &amp; links</th>
+      <th>Trigger &amp; Share</th>
       <th>Cron</th>
-      <th>Screenshots</th>
-      <th>Enabled</th>
+      <th>Settings</th>
       <th>Actions</th>
     </tr>`;
 
@@ -345,26 +365,28 @@ async function loadProjects(selectProjectId) {
         <input type="text" class="name-input project-name-input" value="${escapeHtml(p.name)}" data-field="name" required />
       </td>
       <td class="access-key-cell">
-        <div class="key-block">
-          <span class="key-label">Trigger</span>
-          <div class="access-key-row">
-            <input type="text" class="access-key-input" maxlength="64" value="${escapeHtml(p.access_key ?? "")}" data-field="access_key" spellcheck="false" autocomplete="off" />
-            <button type="button" class="btn-secondary btn-sm" data-action="regenerate-key" title="Generate new trigger key">↻</button>
-          </div>
-          <a href="${escapeHtml(publicTriggerUrl(p.id, p.access_key ?? ""))}" class="public-link" target="_blank" rel="noopener">Trigger URL</a>
-        </div>
-        <div class="key-block">
-          <span class="key-label">Share</span>
-          <div class="access-key-row">
-            <input type="text" class="access-key-input" maxlength="64" value="${escapeHtml(p.share_token ?? "")}" data-field="share_token" spellcheck="false" autocomplete="off" />
-            <button type="button" class="btn-secondary btn-sm" data-action="regenerate-share" title="Generate new share key">↻</button>
-          </div>
-          <a href="${escapeHtml(publicShareDashboardUrl(p.id, p.share_token ?? ""))}" class="public-link" target="_blank" rel="noopener">Share URL</a>
-        </div>
+        ${renderProjectKeyBlock({
+          label: "Trigger",
+          field: "access_key",
+          keyValue: p.access_key,
+          projectId: p.id,
+          buildUrl: (id, key) => publicTriggerUrl(id, key),
+          regenerateAction: "regenerate-key",
+        })}
+        ${renderProjectKeyBlock({
+          label: "Share",
+          field: "share_token",
+          keyValue: p.share_token,
+          projectId: p.id,
+          buildUrl: (id, key) => publicShareDashboardUrl(id, key),
+          regenerateAction: "regenerate-share",
+          openIcon: ICON_SHARE,
+        })}
       </td>
       <td>
         <input type="text" class="cron-input" value="${escapeHtml(p.cron_expression ?? "")}" data-field="cron" placeholder="Manual only" title="Cron schedule (instance timezone); empty = manual only" />
         <p class="cron-preview"></p>
+        <p class="key-field-hint">Clear for manual runs only.</p>
       </td>
       <td class="project-screenshots-cell">
         <label class="project-screenshot-toggle" title="Store full-page screenshots in Lighthouse JSON">
@@ -379,9 +401,6 @@ async function loadProjects(selectProjectId) {
           <input type="checkbox" ${p.lh_warmup ? "checked" : ""} data-field="lh_warmup" />
           W
         </label>
-      </td>
-      <td>
-        <input type="checkbox" ${p.enabled ? "checked" : ""} data-field="enabled" />
       </td>
       <td class="actions-cell">
         <button type="button" class="icon-btn btn-sm" data-action="save-project" title="Save project" aria-label="Save project">${ICON_SAVE}</button>
@@ -610,7 +629,6 @@ async function init() {
     if (btn.dataset.action === "save-project") {
       const name = row.querySelector('[data-field="name"]').value.trim();
       const cron = row.querySelector('[data-field="cron"]').value.trim();
-      const enabled = row.querySelector('[data-field="enabled"]').checked;
       const storeFullpageScreenshots = row.querySelector('[data-field="store_fullpage_screenshots"]').checked;
       const storeTimingScreenshots = row.querySelector('[data-field="store_timing_screenshots"]').checked;
       const lhWarmup = row.querySelector('[data-field="lh_warmup"]').checked;
@@ -626,7 +644,6 @@ async function init() {
           body: JSON.stringify({
             name,
             cron_expression: cron,
-            enabled,
             store_fullpage_screenshots: storeFullpageScreenshots,
             store_timing_screenshots: storeTimingScreenshots,
             lh_warmup: lhWarmup,

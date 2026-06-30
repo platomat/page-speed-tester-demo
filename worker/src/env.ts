@@ -34,10 +34,9 @@ export interface User {
 export interface Project {
   id: string;
   name: string;
-  access_key?: string;
-  share_token?: string;
+  access_key?: string | null;
+  share_token?: string | null;
   cron_expression: string;
-  enabled: number;
   store_fullpage_screenshots?: number;
   store_timing_screenshots?: number;
   lh_warmup?: number;

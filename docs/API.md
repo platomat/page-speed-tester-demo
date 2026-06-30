@@ -71,7 +71,7 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 | ------- | ---- | ---- | ------------ |
 | `GET` | `/api/projects` | Session | Projektliste (User: nur zugewiesene) |
 | `POST` | `/api/projects` | Admin | Projekt anlegen |
-| `PATCH` | `/api/projects/:id` | Admin | Projekt bearbeiten (Name, Cron, enabled, Keys, Screenshot-Flags, …) |
+| `PATCH` | `/api/projects/:id` | Admin | Projekt bearbeiten (Name, Cron, Keys, Screenshot-Flags, …) |
 | `DELETE` | `/api/projects/:id` | Admin | Projekt löschen |
 | `GET` | `/api/projects/:id/run-status` | Session + Zugriff | Laufstatus (KV) für Dashboard-Polling |
 | `DELETE` | `/api/projects/:id/run-status` | Session + Zugriff | Laufstatus zurücksetzen (z. B. nach abgebrochenem GH-Lauf); bricht GitHub **nicht** ab |
@@ -86,7 +86,15 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 
 `lh_warmup` (boolean, Default `false`): Vor jedem Lighthouse-Audit ein `curl`-Warmup auf die Ziel-URL (mit kurzer Pause ± Jitter). Simuliert eher Repeat-Visit; erzeugt zusätzliche Last auf dem Zielserver.
 
-Beide Felder werden beim `repository_dispatch` an GitHub Actions übergeben (`STORE_FULLPAGE_SCREENSHOTS` / `STORE_TIMING_SCREENSHOTS` / `LH_WARMUP`).
+**Keys & Cron (leer = deaktiviert):**
+
+- **`access_key` leer** (beim PATCH leeres Feld senden): kein Public-Trigger. `"generate"` erzeugt einen neuen Key.
+- **`share_token` leer:** kein Share-Dashboard. `"generate"` erzeugt einen neuen Token.
+- **`cron_expression` leer:** kein automatischer Schedule (nur manuelle Läufe im Dashboard).
+
+Neue Projekte starten ohne Trigger- und Share-Key. Instance-`cron_enabled` muss zusätzlich an sein, damit der Scheduler läuft.
+
+Dispatch/CI: `store_fullpage_screenshots` → `STORE_FULLPAGE_SCREENSHOTS`, `store_timing_screenshots` → `STORE_TIMING_SCREENSHOTS`, `lh_warmup` → `LH_WARMUP`.
 
 ---
 

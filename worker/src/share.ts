@@ -1,5 +1,5 @@
 import type { Env } from "./env";
-import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./access-key";
+import { constantTimeEqual, normalizeAccessKey } from "./access-key";
 import { json } from "./http";
 import { getTimezone } from "./settings";
 import {
@@ -8,34 +8,18 @@ import {
 } from "./report-storage";
 import { listShareAnnotations } from "./annotations";
 
-export async function ensureShareToken(env: Env, projectId: string): Promise<string> {
-  const row = await env.DB.prepare(`SELECT share_token FROM projects WHERE id = ?`)
-    .bind(projectId)
-    .first<{ share_token: string | null }>();
-  if (row?.share_token) return row.share_token;
-
-  const token = generateAccessKey();
-  await env.DB.prepare(`UPDATE projects SET share_token = ? WHERE id = ?`)
-    .bind(token, projectId)
-    .run();
-  return token;
-}
-
 async function resolveShareProject(
   env: Env,
   projectId: string,
   token: string
 ): Promise<{ id: string; name: string } | null> {
   const project = await env.DB.prepare(
-    `SELECT id, name, share_token, enabled FROM projects WHERE id = ?`
+    `SELECT id, name, share_token FROM projects WHERE id = ?`
   )
     .bind(projectId)
-    .first<{ id: string; name: string; share_token: string | null; enabled: number }>();
+    .first<{ id: string; name: string; share_token: string | null }>();
 
   if (!project?.share_token || !constantTimeEqual(project.share_token, token)) {
-    return null;
-  }
-  if (!project.enabled) {
     return null;
   }
   return { id: project.id, name: project.name };
