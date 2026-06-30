@@ -174,6 +174,7 @@ async function main() {
 
     const runAt = resolveRunAt(process.env.RUN_AT, lighthouseJson, parsed.runAt);
     const triggerSource = process.env.TRIGGER_SOURCE === "cron" ? "cron" : "manual";
+    const lhWarmup = process.env.LH_WARMUP === "1";
     await registerRun({
       project_id: PROJECT_ID,
       url_id: urlEntry.id,
@@ -184,6 +185,7 @@ async function main() {
       report_bytes: reportBytes,
       has_fullpage_screenshots: media.has_fullpage_screenshots,
       has_timing_screenshots: media.has_timing_screenshots,
+      lh_warmup: lhWarmup,
       ...metrics,
     });
     console.log(`Registered run for ${urlEntry.url} (${parsed.strategy})`);

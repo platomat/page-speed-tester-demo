@@ -399,7 +399,7 @@ async function loadProjects(selectProjectId) {
         </label>
         <label class="project-screenshot-toggle" title="Cache warmup curl before each audit (LH_WARMUP)">
           <input type="checkbox" ${p.lh_warmup ? "checked" : ""} data-field="lh_warmup" />
-          W
+          LHW
         </label>
       </td>
       <td class="actions-cell">

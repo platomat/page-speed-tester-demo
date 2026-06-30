@@ -78,4 +78,5 @@ export interface RunPayload {
   report_bytes?: number | null;
   has_fullpage_screenshots?: boolean | number;
   has_timing_screenshots?: boolean | number;
+  lh_warmup?: boolean | number;
 }

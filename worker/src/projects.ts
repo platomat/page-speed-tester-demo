@@ -540,7 +540,7 @@ export async function getReports(
   if (access instanceof Response) return access;
   const { results } = await env.DB.prepare(
     `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source,
-            report_bytes, has_fullpage_screenshots, has_timing_screenshots
+            report_bytes, has_fullpage_screenshots, has_timing_screenshots, lh_warmup
      FROM runs WHERE project_id = ? AND url_id = ?
      ORDER BY run_at DESC LIMIT 50`
   )
@@ -700,11 +700,12 @@ export async function insertRun(
   const triggerSource = payload.trigger_source === "cron" ? "cron" : "manual";
   const hasFullpageScreenshots = payload.has_fullpage_screenshots ? 1 : 0;
   const hasTimingScreenshots = payload.has_timing_screenshots ? 1 : 0;
+  const lhWarmup = payload.lh_warmup ? 1 : 0;
   await env.DB.prepare(
     `INSERT INTO runs (project_id, url_id, strategy, run_at, performance,
                        lcp_ms, cls, fcp_ms, tbt_ms, speed_index, report_key, trigger_source,
-                       report_bytes, has_fullpage_screenshots, has_timing_screenshots)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                       report_bytes, has_fullpage_screenshots, has_timing_screenshots, lh_warmup)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       payload.project_id,
@@ -721,7 +722,8 @@ export async function insertRun(
       triggerSource,
       reportBytes,
       hasFullpageScreenshots,
-      hasTimingScreenshots
+      hasTimingScreenshots,
+      lhWarmup
     )
     .run();
   return json(

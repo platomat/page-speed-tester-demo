@@ -761,10 +761,15 @@ function renderReportMediaBadges(report) {
 function renderReportMetaCell(report) {
   const source = report?.trigger_source === "cron" ? "cron" : "manual";
   const label = source === "cron" ? "Cron" : "Manual";
+  const lhWarmup = Number(report?.lh_warmup) === 1;
+  const lhwBadge = lhWarmup
+    ? `<span class="trigger-badge trigger-badge--lhw" title="LH cache warmup enabled">LHW</span>`
+    : "";
   return `
     <div class="reports-grid-cell reports-meta">
       <time class="report-date">${formatDateTime(report)}</time>
       <span class="trigger-badge trigger-badge--${source}">${label}</span>
+      ${lhwBadge}
     </div>`;
 }
 
