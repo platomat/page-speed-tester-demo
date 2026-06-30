@@ -3,7 +3,7 @@ import { listAccessibleProjectIds, requireProjectAccess } from "./access";
 import { constantTimeEqual, generateAccessKey, normalizeAccessKey } from "./access-key";
 import { requireAdmin, requireUser } from "./auth";
 import { dispatchProject } from "./github";
-import { isValidCronExpression, normalizeCronExpression } from "./cron";
+import { hasCronSchedule, isValidCronExpression, normalizeCronExpression } from "./cron";
 import { json } from "./http";
 import { normalizeShareToken } from "./share";
 import { slugifyId } from "./slug";
@@ -167,11 +167,14 @@ export async function createProject(
   const storeFullpageScreenshots = body.store_fullpage_screenshots ? 1 : 0;
   const storeTimingScreenshots = body.store_timing_screenshots ? 1 : 0;
   const lhWarmup = body.lh_warmup ? 1 : 0;
+  const createdAt = new Date().toISOString();
+  const lastScheduledAt = hasCronSchedule(cron) ? createdAt : null;
   try {
     await env.DB.prepare(
       `INSERT INTO projects (id, name, access_key, share_token, cron_expression,
-                             store_fullpage_screenshots, store_timing_screenshots, lh_warmup, created_at)
-       VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)`
+                             store_fullpage_screenshots, store_timing_screenshots, lh_warmup,
+                             last_scheduled_at, created_at)
+       VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         id,
@@ -181,7 +184,8 @@ export async function createProject(
         storeFullpageScreenshots,
         storeTimingScreenshots,
         lhWarmup,
-        new Date().toISOString()
+        lastScheduledAt,
+        createdAt
       )
       .run();
   } catch {
@@ -220,9 +224,9 @@ export async function updateProject(
     store_timing_screenshots?: boolean;
     lh_warmup?: boolean;
   };
-  const existing = await env.DB.prepare(`SELECT id FROM projects WHERE id = ?`)
+  const existing = await env.DB.prepare(`SELECT id, cron_expression FROM projects WHERE id = ?`)
     .bind(projectId)
-    .first();
+    .first<{ id: string; cron_expression: string }>();
   if (!existing) return json(request, env, { error: "Not found" }, 404);
   if (body.name != null) {
     await env.DB.prepare(`UPDATE projects SET name = ? WHERE id = ?`)
@@ -262,9 +266,25 @@ export async function updateProject(
     if (!isValidCronExpression(cron)) {
       return json(request, env, { error: "cron_expression must have 5 fields or be empty" }, 400);
     }
-    await env.DB.prepare(`UPDATE projects SET cron_expression = ? WHERE id = ?`)
-      .bind(cron, projectId)
-      .run();
+    const cronChanged = normalizeCronExpression(existing.cron_expression) !== cron;
+    if (cronChanged && hasCronSchedule(cron)) {
+      const nowIso = new Date().toISOString();
+      await env.DB.prepare(
+        `UPDATE projects SET cron_expression = ?, last_scheduled_at = ? WHERE id = ?`
+      )
+        .bind(cron, nowIso, projectId)
+        .run();
+    } else if (cronChanged && !hasCronSchedule(cron)) {
+      await env.DB.prepare(
+        `UPDATE projects SET cron_expression = ?, last_scheduled_at = NULL WHERE id = ?`
+      )
+        .bind(cron, projectId)
+        .run();
+    } else {
+      await env.DB.prepare(`UPDATE projects SET cron_expression = ? WHERE id = ?`)
+        .bind(cron, projectId)
+        .run();
+    }
   }
   if (body.store_fullpage_screenshots != null) {
     await env.DB.prepare(`UPDATE projects SET store_fullpage_screenshots = ? WHERE id = ?`)

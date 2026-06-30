@@ -10,16 +10,25 @@ export async function runScheduledProjects(env: Env): Promise<void> {
   const now = new Date();
   const timezone = await getTimezone(env);
   const { results } = await env.DB.prepare(
-    `SELECT id, cron_expression, last_scheduled_at FROM projects`
+    `SELECT id, cron_expression, last_scheduled_at, created_at FROM projects`
   ).all<{
     id: string;
     cron_expression: string;
     last_scheduled_at: string | null;
+    created_at: string;
   }>();
 
   for (const project of results ?? []) {
     if (!hasCronSchedule(project.cron_expression)) continue;
-    if (!isCronDue(project.cron_expression, now, timezone, project.last_scheduled_at)) {
+    if (
+      !isCronDue(
+        project.cron_expression,
+        now,
+        timezone,
+        project.last_scheduled_at,
+        project.created_at
+      )
+    ) {
       continue;
     }
     if (wasRecentlyScheduled(project.last_scheduled_at)) continue;

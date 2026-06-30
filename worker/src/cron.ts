@@ -135,17 +135,28 @@ export function getLastCronOccurrence(
 /**
  * True when a cron slot has passed and no run was recorded for that slot yet.
  * Uses last_scheduled_at as the last completed dispatch timestamp.
+ * Occurrences before anchorAt (e.g. project created_at) are ignored.
  */
 export function isCronDue(
   expression: string,
   now: Date,
   timeZone: string,
-  lastScheduledAt: string | null
+  lastScheduledAt: string | null,
+  anchorAt?: string | null
 ): boolean {
   const occurrence = getLastCronOccurrence(expression, now, timeZone);
   if (!occurrence) return false;
-  if (!lastScheduledAt) return true;
-  return new Date(lastScheduledAt).getTime() < occurrence.getTime();
+
+  const anchorMs = anchorAt ? floorToMinute(new Date(anchorAt)).getTime() : null;
+  if (anchorMs != null && occurrence.getTime() < anchorMs) {
+    return false;
+  }
+
+  const lastMs = lastScheduledAt ? floorToMinute(new Date(lastScheduledAt)).getTime() : null;
+  const effectiveLastMs = lastMs ?? anchorMs;
+  if (effectiveLastMs == null) return false;
+
+  return effectiveLastMs < occurrence.getTime();
 }
 
 export function wasRecentlyScheduled(
