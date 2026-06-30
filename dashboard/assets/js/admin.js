@@ -32,6 +32,7 @@ function updateCronHint() {
   const hint = document.getElementById("cron-hint");
   if (!hint) return;
   hint.innerHTML = `
+    Leave cron <strong>empty</strong> for manual testing only.
     <strong>Cron (${escapeHtml(tz)}):</strong>
     <code>minute</code> · <code>hour</code> · <code>day</code> · <code>month</code> · <code>weekday</code>
     — e.g. <code>0 6 * * *</code> daily at 06:00,
