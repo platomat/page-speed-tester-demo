@@ -658,7 +658,13 @@ async function init() {
       }
     }
     if (btn.dataset.action === "regenerate-key") {
-      if (!confirm(`Generate a new access key for "${projectId}"? Old trigger URLs will stop working.`)) {
+      const hasKey = Boolean(projects.find((p) => p.id === projectId)?.access_key);
+      if (
+        hasKey &&
+        !confirm(
+          `Generate a new access key for "${projectId}"? Old trigger URLs will stop working.`
+        )
+      ) {
         return;
       }
       try {
@@ -673,7 +679,11 @@ async function init() {
       }
     }
     if (btn.dataset.action === "regenerate-share") {
-      if (!confirm(`Generate a new share key for "${projectId}"? Old share URLs will stop working.`)) {
+      const hasKey = Boolean(projects.find((p) => p.id === projectId)?.share_token);
+      if (
+        hasKey &&
+        !confirm(`Generate a new share key for "${projectId}"? Old share URLs will stop working.`)
+      ) {
         return;
       }
       try {
