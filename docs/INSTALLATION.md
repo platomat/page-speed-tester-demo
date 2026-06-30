@@ -740,6 +740,15 @@ Typische Ursachen:
 
 Logs unter **Actions → fehlgeschlagener Run**.
 
+### URLs oder Run-Historie nach Migration weg?
+
+Migration `0007` in einer frühen Version nutzte `DROP TABLE projects` mit `PRAGMA foreign_keys=OFF`.
+Auf **D1** wird das ignoriert — `ON DELETE CASCADE` hat dabei **urls**, **runs** und ggf. **annotations** mitgelöscht, während **projects** erhalten blieb.
+
+**Wiederherstellung:** Falls möglich D1 **Time Travel** auf einen Zeitpunkt **vor** der Migration (Cloudflare Dashboard → D1 → Time Travel). Sonst URLs im Admin neu anlegen; alte Runs sind ohne Backup nicht wiederherstellbar (Reports in R2 können noch existieren, sind im Dashboard aber ohne D1-Zeilen nicht verlinkt).
+
+Die korrigierte `0007`-Datei sichert Child-Tabellen vor dem Drop. Bereits angewandte Migrationen laufen nicht erneut — betroffene Instanzen brauchen Time Travel oder manuelles Nachpflegen.
+
 ### Dashboard zeigt „Invalid Date“?
 
 `run_at` in D1 war leer. Behoben im Code: Fallback auf Lighthouse `fetchTime` und Dateiname. Nach Deploy + neuem Lauf korrekt.

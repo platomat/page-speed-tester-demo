@@ -46,3 +46,21 @@ npm run db:migrate:list     # Status: angewandt / offen
 Beim `npm run deploy` werden die Remote-Migrationen **automatisch vor** dem Worker-Deploy
 ausgeführt. Bei Cloudflare **Workers Git-Deploy** das Build-Kommando entsprechend setzen
 (siehe `docs/INSTALLATION.md`).
+
+## D1: Tabellen mit Foreign Keys neu aufbauen
+
+Cloudflare D1 führt jede Migration in einer **Transaktion** aus. `PRAGMA foreign_keys=OFF`
+wirkt darin **nicht** — `DROP TABLE` auf eine Parent-Tabelle löst trotzdem
+`ON DELETE CASCADE` auf allen Child-Tabellen aus (z. B. `urls`, `runs` bei `projects`).
+
+**Sicheres Muster:** Child-Zeilen zuerst in Temp-Tabellen kopieren, Tabellen in
+Abhängigkeitsreihenfolge droppen, Parent neu anlegen, Children wiederherstellen.
+Vorbild: `0007_drop_project_enabled_nullable_keys.sql`.
+
+**Wenn eine fehlerhafte Migration bereits gelaufen ist:** Daten aus Temp-Backups sind
+nicht wieder da. Optionen: D1 **Time Travel** (Restore auf Zeitpunkt vor der Migration,
+siehe Cloudflare-Doku) oder betroffene Zeilen manuell neu anlegen (Projekte bleiben
+oft erhalten, URLs/Runs ggf. weg).
+
+**Bevorzugt:** `ALTER TABLE ADD/DROP/RENAME COLUMN` statt `DROP TABLE` + Recreate, wo
+SQLite das hergibt.
