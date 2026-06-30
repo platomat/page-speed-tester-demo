@@ -38,16 +38,17 @@ export async function dispatchProject(
   }
 
   const project = await env.DB.prepare(
-    `SELECT store_fullpage_screenshots, store_timing_screenshots FROM projects WHERE id = ?`
+    `SELECT store_fullpage_screenshots, store_timing_screenshots, lh_warmup FROM projects WHERE id = ?`
   )
     .bind(projectId)
-    .first<{ store_fullpage_screenshots: number; store_timing_screenshots: number }>();
+    .first<{ store_fullpage_screenshots: number; store_timing_screenshots: number; lh_warmup: number }>();
   if (!project) {
     return { ok: false, status: 404, body: JSON.stringify({ error: "Project not found" }) };
   }
 
   const storeFullpageScreenshots = project.store_fullpage_screenshots === 1;
   const storeTimingScreenshots = project.store_timing_screenshots === 1;
+  const lhWarmup = project.lh_warmup === 1;
 
   const ghResponse = await fetch(
     `https://api.github.com/repos/${gh.owner}/${gh.repo}/dispatches`,
@@ -67,6 +68,7 @@ export async function dispatchProject(
           trigger_source: options?.triggerSource ?? "manual",
           store_fullpage_screenshots: storeFullpageScreenshots,
           store_timing_screenshots: storeTimingScreenshots,
+          lh_warmup: lhWarmup,
           ...(urlIds?.length ? { url_ids: urlIds } : {}),
         },
       }),

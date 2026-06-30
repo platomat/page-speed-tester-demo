@@ -375,6 +375,10 @@ async function loadProjects(selectProjectId) {
           <input type="checkbox" ${p.store_timing_screenshots ? "checked" : ""} data-field="store_timing_screenshots" />
           T
         </label>
+        <label class="project-screenshot-toggle" title="Cache warmup curl before each audit (LH_WARMUP)">
+          <input type="checkbox" ${p.lh_warmup ? "checked" : ""} data-field="lh_warmup" />
+          W
+        </label>
       </td>
       <td>
         <input type="checkbox" ${p.enabled ? "checked" : ""} data-field="enabled" />
@@ -528,6 +532,7 @@ async function init() {
           cron_expression: document.getElementById("project-cron").value.trim(),
           store_fullpage_screenshots: document.getElementById("project-store-fullpage-screenshots").checked,
           store_timing_screenshots: document.getElementById("project-store-timing-screenshots").checked,
+          lh_warmup: document.getElementById("project-lh-warmup").checked,
         }),
       });
       e.target.reset();
@@ -608,6 +613,7 @@ async function init() {
       const enabled = row.querySelector('[data-field="enabled"]').checked;
       const storeFullpageScreenshots = row.querySelector('[data-field="store_fullpage_screenshots"]').checked;
       const storeTimingScreenshots = row.querySelector('[data-field="store_timing_screenshots"]').checked;
+      const lhWarmup = row.querySelector('[data-field="lh_warmup"]').checked;
       const accessKey = row.querySelector('[data-field="access_key"]').value.trim();
       const shareToken = row.querySelector('[data-field="share_token"]').value.trim();
       if (!name) {
@@ -623,6 +629,7 @@ async function init() {
             enabled,
             store_fullpage_screenshots: storeFullpageScreenshots,
             store_timing_screenshots: storeTimingScreenshots,
+            lh_warmup: lhWarmup,
             access_key: accessKey,
             share_token: shareToken,
           }),

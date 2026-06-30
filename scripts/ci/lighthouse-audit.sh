@@ -13,9 +13,10 @@ LH_MAX_WAIT_LOAD_DESKTOP="${LH_MAX_WAIT_LOAD_DESKTOP:-45000}"
 LH_MAX_WAIT_LOAD_MOBILE="${LH_MAX_WAIT_LOAD_MOBILE:-60000}"
 CHROME_FLAGS="${CHROME_FLAGS:---headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-blink-features=AutomationControlled}"
 LH_USER_AGENT="${LH_USER_AGENT:-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36}"
-# Optional cache warmup before each audit. Off by default — it adds extra requests
-# to the same host and can trip server-side rate limits / fail2ban. Set LH_WARMUP=1 to enable.
+# Optional cache warmup before each audit. Off by default — set per project via dispatch
+# (client_payload.lh_warmup → LH_WARMUP). Adds extra requests to the target host.
 LH_WARMUP="${LH_WARMUP:-0}"
+LH_WARMUP_DELAY_SEC="${LH_WARMUP_DELAY_SEC:-2}"
 LH_RETRY_DELAY_SEC="${LH_RETRY_DELAY_SEC:-8}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -31,6 +32,8 @@ warmup() {
   if [ "$LH_WARMUP" != "1" ] && [ "$LH_WARMUP" != "true" ]; then
     return 0
   fi
+  echo "Cache warmup enabled — pausing before initial request…" >&2
+  "$SCRIPT_DIR/sleep-jitter.sh" "$LH_WARMUP_DELAY_SEC"
   curl -fsSL -A "$LH_USER_AGENT" -o /dev/null --max-time 30 "$page_url" || true
 }
 

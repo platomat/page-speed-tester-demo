@@ -84,7 +84,9 @@ Nur wenn `upstream_sync_enabled === true` (Kunden-Instanz; nicht die Demo-Quelle
 
 `store_timing_screenshots` (boolean, Default `false`): Filmstrip-Timing-Screenshots (`screenshot-thumbnails`) im JSON behalten. Off by default.
 
-Beide Felder werden beim `repository_dispatch` an GitHub Actions übergeben (`STORE_FULLPAGE_SCREENSHOTS` / `STORE_TIMING_SCREENSHOTS`).
+`lh_warmup` (boolean, Default `false`): Vor jedem Lighthouse-Audit ein `curl`-Warmup auf die Ziel-URL (mit kurzer Pause ± Jitter). Simuliert eher Repeat-Visit; erzeugt zusätzliche Last auf dem Zielserver.
+
+Beide Felder werden beim `repository_dispatch` an GitHub Actions übergeben (`STORE_FULLPAGE_SCREENSHOTS` / `STORE_TIMING_SCREENSHOTS` / `LH_WARMUP`).
 
 ---
 

@@ -40,6 +40,7 @@ export interface Project {
   enabled: number;
   store_fullpage_screenshots?: number;
   store_timing_screenshots?: number;
+  lh_warmup?: number;
   last_scheduled_at: string | null;
   created_at: string;
 }

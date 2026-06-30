@@ -345,7 +345,8 @@ Mehrere URLs **auf demselben Host** erzeugen in kurzer Zeit viele Requests von *
 | `LH_STRATEGY_PAUSE_SEC` | `5` | Pause zwischen Desktop- und Mobile-Lauf derselben URL |
 | `LH_PAUSE_JITTER_SEC` | `3` | Zufällige Abweichung (± Sekunden) zu den Pausen — wirkt weniger maschinell |
 | `LH_RETRY_DELAY_SEC` | `8` | Wartezeit vor dem zweiten Versuch |
-| `LH_WARMUP` | `0` | Cache-Warmup-`curl` vor jedem Audit (Standard **aus** — erzeugt zusätzliche Last) |
+| `LH_WARMUP_DELAY_SEC` | `2` | Pause vor dem Warmup-`curl` (± `LH_PAUSE_JITTER_SEC`) — nur wenn Projekt **Cache warmup** aktiv |
+| `LH_WARMUP` | pro Projekt | Cache-Warmup-`curl` vor jedem Audit (Admin: **W**-Checkbox, Default **aus**) |
 
 Bei aggressiven Server-Limits `LH_URL_PAUSE_SEC` / `LH_STRATEGY_PAUSE_SEC` erhöhen.
 
