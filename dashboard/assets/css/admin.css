@@ -360,6 +360,27 @@ input[type="checkbox"] {
   min-width: 10rem;
 }
 
+.project-screenshots-cell {
+  white-space: nowrap;
+}
+
+.project-screenshot-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.project-screenshot-toggle input {
+  margin: 0;
+}
+
 .access-key-cell {
   min-width: 16rem;
 }

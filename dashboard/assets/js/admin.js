@@ -29,8 +29,6 @@ function collectSettingsFromForm() {
     upstream_repo: document.getElementById("instance-upstream-repo").value.trim(),
     upstream_branch: document.getElementById("instance-upstream-branch").value.trim(),
     cookie_domain: document.getElementById("instance-cookie-domain").value.trim(),
-    store_screenshots: document.getElementById("instance-store-screenshots").checked,
-    store_timing_screenshots: document.getElementById("instance-store-timing-screenshots").checked,
   };
 }
 
@@ -246,10 +244,6 @@ async function loadSettingsForm() {
   document.getElementById("instance-upstream-repo").value = data.upstream_repo ?? "page-speed-tester-demo";
   document.getElementById("instance-upstream-branch").value = data.upstream_branch ?? "main";
   document.getElementById("instance-cookie-domain").value = data.cookie_domain ?? "";
-  document.getElementById("instance-store-screenshots").checked = Boolean(data.store_screenshots);
-  document.getElementById("instance-store-timing-screenshots").checked = Boolean(
-    data.store_timing_screenshots
-  );
   applyUpstreamSyncVisibility(data.upstream_sync_enabled !== false);
   return data;
 }
@@ -336,6 +330,7 @@ async function loadProjects(selectProjectId) {
       <th>Name</th>
       <th>Keys &amp; links</th>
       <th>Cron</th>
+      <th>Screenshots</th>
       <th>Enabled</th>
       <th>Actions</th>
     </tr>`;
@@ -370,6 +365,16 @@ async function loadProjects(selectProjectId) {
       <td>
         <input type="text" class="cron-input" value="${escapeHtml(p.cron_expression ?? "")}" data-field="cron" placeholder="Manual only" title="Cron schedule (instance timezone); empty = manual only" />
         <p class="cron-preview"></p>
+      </td>
+      <td class="project-screenshots-cell">
+        <label class="project-screenshot-toggle" title="Store full-page screenshots in Lighthouse JSON">
+          <input type="checkbox" ${p.store_fullpage_screenshots ? "checked" : ""} data-field="store_fullpage_screenshots" />
+          FP
+        </label>
+        <label class="project-screenshot-toggle" title="Store timing screenshots in Lighthouse JSON">
+          <input type="checkbox" ${p.store_timing_screenshots ? "checked" : ""} data-field="store_timing_screenshots" />
+          T
+        </label>
       </td>
       <td>
         <input type="checkbox" ${p.enabled ? "checked" : ""} data-field="enabled" />
@@ -521,6 +526,8 @@ async function init() {
           name: document.getElementById("project-name").value.trim(),
           access_key: document.getElementById("project-access-key").value.trim() || undefined,
           cron_expression: document.getElementById("project-cron").value.trim(),
+          store_fullpage_screenshots: document.getElementById("project-store-fullpage-screenshots").checked,
+          store_timing_screenshots: document.getElementById("project-store-timing-screenshots").checked,
         }),
       });
       e.target.reset();
@@ -599,6 +606,8 @@ async function init() {
       const name = row.querySelector('[data-field="name"]').value.trim();
       const cron = row.querySelector('[data-field="cron"]').value.trim();
       const enabled = row.querySelector('[data-field="enabled"]').checked;
+      const storeFullpageScreenshots = row.querySelector('[data-field="store_fullpage_screenshots"]').checked;
+      const storeTimingScreenshots = row.querySelector('[data-field="store_timing_screenshots"]').checked;
       const accessKey = row.querySelector('[data-field="access_key"]').value.trim();
       const shareToken = row.querySelector('[data-field="share_token"]').value.trim();
       if (!name) {
@@ -612,6 +621,8 @@ async function init() {
             name,
             cron_expression: cron,
             enabled,
+            store_fullpage_screenshots: storeFullpageScreenshots,
+            store_timing_screenshots: storeTimingScreenshots,
             access_key: accessKey,
             share_token: shareToken,
           }),

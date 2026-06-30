@@ -36,7 +36,7 @@ warmup() {
 
 run_once() {
   local screenshot_args=(--disable-full-page-screenshot)
-  if [ "${STORE_SCREENSHOTS:-0}" = "1" ] || [ "${STORE_SCREENSHOTS:-}" = "true" ]; then
+  if [ "${STORE_FULLPAGE_SCREENSHOTS:-0}" = "1" ] || [ "${STORE_FULLPAGE_SCREENSHOTS:-}" = "true" ]; then
     screenshot_args=()
   fi
   timeout "$timeout_sec" lighthouse "$page_url" \

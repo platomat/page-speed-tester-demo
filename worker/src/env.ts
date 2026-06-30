@@ -38,6 +38,8 @@ export interface Project {
   share_token?: string;
   cron_expression: string;
   enabled: number;
+  store_fullpage_screenshots?: number;
+  store_timing_screenshots?: number;
   last_scheduled_at: string | null;
   created_at: string;
 }

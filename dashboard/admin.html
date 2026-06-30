@@ -55,6 +55,18 @@
                 value=""
                 title="Cron schedule (instance timezone); leave empty for manual runs only"
               />
+              <label for="project-store-fullpage-screenshots">Full-page screenshots</label>
+              <input
+                type="checkbox"
+                id="project-store-fullpage-screenshots"
+                name="store_fullpage_screenshots"
+              />
+              <label for="project-store-timing-screenshots">Timing screenshots</label>
+              <input
+                type="checkbox"
+                id="project-store-timing-screenshots"
+                name="store_timing_screenshots"
+              />
             </div>
             <p class="cron-preview" id="project-cron-preview" data-cron-preview-for="project-cron"></p>
             <p class="admin-cron-hint" id="cron-hint">
@@ -180,24 +192,6 @@
                 <code>CRON_EXPRESSION</code> → <code>wrangler.toml</code>) checks which projects are
                 due and triggers GitHub Actions. Manual <strong>Run test</strong> still works when
                 disabled.
-              </p>
-
-              <label for="instance-store-screenshots" class="settings-label">Report screenshots</label>
-              <div class="settings-control">
-                <input type="checkbox" id="instance-store-screenshots" name="store_screenshots" />
-              </div>
-              <p class="settings-field-hint">
-                Store viewport and full-page screenshots in Lighthouse JSON (R2). Off by default —
-                much smaller reports and lower storage cost. Applies to runs started after you save.
-              </p>
-
-              <label for="instance-store-timing-screenshots" class="settings-label">Timing screenshots</label>
-              <div class="settings-control">
-                <input type="checkbox" id="instance-store-timing-screenshots" name="store_timing_screenshots" />
-              </div>
-              <p class="settings-field-hint">
-                Store filmstrip timing screenshots (progress frames during page load) in Lighthouse JSON.
-                Off by default — can add significant size. Applies to runs started after you save.
               </p>
             </div>
           </fieldset>

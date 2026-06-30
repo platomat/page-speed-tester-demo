@@ -114,7 +114,7 @@ export async function listProjects(
   const placeholders = ids.map(() => "?").join(",");
   const cols =
     user.role === "admin"
-      ? "id, name, access_key, share_token, cron_expression, enabled, last_scheduled_at, created_at"
+      ? "id, name, access_key, share_token, cron_expression, enabled, store_fullpage_screenshots, store_timing_screenshots, last_scheduled_at, created_at"
       : "id, name, cron_expression, enabled, last_scheduled_at, created_at";
   const { results } = await env.DB.prepare(
     `SELECT ${cols} FROM projects WHERE id IN (${placeholders}) ORDER BY name`
@@ -144,6 +144,8 @@ export async function createProject(
     name?: string;
     access_key?: string;
     cron_expression?: string;
+    store_fullpage_screenshots?: boolean;
+    store_timing_screenshots?: boolean;
   };
   if (!body.name) return json(request, env, { error: "name required" }, 400);
   const id = slugifyId(body.id ?? body.name);
@@ -163,12 +165,24 @@ export async function createProject(
     );
   }
   const shareToken = generateAccessKey();
+  const storeFullpageScreenshots = body.store_fullpage_screenshots ? 1 : 0;
+  const storeTimingScreenshots = body.store_timing_screenshots ? 1 : 0;
   try {
     await env.DB.prepare(
-      `INSERT INTO projects (id, name, access_key, share_token, cron_expression, enabled, created_at)
-       VALUES (?, ?, ?, ?, ?, 1, ?)`
+      `INSERT INTO projects (id, name, access_key, share_token, cron_expression, enabled,
+                             store_fullpage_screenshots, store_timing_screenshots, created_at)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`
     )
-      .bind(id, body.name, accessKey, shareToken, cron, new Date().toISOString())
+      .bind(
+        id,
+        body.name,
+        accessKey,
+        shareToken,
+        cron,
+        storeFullpageScreenshots,
+        storeTimingScreenshots,
+        new Date().toISOString()
+      )
       .run();
   } catch {
     return json(request, env, { error: "Project id or access_key already exists" }, 409);
@@ -176,7 +190,15 @@ export async function createProject(
   return json(
     request,
     env,
-    { id, name: body.name, access_key: accessKey, share_token: shareToken, cron_expression: cron },
+    {
+      id,
+      name: body.name,
+      access_key: accessKey,
+      share_token: shareToken,
+      cron_expression: cron,
+      store_fullpage_screenshots: storeFullpageScreenshots,
+      store_timing_screenshots: storeTimingScreenshots,
+    },
     201
   );
 }
@@ -194,6 +216,8 @@ export async function updateProject(
     share_token?: string;
     cron_expression?: string;
     enabled?: boolean;
+    store_fullpage_screenshots?: boolean;
+    store_timing_screenshots?: boolean;
   };
   const existing = await env.DB.prepare(`SELECT id FROM projects WHERE id = ?`)
     .bind(projectId)
@@ -258,6 +282,16 @@ export async function updateProject(
   if (body.enabled != null) {
     await env.DB.prepare(`UPDATE projects SET enabled = ? WHERE id = ?`)
       .bind(body.enabled ? 1 : 0, projectId)
+      .run();
+  }
+  if (body.store_fullpage_screenshots != null) {
+    await env.DB.prepare(`UPDATE projects SET store_fullpage_screenshots = ? WHERE id = ?`)
+      .bind(body.store_fullpage_screenshots ? 1 : 0, projectId)
+      .run();
+  }
+  if (body.store_timing_screenshots != null) {
+    await env.DB.prepare(`UPDATE projects SET store_timing_screenshots = ? WHERE id = ?`)
+      .bind(body.store_timing_screenshots ? 1 : 0, projectId)
       .run();
   }
   return json(request, env, { status: "ok" });

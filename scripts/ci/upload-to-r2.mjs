@@ -153,13 +153,14 @@ async function main() {
     }
 
     const raw = await readFile(join(REPORTS_DIR, file), "utf8");
-    const storeScreenshots =
-      process.env.STORE_SCREENSHOTS === "1" || process.env.STORE_SCREENSHOTS === "true";
+    const storeFullpageScreenshots =
+      process.env.STORE_FULLPAGE_SCREENSHOTS === "1" ||
+      process.env.STORE_FULLPAGE_SCREENSHOTS === "true";
     const storeTimingScreenshots =
       process.env.STORE_TIMING_SCREENSHOTS === "1" ||
       process.env.STORE_TIMING_SCREENSHOTS === "true";
     const lighthouseJson = slimLighthouseReport(JSON.parse(raw), {
-      storeScreenshots,
+      storeScreenshots: storeFullpageScreenshots,
       storeTimingScreenshots,
     });
     const media = reportMediaFlags(lighthouseJson);

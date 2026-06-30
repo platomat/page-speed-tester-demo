@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      STORE_SCREENSHOTS: ${{ github.event.client_payload.store_screenshots == true && '1' || '0' }}
+      STORE_FULLPAGE_SCREENSHOTS: ${{ github.event.client_payload.store_fullpage_screenshots == true && '1' || '0' }}
       STORE_TIMING_SCREENSHOTS: ${{ github.event.client_payload.store_timing_screenshots == true && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4

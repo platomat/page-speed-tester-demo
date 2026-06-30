@@ -1,6 +1,6 @@
 import type { Env } from "./env";
 import { setRunPending } from "./run-status";
-import { getGitHubTarget, getStoreScreenshots, getStoreTimingScreenshots } from "./settings";
+import { getGitHubTarget } from "./settings";
 
 const RATE_LIMIT_MS = 5 * 60 * 1000;
 
@@ -37,8 +37,17 @@ export async function dispatchProject(
     }
   }
 
-  const storeScreenshots = await getStoreScreenshots(env);
-  const storeTimingScreenshots = await getStoreTimingScreenshots(env);
+  const project = await env.DB.prepare(
+    `SELECT store_fullpage_screenshots, store_timing_screenshots FROM projects WHERE id = ?`
+  )
+    .bind(projectId)
+    .first<{ store_fullpage_screenshots: number; store_timing_screenshots: number }>();
+  if (!project) {
+    return { ok: false, status: 404, body: JSON.stringify({ error: "Project not found" }) };
+  }
+
+  const storeFullpageScreenshots = project.store_fullpage_screenshots === 1;
+  const storeTimingScreenshots = project.store_timing_screenshots === 1;
 
   const ghResponse = await fetch(
     `https://api.github.com/repos/${gh.owner}/${gh.repo}/dispatches`,
@@ -56,7 +65,7 @@ export async function dispatchProject(
         client_payload: {
           project_id: projectId,
           trigger_source: options?.triggerSource ?? "manual",
-          store_screenshots: storeScreenshots,
+          store_fullpage_screenshots: storeFullpageScreenshots,
           store_timing_screenshots: storeTimingScreenshots,
           ...(urlIds?.length ? { url_ids: urlIds } : {}),
         },
