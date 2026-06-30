@@ -659,7 +659,7 @@ async function init() {
       }
     }
     if (btn.dataset.action === "regenerate-key") {
-      const hasKey = Boolean(projects.find((p) => p.id === projectId)?.access_key);
+      const hasKey = Boolean(row.querySelector('[data-field="access_key"]')?.value.trim());
       if (
         hasKey &&
         !confirm(
@@ -680,7 +680,7 @@ async function init() {
       }
     }
     if (btn.dataset.action === "regenerate-share") {
-      const hasKey = Boolean(projects.find((p) => p.id === projectId)?.share_token);
+      const hasKey = Boolean(row.querySelector('[data-field="share_token"]')?.value.trim());
       if (
         hasKey &&
         !confirm(`Generate a new share key for "${projectId}"? Old share URLs will stop working.`)
