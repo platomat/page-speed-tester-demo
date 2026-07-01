@@ -322,8 +322,8 @@ const METRICS = [
 
 let currentUser = null;
 let projects = [];
-/** @type {{ desktop: boolean; mobile: boolean }} */
-const deviceFilters = { desktop: true, mobile: true };
+/** @type {"desktop" | "both" | "mobile"} */
+let deviceScope = "both";
 /** @type {Map<string, Array<{id: string, name: string, url: string}>>} */
 const projectUrls = new Map();
 
@@ -937,31 +937,33 @@ function updateDeviceTogglesVisibility() {
 }
 
 function applyDeviceVisibility() {
+  const showDesktop = deviceScope === "desktop" || deviceScope === "both";
+  const showMobile = deviceScope === "mobile" || deviceScope === "both";
   const main = document.querySelector("main");
   if (main) {
-    main.dataset.showDesktop = deviceFilters.desktop ? "true" : "false";
-    main.dataset.showMobile = deviceFilters.mobile ? "true" : "false";
+    main.dataset.showDesktop = showDesktop ? "true" : "false";
+    main.dataset.showMobile = showMobile ? "true" : "false";
   }
-  for (const device of ["desktop", "mobile"]) {
-    const btn = document.getElementById(`device-toggle-${device}`);
+  const segmented = document.querySelector(".device-scope-segmented");
+  if (segmented) {
+    segmented.dataset.active = deviceScope;
+  }
+  for (const scope of ["desktop", "both", "mobile"]) {
+    const btn = document.querySelector(`[data-device-scope="${scope}"]`);
     if (!btn) continue;
-    const on = deviceFilters[device];
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-pressed", deviceScope === scope ? "true" : "false");
   }
   const grid = document.getElementById("reports-grid");
   if (grid) {
-    grid.classList.toggle("reports-grid--hide-desktop", !deviceFilters.desktop);
-    grid.classList.toggle("reports-grid--hide-mobile", !deviceFilters.mobile);
+    grid.classList.toggle("reports-grid--hide-desktop", !showDesktop);
+    grid.classList.toggle("reports-grid--hide-mobile", !showMobile);
   }
   resizeAllCharts();
 }
 
-function toggleDeviceFilter(device) {
-  if (device !== "desktop" && device !== "mobile") return;
-  const other = device === "desktop" ? "mobile" : "desktop";
-  const next = !deviceFilters[device];
-  if (!next && !deviceFilters[other]) return;
-  deviceFilters[device] = next;
+function setDeviceScope(scope) {
+  if (scope !== "desktop" && scope !== "both" && scope !== "mobile") return;
+  deviceScope = scope;
   applyDeviceVisibility();
 }
 
@@ -969,9 +971,9 @@ function initDeviceToggles() {
   const bar = document.getElementById("device-toggles");
   if (!bar) return;
   bar.addEventListener("click", (event) => {
-    const btn = event.target.closest("[data-device-toggle]");
+    const btn = event.target.closest("[data-device-scope]");
     if (!btn) return;
-    toggleDeviceFilter(btn.dataset.deviceToggle);
+    setDeviceScope(btn.dataset.deviceScope);
   });
   applyDeviceVisibility();
 }

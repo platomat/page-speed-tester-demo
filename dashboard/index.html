@@ -23,26 +23,35 @@
         <button id="run-btn" type="button">Run test</button>
       </section>
 
-      <div id="device-toggles" class="device-toggles hidden" role="group" aria-label="Devices to show">
-        <span class="device-toggles-label">Devices</span>
-        <button
-          type="button"
-          id="device-toggle-desktop"
-          class="device-toggle"
-          data-device-toggle="desktop"
-          aria-pressed="true"
-        >
-          Desktop
-        </button>
-        <button
-          type="button"
-          id="device-toggle-mobile"
-          class="device-toggle"
-          data-device-toggle="mobile"
-          aria-pressed="true"
-        >
-          Mobile
-        </button>
+      <div id="device-toggles" class="device-scope hidden" role="group" aria-label="Devices to show">
+        <span class="device-scope-label">View</span>
+        <div class="device-scope-segmented" data-active="both">
+          <span class="device-scope-thumb" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="device-scope-btn"
+            data-device-scope="desktop"
+            aria-pressed="false"
+          >
+            Desktop
+          </button>
+          <button
+            type="button"
+            class="device-scope-btn"
+            data-device-scope="both"
+            aria-pressed="true"
+          >
+            Both
+          </button>
+          <button
+            type="button"
+            class="device-scope-btn"
+            data-device-scope="mobile"
+            aria-pressed="false"
+          >
+            Mobile
+          </button>
+        </div>
       </div>
 
       <div id="run-status" class="status-hint hidden" role="status" aria-live="polite"></div>
