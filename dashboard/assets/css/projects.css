@@ -115,13 +115,26 @@
 }
 
 .project-keys {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
   min-width: 0;
 }
 
 .project-key-col {
+  min-width: 0;
+}
+
+.project-key-col .project-key-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.project-key-col .project-key-value {
+  flex: 1;
+  width: auto;
   min-width: 0;
 }
 

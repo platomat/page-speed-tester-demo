@@ -2,6 +2,10 @@ const ICON_EDIT = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" s
 
 const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
+const ICON_OPEN_LINK = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+
+const ICON_SHARE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+
 let messageTimer = null;
 
 function showMessage(text, isError = false) {
@@ -43,7 +47,7 @@ async function copyKey(value) {
   }
 }
 
-function renderKeyColumn(label, keyValue) {
+function renderKeyColumn(label, keyValue, { linkUrl, openIcon = ICON_OPEN_LINK, openLabel }) {
   if (!keyValue) {
     return `
       <div class="project-key-col">
@@ -52,15 +56,21 @@ function renderKeyColumn(label, keyValue) {
       </div>`;
   }
   const title = `Click to copy: ${keyValue}`;
+  const openLink = linkUrl
+    ? `<a href="${escapeHtml(linkUrl)}" class="icon-btn btn-sm" target="_blank" rel="noopener" title="${escapeHtml(openLabel)}" aria-label="${escapeHtml(openLabel)}">${openIcon}</a>`
+    : "";
   return `
     <div class="project-key-col">
       <span class="project-key-label">${label}</span>
-      <button
-        type="button"
-        class="project-key-value"
-        data-copy-key="${escapeHtml(keyValue)}"
-        title="${escapeHtml(title)}"
-      >${escapeHtml(keyValue)}</button>
+      <div class="project-key-row">
+        <button
+          type="button"
+          class="project-key-value"
+          data-copy-key="${escapeHtml(keyValue)}"
+          title="${escapeHtml(title)}"
+        >${escapeHtml(keyValue)}</button>
+        ${openLink}
+      </div>
     </div>`;
 }
 
@@ -94,8 +104,15 @@ function renderProjectCard(project) {
         </div>
       </div>
       <div class="project-keys">
-        ${renderKeyColumn("Trigger", project.access_key)}
-        ${renderKeyColumn("Share", project.share_token)}
+        ${renderKeyColumn("Trigger", project.access_key, {
+          linkUrl: project.access_key ? publicTriggerUrl(project.id, project.access_key) : null,
+          openLabel: "Open trigger URL",
+        })}
+        ${renderKeyColumn("Share", project.share_token, {
+          linkUrl: project.share_token ? publicShareDashboardUrl(project.id, project.share_token) : null,
+          openIcon: ICON_SHARE,
+          openLabel: "Open share URL",
+        })}
       </div>
       <div class="project-cron-block">
         <p class="project-cron">
