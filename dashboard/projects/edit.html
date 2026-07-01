@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit project — Page Speed Dashboard</title>
+    <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/css/common.css" />
+    <link rel="stylesheet" href="/assets/css/projects.css" />
+  </head>
+  <body>
+    <header id="site-header" data-page="projects" data-subtitle="Edit project"></header>
+
+    <main class="projects-edit-placeholder">
+      <h2>Edit project</h2>
+      <p id="edit-project-id"></p>
+      <p>This screen will be implemented next (T-009).</p>
+      <p><a href="/projects/">← Back to projects</a></p>
+    </main>
+
+    <footer id="site-footer" class="site-footer"></footer>
+
+    <script src="/config.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/header.js"></script>
+    <script src="/assets/js/footer.js"></script>
+    <script>
+      (async () => {
+        const user = await initSiteHeader();
+        if (!user || user.role !== "admin") {
+          window.location.href = "/";
+          return;
+        }
+        const id = new URLSearchParams(window.location.search).get("id")?.trim();
+        const el = document.getElementById("edit-project-id");
+        if (el) {
+          el.textContent = id ? `Project: ${id}` : "No project id in URL (?id=…)";
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -22,7 +22,8 @@ async function initSiteHeader() {
 
   const adminNav =
     user?.role === "admin"
-      ? `<a href="/admin.html" class="icon-btn header-admin-btn${page === "admin" ? " is-active" : ""}" title="Settings" aria-label="Admin settings">${ICON_GEAR}</a>`
+      ? `<a href="/projects/" class="header-nav-link${page === "projects" ? " is-active" : ""}">Projects</a>
+      <a href="/admin.html" class="icon-btn header-admin-btn${page === "admin" ? " is-active" : ""}" title="Settings" aria-label="Admin settings">${ICON_GEAR}</a>`
       : "";
 
   const userNav = user

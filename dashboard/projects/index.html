@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Projects — Page Speed Dashboard</title>
+    <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/css/common.css" />
+    <link rel="stylesheet" href="/assets/css/projects.css" />
+  </head>
+  <body>
+    <header id="site-header" data-page="projects" data-subtitle="Projects"></header>
+
+    <main class="projects-main">
+      <p
+        id="projects-message"
+        class="projects-message hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></p>
+
+      <div class="projects-toolbar">
+        <h2>Projects</h2>
+      </div>
+
+      <p class="projects-hint">
+        Overview of all projects. Use <strong>Edit</strong> to change settings on the project page
+        (URLs, cron, keys, and options).
+      </p>
+
+      <div id="projects-grid" class="projects-grid" aria-live="polite"></div>
+    </main>
+
+    <footer id="site-footer" class="site-footer"></footer>
+
+    <script src="/config.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/cron-describe.js"></script>
+    <script src="/assets/js/header.js"></script>
+    <script src="/assets/js/footer.js"></script>
+    <script src="/assets/js/projects-index.js"></script>
+  </body>
+</html>
