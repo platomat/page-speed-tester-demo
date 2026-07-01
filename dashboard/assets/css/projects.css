@@ -213,14 +213,46 @@
   grid-column: 1 / -1;
 }
 
-.projects-edit-placeholder {
-  max-width: 36rem;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  text-align: center;
+.projects-edit-main {
+  max-width: 52rem;
 }
 
-.projects-edit-placeholder p {
+.projects-breadcrumb {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
   color: var(--muted);
-  line-height: 1.5;
+}
+
+.projects-breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.projects-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.projects-edit-section {
+  margin-bottom: 2rem;
+}
+
+.project-key-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.project-key-row .project-key-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.projects-edit-main .admin-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.projects-edit-main #url-form-panel.admin-form-panel {
+  max-width: none;
 }

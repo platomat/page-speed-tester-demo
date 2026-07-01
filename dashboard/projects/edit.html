@@ -6,37 +6,230 @@
     <title>Edit project — Page Speed Dashboard</title>
     <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/assets/css/common.css" />
+    <link rel="stylesheet" href="/assets/css/admin.css" />
     <link rel="stylesheet" href="/assets/css/projects.css" />
   </head>
   <body>
     <header id="site-header" data-page="projects" data-subtitle="Edit project"></header>
 
-    <main class="projects-edit-placeholder">
-      <h2>Edit project</h2>
-      <p id="edit-project-id"></p>
-      <p>This screen will be implemented next (T-009).</p>
-      <p><a href="/projects/">← Back to projects</a></p>
+    <main class="projects-main projects-edit-main">
+      <p class="projects-breadcrumb">
+        <a href="/projects/">Projects</a>
+        <span aria-hidden="true"> / </span>
+        <span id="edit-breadcrumb-name">…</span>
+      </p>
+
+      <p
+        id="projects-message"
+        class="projects-message hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></p>
+
+      <section class="admin-section projects-edit-section">
+        <form id="project-form" class="settings-form">
+          <fieldset class="settings-group">
+            <legend id="edit-form-legend">Project</legend>
+            <div class="settings-grid">
+              <label for="edit-project-id" class="settings-label">ID</label>
+              <input
+                type="text"
+                id="edit-project-id"
+                class="settings-control-input"
+                readonly
+                spellcheck="false"
+              />
+              <p class="settings-field-hint">Immutable project slug.</p>
+
+              <label for="edit-project-name" class="settings-label">Name</label>
+              <input
+                type="text"
+                id="edit-project-name"
+                class="settings-control-input"
+                required
+                spellcheck="false"
+              />
+              <p class="settings-field-hint">Display name in dashboard and admin.</p>
+
+              <label for="edit-access-key" class="settings-label">Trigger key</label>
+              <div class="settings-control-stack">
+                <div class="project-key-row">
+                  <input
+                    type="text"
+                    id="edit-access-key"
+                    class="settings-control-input project-key-input"
+                    maxlength="64"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="Disabled when empty"
+                  />
+                  <button
+                    type="button"
+                    class="btn-secondary btn-sm"
+                    data-action="regenerate-key"
+                    title="Generate new trigger key"
+                  >
+                    ↻
+                  </button>
+                  <a
+                    id="edit-trigger-link"
+                    class="icon-btn btn-sm hidden"
+                    target="_blank"
+                    rel="noopener"
+                    title="Open trigger URL"
+                    aria-label="Open trigger URL"
+                  ></a>
+                </div>
+              </div>
+              <p class="settings-field-hint">Public trigger URL key. Clear and save to disable.</p>
+
+              <label for="edit-share-token" class="settings-label">Share key</label>
+              <div class="settings-control-stack">
+                <div class="project-key-row">
+                  <input
+                    type="text"
+                    id="edit-share-token"
+                    class="settings-control-input project-key-input"
+                    maxlength="64"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="Disabled when empty"
+                  />
+                  <button
+                    type="button"
+                    class="btn-secondary btn-sm"
+                    data-action="regenerate-share"
+                    title="Generate new share key"
+                  >
+                    ↻
+                  </button>
+                  <a
+                    id="edit-share-link"
+                    class="icon-btn btn-sm hidden"
+                    target="_blank"
+                    rel="noopener"
+                    title="Open share URL"
+                    aria-label="Open share URL"
+                  ></a>
+                </div>
+              </div>
+              <p class="settings-field-hint">Share dashboard key. Clear and save to disable.</p>
+
+              <label for="edit-project-cron" class="settings-label">Cron</label>
+              <div class="settings-control-stack">
+                <input
+                  type="text"
+                  id="edit-project-cron"
+                  class="settings-control-input"
+                  placeholder="Empty = manual only, e.g. 0 6 * * *"
+                  title="Cron schedule (instance timezone); empty = manual only"
+                />
+                <p class="cron-preview" id="edit-cron-preview" data-cron-preview-for="edit-project-cron"></p>
+              </div>
+              <p class="settings-field-hint" id="cron-hint">
+                Leave cron <strong>empty</strong> for manual testing only. Otherwise use local time:
+                <code>minute</code> · <code>hour</code> · <code>day</code> · <code>month</code> ·
+                <code>weekday</code>.
+              </p>
+
+              <label for="edit-store-fullpage" class="settings-label">Full-page screenshots</label>
+              <div class="settings-control">
+                <input type="checkbox" id="edit-store-fullpage" name="store_fullpage_screenshots" />
+              </div>
+              <p class="settings-field-hint">Store full-page screenshots in Lighthouse JSON (FP IMG).</p>
+
+              <label for="edit-store-timing" class="settings-label">Timing screenshots</label>
+              <div class="settings-control">
+                <input type="checkbox" id="edit-store-timing" name="store_timing_screenshots" />
+              </div>
+              <p class="settings-field-hint">Store timing filmstrip screenshots in Lighthouse JSON (T IMG).</p>
+
+              <label for="edit-lh-warmup" class="settings-label">LHW</label>
+              <div class="settings-control">
+                <input type="checkbox" id="edit-lh-warmup" name="lh_warmup" />
+              </div>
+              <p class="settings-field-hint">
+                Cache warmup <code>curl</code> before each audit (adds delay and an extra request).
+              </p>
+            </div>
+          </fieldset>
+          <div class="admin-form-panel-actions">
+            <button type="submit">Save project</button>
+            <a href="/projects/" class="btn-secondary">Cancel</a>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-section">
+        <h2>URLs</h2>
+        <p class="admin-section-hint">
+          Pages to test within this project. Each enabled URL is audited on
+          <strong>desktop</strong> and <strong>mobile</strong> when a run is triggered or scheduled.
+        </p>
+        <table id="urls-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>URL</th>
+              <th>Enabled</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="admin-add-toggle">
+          <button type="button" id="toggle-url-form" class="btn-secondary">+ Add URL</button>
+        </p>
+        <div id="url-form-panel" class="admin-form-panel hidden">
+          <form id="url-form" class="admin-create-form">
+            <div class="settings-grid">
+              <label for="url-id" class="settings-label">ID</label>
+              <input
+                type="text"
+                id="url-id"
+                class="settings-control-input"
+                placeholder="Optional — auto: {project}-{name}"
+              />
+              <p class="settings-field-hint">Optional slug; generated from the name if empty.</p>
+
+              <label for="url-name" class="settings-label">Name</label>
+              <input
+                type="text"
+                id="url-name"
+                class="settings-control-input"
+                placeholder="Display name"
+                required
+              />
+              <p class="settings-field-hint">Label in the dashboard scope selector.</p>
+
+              <label for="url-url" class="settings-label">URL</label>
+              <input
+                type="url"
+                id="url-url"
+                class="settings-control-input"
+                placeholder="https://…"
+                required
+              />
+              <p class="settings-field-hint">Page URL passed to Lighthouse.</p>
+            </div>
+            <div class="admin-form-panel-actions">
+              <button type="submit">Create URL</button>
+              <button type="button" class="btn-secondary" id="cancel-url-form">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </section>
     </main>
 
     <footer id="site-footer" class="site-footer"></footer>
 
     <script src="/config.js"></script>
     <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/cron-describe.js"></script>
     <script src="/assets/js/header.js"></script>
     <script src="/assets/js/footer.js"></script>
-    <script>
-      (async () => {
-        const user = await initSiteHeader();
-        if (!user || user.role !== "admin") {
-          window.location.href = "/";
-          return;
-        }
-        const id = new URLSearchParams(window.location.search).get("id")?.trim();
-        const el = document.getElementById("edit-project-id");
-        if (el) {
-          el.textContent = id ? `Project: ${id}` : "No project id in URL (?id=…)";
-        }
-      })();
-    </script>
+    <script src="/assets/js/projects-edit.js"></script>
   </body>
 </html>
