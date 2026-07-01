@@ -2,10 +2,6 @@ let projects = [];
 let users = [];
 let adminMessageTimer = null;
 
-const ICON_SAVE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
-
-const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
-
 function collectSettingsFromForm() {
   return {
     timezone: document.getElementById("instance-timezone").value.trim(),
@@ -142,7 +138,6 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Poll upstream status until the dispatched sync workflow reports a result.
 async function pollUpstreamSyncResult({ attempts = 20, intervalMs = 5000 } = {}) {
   for (let i = 0; i < attempts; i++) {
     await delay(intervalMs);
@@ -274,76 +269,9 @@ function renderUpstreamSyncError(data) {
   return parts.join("");
 }
 
-function openFormPanel(panelId, toggleId) {
-  const panel = document.getElementById(panelId);
-  const toggle = document.getElementById(toggleId);
-  panel.classList.remove("hidden");
-  toggle.classList.add("hidden");
-  const firstInput = panel.querySelector("input:not([type='hidden'])");
-  firstInput?.focus();
-}
-
-function closeFormPanel(panelId, toggleId) {
-  document.getElementById(panelId).classList.add("hidden");
-  document.getElementById(toggleId).classList.remove("hidden");
-}
-
-function updateUrlFormProjectLabel() {
-  const select = document.getElementById("url-project-select");
-  const label = document.getElementById("url-form-project-name");
-  const option = select.selectedOptions[0];
-  label.textContent = option?.textContent?.trim() || "—";
-}
-
-async function loadProjects(selectProjectId) {
+async function loadProjects() {
   const data = await api("/api/projects");
   projects = data.projects ?? [];
-  const urlSelect = document.getElementById("url-project-select");
-  const previousId = selectProjectId ?? urlSelect.value;
-
-  urlSelect.innerHTML = projects
-    .map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
-    .join("");
-
-  if (projects.length) {
-    const ids = projects.map((p) => p.id);
-    if (selectProjectId && ids.includes(selectProjectId)) {
-      urlSelect.value = selectProjectId;
-    } else if (previousId && ids.includes(previousId)) {
-      urlSelect.value = previousId;
-    } else {
-      urlSelect.value = projects[0].id;
-    }
-  }
-
-  await loadUrls();
-  updateUrlFormProjectLabel();
-}
-
-async function loadUrls() {
-  const projectId = document.getElementById("url-project-select").value;
-  if (!projectId) {
-    document.querySelector("#urls-table tbody").innerHTML = "";
-    return;
-  }
-  const data = await api(`/api/projects/${encodeURIComponent(projectId)}/urls`);
-  const urls = data.urls ?? [];
-  const tbody = document.querySelector("#urls-table tbody");
-  tbody.innerHTML = urls
-    .map(
-      (u) => `
-    <tr data-url-id="${escapeHtml(u.id)}">
-      <td><code>${escapeHtml(u.id)}</code></td>
-      <td><input type="text" class="name-input" value="${escapeHtml(u.name)}" data-field="name" /></td>
-      <td><input type="url" class="url-input" value="${escapeHtml(u.url)}" data-field="url" /></td>
-      <td><input type="checkbox" ${u.enabled ? "checked" : ""} data-field="enabled" /></td>
-      <td class="actions-cell">
-        <button type="button" class="icon-btn btn-sm" data-action="save-url" title="Save URL" aria-label="Save URL">${ICON_SAVE}</button>
-        <button type="button" class="icon-btn btn-danger btn-sm" data-action="delete-url" title="Delete URL" aria-label="Delete URL">${ICON_DELETE}</button>
-      </td>
-    </tr>`
-    )
-    .join("");
 }
 
 async function loadUsers() {
@@ -409,43 +337,7 @@ async function init() {
     loadUpstreamStatus().catch((err) => showMessage(err.message, true));
   });
 
-  document.getElementById("toggle-url-form")?.addEventListener("click", () => {
-    const projectId = document.getElementById("url-project-select").value;
-    if (!projectId) {
-      showMessage("Select a project first", true);
-      return;
-    }
-    updateUrlFormProjectLabel();
-    openFormPanel("url-form-panel", "toggle-url-form");
-  });
-
-  document.getElementById("cancel-url-form")?.addEventListener("click", () => {
-    document.getElementById("url-form").reset();
-    closeFormPanel("url-form-panel", "toggle-url-form");
-  });
-
-  document.getElementById("url-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const projectId = document.getElementById("url-project-select").value;
-    try {
-      await api(`/api/projects/${encodeURIComponent(projectId)}/urls`, {
-        method: "POST",
-        body: JSON.stringify({
-          id: document.getElementById("url-id").value.trim() || undefined,
-          name: document.getElementById("url-name").value.trim(),
-          url: document.getElementById("url-url").value.trim(),
-        }),
-      });
-      e.target.reset();
-      closeFormPanel("url-form-panel", "toggle-url-form");
-      await loadUrls();
-      showMessage("URL added");
-    } catch (err) {
-      showMessage(err.message, true);
-    }
-  });
-
-  document.getElementById("user-form")?.addEventListener("submit", async (e) => {
+  document.getElementById("user-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
       await api("/api/users", {
@@ -465,51 +357,7 @@ async function init() {
     }
   });
 
-  document.getElementById("url-project-select")?.addEventListener("change", () => {
-    loadUrls();
-    updateUrlFormProjectLabel();
-  });
-
-  document.getElementById("urls-table")?.addEventListener("click", async (e) => {
-    const btn = e.target.closest("button[data-action]");
-    if (!btn) return;
-    const row = btn.closest("tr");
-    const urlId = row.dataset.urlId;
-    const projectId = document.getElementById("url-project-select").value;
-    if (btn.dataset.action === "delete-url") {
-      if (!confirm(`Delete URL "${urlId}"?`)) return;
-      try {
-        await api(
-          `/api/projects/${encodeURIComponent(projectId)}/urls/${encodeURIComponent(urlId)}`,
-          { method: "DELETE" }
-        );
-        await loadUrls();
-        showMessage("URL deleted");
-      } catch (err) {
-        showMessage(err.message, true);
-      }
-    }
-    if (btn.dataset.action === "save-url") {
-      try {
-        await api(
-          `/api/projects/${encodeURIComponent(projectId)}/urls/${encodeURIComponent(urlId)}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({
-              name: row.querySelector('[data-field="name"]').value.trim(),
-              url: row.querySelector('[data-field="url"]').value.trim(),
-              enabled: row.querySelector('[data-field="enabled"]').checked,
-            }),
-          }
-        );
-        showMessage("URL updated");
-      } catch (err) {
-        showMessage(err.message, true);
-      }
-    }
-  });
-
-  document.getElementById("users-table")?.addEventListener("click", async (e) => {
+  document.getElementById("users-table").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-action='save-assignments']");
     if (!btn) return;
     const row = btn.closest("tr");

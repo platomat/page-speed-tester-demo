@@ -72,39 +72,11 @@
   color: var(--muted);
 }
 
-.admin-create-grid {
-  display: grid;
-  grid-template-columns: 8rem minmax(0, 1fr);
-  gap: 0.75rem 1.25rem;
-  align-items: center;
-}
-
-.admin-create-grid label {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.admin-create-grid input,
-.admin-create-grid select {
-  font: inherit;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  width: 100%;
-  min-width: 0;
-}
-
 .admin-form-panel-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1.25rem;
-}
-
-.url-project-filter {
-  margin-bottom: 1rem;
 }
 
 .settings-form {

@@ -210,6 +210,7 @@ button {
 
 button:hover {
   background: var(--accent-hover);
+  color: var(--text);
 }
 
 button[disabled] {
@@ -293,6 +294,11 @@ a.btn-secondary:hover {
 .icon-btn.btn-sm {
   width: 1.75rem;
   height: 1.75rem;
+}
+
+.icon-btn.double-icon-btn {
+  gap: 0.5rem;
+  width: 3.5rem;
 }
 
 .icon-btn.btn-danger {

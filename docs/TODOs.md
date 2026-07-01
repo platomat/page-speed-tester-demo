@@ -13,5 +13,6 @@
 | T-009 | Erledigt | Dashboard / Projekte | CRUD-Routen und -Seiten für Projekte in der UI | **Umgesetzt:** `projects/index.html` (Grid), `projects/new.html` (Create), `projects/edit.html` (Settings + URLs). Admin-Projektblock entfernt; Header-Button **Projects**; Dashboard-Shortcut zum Bearbeiten. |
 | T-010 | Erledigt | Projekte / CI | `LH_WARMUP` pro Projekt konfigurierbar | **Umgesetzt:** Spalte `lh_warmup` auf `projects` (Migration `0006_project_lh_warmup.sql`, Default aus). Admin: **W**-Checkbox in Projekt-Tabelle/Create-Formular. Dispatch → `LH_WARMUP` in CI; Warmup mit `sleep-jitter` (`LH_WARMUP_DELAY_SEC`, Default 2s ± Jitter) vor dem `curl`. |
 | T-011 | Erledigt | Dashboard / Charts | Datumsbereich für Metriken und Reports | **Umgesetzt:** Period-Picker (Von/Bis + Presets 7/30/90 Tage), Default rollierend 7 Tage. Filter auf `/api/metrics`, `/api/reports` und Share-APIs (`from`/`to` ISO). Charts, Latest, Reports und Annotation-Marker im gewählten Zeitraum. |
+| T-012 | Offen | Admin / Users | CRUD-Routen und -Seiten für Users in der UI | Analog zu Projects: Index/Create/Edit-Seiten unter `/users/`, Admin-Userblock entfernen sobald migriert. API existiert bereits (`/api/users`, Projekt-Zuweisungen). |
 
 **Status-Legende:** `Offen` · `In Arbeit` · `Erledigt`

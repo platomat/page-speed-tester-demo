@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="assets/css/admin.css" />
   </head>
   <body>
-    <header id="site-header" data-page="admin" data-subtitle="Admin — settings, URLs, and users"></header>
+    <header id="site-header" data-page="admin" data-subtitle="Admin — settings and users"></header>
 
     <p
       id="admin-message"
@@ -20,52 +20,6 @@
     ></p>
 
     <main>
-      <section class="admin-section">
-        <h2>URLs</h2>
-        <p class="admin-section-hint">
-          Pages to test within a project. Each enabled URL is audited on <strong>desktop</strong> and
-          <strong>mobile</strong> when a run is triggered or scheduled.
-        </p>
-        <label class="inline-label url-project-filter">
-          Project
-          <select id="url-project-select"></select>
-        </label>
-        <table id="urls-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>URL</th>
-              <th>Enabled</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <p class="admin-add-toggle">
-          <button type="button" id="toggle-url-form" class="btn-secondary">+ Add URL</button>
-        </p>
-        <div id="url-form-panel" class="admin-form-panel hidden">
-          <p class="admin-form-panel-context">
-            Adding URL to <strong id="url-form-project-name">—</strong>
-          </p>
-          <form id="url-form" class="admin-create-form">
-            <div class="admin-create-grid">
-              <label for="url-id">ID</label>
-              <input type="text" id="url-id" placeholder="Optional — auto: {project}-{name}" />
-              <label for="url-name">Name</label>
-              <input type="text" id="url-name" placeholder="Display name" required />
-              <label for="url-url">URL</label>
-              <input type="url" id="url-url" placeholder="https://…" required />
-            </div>
-            <div class="admin-form-panel-actions">
-              <button type="submit">Create URL</button>
-              <button type="button" class="btn-secondary" id="cancel-url-form">Cancel</button>
-            </div>
-          </form>
-        </div>
-      </section>
-
       <section class="admin-section">
         <h2>Users</h2>
         <p class="admin-section-hint">
