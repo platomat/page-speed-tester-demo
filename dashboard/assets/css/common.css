@@ -162,6 +162,10 @@ header h1 {
   border-color: var(--accent);
 }
 
+a.header-nav-btn:hover {
+  text-decoration: none;
+}
+
 input[type="text"],
 input[type="password"],
 input[type="email"],

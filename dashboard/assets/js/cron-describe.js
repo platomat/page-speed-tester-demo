@@ -179,11 +179,7 @@ function refreshAllCronPreviews() {
   const tz = getInstanceTimezone();
   document.querySelectorAll("[data-cron-preview-for]").forEach((preview) => {
     const id = preview.getAttribute("data-cron-preview-for");
-    const input = document.getElementById(id) ?? preview.closest("tr")?.querySelector('[data-field="cron"]');
+    const input = document.getElementById(id);
     if (input) preview.textContent = describeCron(input.value, tz);
-  });
-  document.querySelectorAll("tr[data-project-id] [data-field='cron']").forEach((input) => {
-    const preview = input.closest("td")?.querySelector(".cron-preview");
-    if (preview) preview.textContent = describeCron(input.value, tz);
   });
 }

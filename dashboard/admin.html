@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="assets/css/admin.css" />
   </head>
   <body>
-    <header id="site-header" data-page="admin" data-subtitle="Admin — projects, URLs, and users"></header>
+    <header id="site-header" data-page="admin" data-subtitle="Admin — settings, URLs, and users"></header>
 
     <p
       id="admin-message"
@@ -20,115 +20,6 @@
     ></p>
 
     <main>
-      <section class="admin-section">
-        <h2>Projects</h2>
-        <p class="admin-section-hint">
-          Create and edit projects: name, cron schedule, trigger and share keys, and run options.
-        </p>
-        <table id="projects-table">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-        <p class="admin-add-toggle">
-          <button type="button" id="toggle-project-form" class="btn-secondary">+ Add project</button>
-        </p>
-        <div id="project-form-panel" class="admin-form-panel admin-form-panel-wide hidden">
-          <form id="project-form" class="admin-create-form">
-            <div class="settings-grid">
-              <label for="project-id" class="settings-label">ID</label>
-              <input
-                type="text"
-                id="project-id"
-                class="settings-control-input"
-                placeholder="Optional slug"
-              />
-              <p class="settings-field-hint">Optional slug; generated from the name if empty.</p>
-
-              <label for="project-name" class="settings-label">Name</label>
-              <input
-                type="text"
-                id="project-name"
-                class="settings-control-input"
-                placeholder="Project name"
-                required
-              />
-              <p class="settings-field-hint">Display name in dashboard and admin.</p>
-
-              <label for="project-access-key" class="settings-label">Trigger key</label>
-              <input
-                type="text"
-                id="project-access-key"
-                class="settings-control-input"
-                placeholder="Optional — leave empty to disable"
-                maxlength="64"
-              />
-              <p class="settings-field-hint">Public trigger URL key. Leave empty to disable.</p>
-
-              <label for="project-cron" class="settings-label">Cron</label>
-              <div class="settings-control-stack">
-                <input
-                  type="text"
-                  id="project-cron"
-                  class="settings-control-input"
-                  placeholder="Empty = manual only, e.g. 0 6 * * *"
-                  value=""
-                  title="Cron schedule (instance timezone); leave empty for manual runs only"
-                />
-                <p
-                  class="cron-preview"
-                  id="project-cron-preview"
-                  data-cron-preview-for="project-cron"
-                ></p>
-              </div>
-              <p class="settings-field-hint" id="cron-hint">
-                Leave cron <strong>empty</strong> for manual testing only. Otherwise use local time:
-                <code>minute</code> · <code>hour</code> · <code>day</code> · <code>month</code> ·
-                <code>weekday</code> — e.g. <code>0 6 * * *</code> daily at 06:00,
-                <code>0 */6 * * *</code> every 6 hours,
-                <code>*/15 * * * *</code> every 15 minutes. Use <code>*</code> for “any”.
-              </p>
-
-              <label for="project-store-fullpage-screenshots" class="settings-label">Full-page screenshots</label>
-              <div class="settings-control">
-                <input
-                  type="checkbox"
-                  id="project-store-fullpage-screenshots"
-                  name="store_fullpage_screenshots"
-                />
-              </div>
-              <p class="settings-field-hint">Store full-page screenshots in Lighthouse JSON (FP IMG).</p>
-
-              <label for="project-store-timing-screenshots" class="settings-label">Timing screenshots</label>
-              <div class="settings-control">
-                <input
-                  type="checkbox"
-                  id="project-store-timing-screenshots"
-                  name="store_timing_screenshots"
-                />
-              </div>
-              <p class="settings-field-hint">Store timing filmstrip screenshots in Lighthouse JSON (T IMG).</p>
-
-              <label for="project-lh-warmup" class="settings-label">LHW</label>
-              <div class="settings-control">
-                <input
-                  type="checkbox"
-                  id="project-lh-warmup"
-                  name="lh_warmup"
-                  title="Cache warmup curl before each audit (LH_WARMUP)"
-                />
-              </div>
-              <p class="settings-field-hint">
-                Cache warmup <code>curl</code> before each audit (adds delay and an extra request).
-              </p>
-            </div>
-            <div class="admin-form-panel-actions">
-              <button type="submit">Create project</button>
-              <button type="button" class="btn-secondary" id="cancel-project-form">Cancel</button>
-            </div>
-          </form>
-        </div>
-      </section>
-
       <section class="admin-section">
         <h2>URLs</h2>
         <p class="admin-section-hint">

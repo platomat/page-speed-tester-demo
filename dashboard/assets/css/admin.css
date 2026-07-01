@@ -34,11 +34,6 @@
   line-height: 1.45;
 }
 
-#projects-table .cron-preview {
-  margin: 0.35rem 0 0;
-  max-width: 16rem;
-}
-
 .admin-add-toggle {
   margin: 1rem 0 0;
 }
@@ -332,11 +327,6 @@ input[type="checkbox"] {
   color: var(--text);
 }
 
-.inline-form input#project-access-key {
-  min-width: 20rem;
-  font-family: ui-monospace, monospace;
-}
-
 .inline-form {
   display: flex;
   flex-wrap: wrap;
@@ -354,8 +344,6 @@ input[type="checkbox"] {
   margin-bottom: 1rem;
 }
 
-.cron-input,
-.access-key-input,
 .name-input,
 .url-input {
   font: inherit;
@@ -371,74 +359,9 @@ input[type="checkbox"] {
   min-width: 14rem;
 }
 
-.project-name-input {
-  min-width: 10rem;
-}
-
-.key-field-hint {
-  margin: 0.25rem 0 0;
-  font-size: 0.7rem;
-  color: var(--muted);
-  line-height: 1.35;
-}
-
 .admin-field-hint {
   grid-column: 2;
   margin-top: -0.35rem;
-}
-
-.project-screenshots-cell {
-  white-space: nowrap;
-}
-
-.project-screenshot-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-right: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.project-screenshot-toggle input {
-  margin: 0;
-}
-
-.access-key-cell {
-  min-width: 16rem;
-}
-
-.key-block + .key-block {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.key-label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.access-key-row {
-  display: flex;
-  gap: 0.35rem;
-  align-items: center;
-  margin-bottom: 0.35rem;
-}
-
-.access-key-input {
-  flex: 1;
-  min-width: 8rem;
-  font-family: ui-monospace, monospace;
 }
 
 .public-link {

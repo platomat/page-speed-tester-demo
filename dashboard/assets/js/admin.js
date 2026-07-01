@@ -6,41 +6,6 @@ const ICON_SAVE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" s
 
 const ICON_DELETE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
-const ICON_OPEN_LINK = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
-
-const ICON_SHARE = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
-
-function renderProjectKeyBlock({ label, field, keyValue, buildUrl, projectId, regenerateAction, openIcon = ICON_OPEN_LINK }) {
-  const hasKey = Boolean(keyValue);
-  const openLink = hasKey
-    ? `<a href="${escapeHtml(buildUrl(projectId, keyValue))}" class="icon-btn btn-sm" target="_blank" rel="noopener" title="Open ${label} URL" aria-label="Open ${label} URL">${openIcon}</a>`
-    : "";
-  return `
-    <div class="key-block">
-      <span class="key-label">${label}</span>
-      <div class="access-key-row">
-        <input type="text" class="access-key-input" maxlength="64" value="${escapeHtml(keyValue ?? "")}" data-field="${field}" spellcheck="false" autocomplete="off" placeholder="Disabled when empty" />
-        <button type="button" class="btn-secondary btn-sm" data-action="${regenerateAction}" title="Generate new ${label.toLowerCase()} key">↻</button>
-        ${openLink}
-      </div>
-      <p class="key-field-hint">Clear and save to disable.</p>
-    </div>`;
-}
-
-function updateCronHint() {
-  const tz = getInstanceTimezone();
-  const hint = document.getElementById("cron-hint");
-  if (!hint) return;
-  hint.innerHTML = `
-    Leave cron <strong>empty</strong> for manual testing only.
-    <strong>Cron (${escapeHtml(tz)}):</strong>
-    <code>minute</code> · <code>hour</code> · <code>day</code> · <code>month</code> · <code>weekday</code>
-    — e.g. <code>0 6 * * *</code> daily at 06:00,
-    <code>0 */6 * * *</code> every 6 hours,
-    <code>*/15 * * * *</code> every 15 minutes.
-    Use <code>*</code> for “any”.`;
-}
-
 function collectSettingsFromForm() {
   return {
     timezone: document.getElementById("instance-timezone").value.trim(),
@@ -207,7 +172,6 @@ async function syncUpstreamFromAdmin() {
 
     if (data.started) {
       keepDisabled = true;
-      // Workflow dispatched — poll until the GitHub Action reports a result.
       const result = await pollUpstreamSyncResult();
       if (result?.status === "success") {
         showMessage(result.message || "Upstream merged via GitHub Actions");
@@ -334,7 +298,6 @@ function updateUrlFormProjectLabel() {
 async function loadProjects(selectProjectId) {
   const data = await api("/api/projects");
   projects = data.projects ?? [];
-  const table = document.querySelector("#projects-table");
   const urlSelect = document.getElementById("url-project-select");
   const previousId = selectProjectId ?? urlSelect.value;
 
@@ -352,76 +315,6 @@ async function loadProjects(selectProjectId) {
       urlSelect.value = projects[0].id;
     }
   }
-
-  table.querySelector("thead").innerHTML = `
-    <tr>
-      <th>ID</th>
-      <th>Name</th>
-      <th>Trigger &amp; Share</th>
-      <th>Cron</th>
-      <th>Settings</th>
-      <th>Actions</th>
-    </tr>`;
-
-  const tbody = table.querySelector("tbody");
-  tbody.innerHTML = projects
-    .map(
-      (p) => `
-    <tr data-project-id="${escapeHtml(p.id)}">
-      <td><code>${escapeHtml(p.id)}</code></td>
-      <td>
-        <input type="text" class="name-input project-name-input" value="${escapeHtml(p.name)}" data-field="name" required />
-      </td>
-      <td class="access-key-cell">
-        ${renderProjectKeyBlock({
-          label: "Trigger",
-          field: "access_key",
-          keyValue: p.access_key,
-          projectId: p.id,
-          buildUrl: (id, key) => publicTriggerUrl(id, key),
-          regenerateAction: "regenerate-key",
-        })}
-        ${renderProjectKeyBlock({
-          label: "Share",
-          field: "share_token",
-          keyValue: p.share_token,
-          projectId: p.id,
-          buildUrl: (id, key) => publicShareDashboardUrl(id, key),
-          regenerateAction: "regenerate-share",
-          openIcon: ICON_SHARE,
-        })}
-      </td>
-      <td>
-        <input type="text" class="cron-input" value="${escapeHtml(p.cron_expression ?? "")}" data-field="cron" placeholder="Manual only" title="Cron schedule (instance timezone); empty = manual only" />
-        <p class="cron-preview"></p>
-        <p class="key-field-hint">Clear for manual runs only.</p>
-      </td>
-      <td class="project-screenshots-cell">
-        <label class="project-screenshot-toggle" title="Store full-page screenshots in Lighthouse JSON">
-          <input type="checkbox" ${p.store_fullpage_screenshots ? "checked" : ""} data-field="store_fullpage_screenshots" />
-          FP
-        </label>
-        <label class="project-screenshot-toggle" title="Store timing screenshots in Lighthouse JSON">
-          <input type="checkbox" ${p.store_timing_screenshots ? "checked" : ""} data-field="store_timing_screenshots" />
-          T
-        </label>
-        <label class="project-screenshot-toggle" title="Cache warmup curl before each audit (LH_WARMUP)">
-          <input type="checkbox" ${p.lh_warmup ? "checked" : ""} data-field="lh_warmup" />
-          LHW
-        </label>
-      </td>
-      <td class="actions-cell">
-        <button type="button" class="icon-btn btn-sm" data-action="save-project" title="Save project" aria-label="Save project">${ICON_SAVE}</button>
-        <button type="button" class="icon-btn btn-danger btn-sm" data-action="delete-project" title="Delete project" aria-label="Delete project">${ICON_DELETE}</button>
-      </td>
-    </tr>`
-    )
-    .join("");
-
-  document.querySelectorAll("#projects-table [data-field='cron']").forEach((input) => {
-    const preview = input.closest("td")?.querySelector(".cron-preview");
-    if (preview) bindCronPreview(input, preview);
-  });
 
   await loadUrls();
   updateUrlFormProjectLabel();
@@ -491,11 +384,6 @@ async function init() {
   }
 
   await loadSettingsForm();
-  updateCronHint();
-  bindCronPreview(
-    document.getElementById("project-cron"),
-    document.getElementById("project-cron-preview")
-  );
 
   document.getElementById("settings-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -506,7 +394,6 @@ async function init() {
         body: JSON.stringify(payload),
       });
       instanceTimezone = data.timezone ?? payload.timezone;
-      updateCronHint();
       refreshAllCronPreviews();
       showMessage("Settings saved");
       applyUpstreamSyncVisibility(data.upstream_sync_enabled !== false);
@@ -522,17 +409,7 @@ async function init() {
     loadUpstreamStatus().catch((err) => showMessage(err.message, true));
   });
 
-  document.getElementById("toggle-project-form").addEventListener("click", () => {
-    openFormPanel("project-form-panel", "toggle-project-form");
-  });
-
-  document.getElementById("cancel-project-form").addEventListener("click", () => {
-    document.getElementById("project-form").reset();
-    document.getElementById("project-cron-preview").textContent = describeCron("", getInstanceTimezone());
-    closeFormPanel("project-form-panel", "toggle-project-form");
-  });
-
-  document.getElementById("toggle-url-form").addEventListener("click", () => {
+  document.getElementById("toggle-url-form")?.addEventListener("click", () => {
     const projectId = document.getElementById("url-project-select").value;
     if (!projectId) {
       showMessage("Select a project first", true);
@@ -542,37 +419,12 @@ async function init() {
     openFormPanel("url-form-panel", "toggle-url-form");
   });
 
-  document.getElementById("cancel-url-form").addEventListener("click", () => {
+  document.getElementById("cancel-url-form")?.addEventListener("click", () => {
     document.getElementById("url-form").reset();
     closeFormPanel("url-form-panel", "toggle-url-form");
   });
 
-  document.getElementById("project-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      const created = await api("/api/projects", {
-        method: "POST",
-        body: JSON.stringify({
-          id: document.getElementById("project-id").value.trim() || undefined,
-          name: document.getElementById("project-name").value.trim(),
-          access_key: document.getElementById("project-access-key").value.trim() || undefined,
-          cron_expression: document.getElementById("project-cron").value.trim(),
-          store_fullpage_screenshots: document.getElementById("project-store-fullpage-screenshots").checked,
-          store_timing_screenshots: document.getElementById("project-store-timing-screenshots").checked,
-          lh_warmup: document.getElementById("project-lh-warmup").checked,
-        }),
-      });
-      e.target.reset();
-      closeFormPanel("project-form-panel", "toggle-project-form");
-      await loadProjects(created.id);
-      await loadUsers();
-      showMessage("Project created");
-    } catch (err) {
-      showMessage(err.message, true);
-    }
-  });
-
-  document.getElementById("url-form").addEventListener("submit", async (e) => {
+  document.getElementById("url-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const projectId = document.getElementById("url-project-select").value;
     try {
@@ -593,7 +445,7 @@ async function init() {
     }
   });
 
-  document.getElementById("user-form").addEventListener("submit", async (e) => {
+  document.getElementById("user-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
       await api("/api/users", {
@@ -613,101 +465,12 @@ async function init() {
     }
   });
 
-  document.getElementById("url-project-select").addEventListener("change", () => {
+  document.getElementById("url-project-select")?.addEventListener("change", () => {
     loadUrls();
     updateUrlFormProjectLabel();
   });
 
-  document.getElementById("projects-table").addEventListener("click", async (e) => {
-    const btn = e.target.closest("button[data-action]");
-    if (!btn) return;
-    const row = btn.closest("tr");
-    const projectId = row.dataset.projectId;
-    if (btn.dataset.action === "delete-project") {
-      if (!confirm(`Delete project "${projectId}"?`)) return;
-      try {
-        await api(`/api/projects/${encodeURIComponent(projectId)}`, { method: "DELETE" });
-        await loadProjects();
-        await loadUsers();
-        showMessage("Project deleted");
-      } catch (err) {
-        showMessage(err.message, true);
-      }
-    }
-    if (btn.dataset.action === "save-project") {
-      const name = row.querySelector('[data-field="name"]').value.trim();
-      const cron = row.querySelector('[data-field="cron"]').value.trim();
-      const storeFullpageScreenshots = row.querySelector('[data-field="store_fullpage_screenshots"]').checked;
-      const storeTimingScreenshots = row.querySelector('[data-field="store_timing_screenshots"]').checked;
-      const lhWarmup = row.querySelector('[data-field="lh_warmup"]').checked;
-      const accessKey = row.querySelector('[data-field="access_key"]').value.trim();
-      const shareToken = row.querySelector('[data-field="share_token"]').value.trim();
-      if (!name) {
-        showMessage("Project name is required", true);
-        return;
-      }
-      try {
-        await api(`/api/projects/${encodeURIComponent(projectId)}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            name,
-            cron_expression: cron,
-            store_fullpage_screenshots: storeFullpageScreenshots,
-            store_timing_screenshots: storeTimingScreenshots,
-            lh_warmup: lhWarmup,
-            access_key: accessKey,
-            share_token: shareToken,
-          }),
-        });
-        await loadProjects();
-        showMessage("Project updated");
-      } catch (err) {
-        showMessage(err.message, true);
-      }
-    }
-    if (btn.dataset.action === "regenerate-key") {
-      const hasKey = Boolean(row.querySelector('[data-field="access_key"]')?.value.trim());
-      if (
-        hasKey &&
-        !confirm(
-          `Generate a new access key for "${projectId}"? Old trigger URLs will stop working.`
-        )
-      ) {
-        return;
-      }
-      try {
-        await api(`/api/projects/${encodeURIComponent(projectId)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ access_key: "generate" }),
-        });
-        await loadProjects();
-        showMessage("Access key regenerated");
-      } catch (err) {
-        showMessage(err.message, true);
-      }
-    }
-    if (btn.dataset.action === "regenerate-share") {
-      const hasKey = Boolean(row.querySelector('[data-field="share_token"]')?.value.trim());
-      if (
-        hasKey &&
-        !confirm(`Generate a new share key for "${projectId}"? Old share URLs will stop working.`)
-      ) {
-        return;
-      }
-      try {
-        await api(`/api/projects/${encodeURIComponent(projectId)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ share_token: "generate" }),
-        });
-        await loadProjects();
-        showMessage("Share key regenerated");
-      } catch (err) {
-        showMessage(err.message, true);
-      }
-    }
-  });
-
-  document.getElementById("urls-table").addEventListener("click", async (e) => {
+  document.getElementById("urls-table")?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
     const row = btn.closest("tr");
@@ -746,7 +509,7 @@ async function init() {
     }
   });
 
-  document.getElementById("users-table").addEventListener("click", async (e) => {
+  document.getElementById("users-table")?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-action='save-assignments']");
     if (!btn) return;
     const row = btn.closest("tr");

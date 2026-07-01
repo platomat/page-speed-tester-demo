@@ -36,6 +36,11 @@
   margin: 0;
 }
 
+.device-toolbar-edit {
+  gap: 0.5rem;
+  width: 3.5rem;
+}
+
 .device-toolbar-edit.hidden {
   display: none;
 }
