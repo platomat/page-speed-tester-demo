@@ -224,8 +224,12 @@
   grid-column: 1 / -1;
 }
 
-.projects-edit-main {
-  max-width: 52rem;
+.projects-add-toggle {
+  margin: 1.25rem 0 0;
+}
+
+.projects-main .settings-form {
+  max-width: none;
 }
 
 .projects-breadcrumb {
@@ -259,11 +263,11 @@
   min-width: 0;
 }
 
-.projects-edit-main .admin-section h2 {
+.projects-main .admin-section h2 {
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
 }
 
-.projects-edit-main #url-form-panel.admin-form-panel {
+.projects-main #url-form-panel.admin-form-panel {
   max-width: none;
 }
