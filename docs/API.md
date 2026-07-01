@@ -42,8 +42,10 @@ CORS erlaubt Dashboard-Origins (`api.<host>`-Konvention, `*.pages.dev`, optional
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, GitHub owner/repo, upstream owner/repo/branch, cookie domain, `upstream_sync_enabled` |
+| `GET` | `/api/settings` | Session | Timezone, Cron-Schalter, Report-Retention (Tage), GitHub owner/repo, upstream owner/repo/branch, cookie domain, `upstream_sync_enabled` |
 | `PATCH` | `/api/settings` | Admin | Instance settings aktualisieren |
+
+`report_retention_days` (integer, Default `0`): Lighthouse-JSON in R2 löschen, wenn `run_at` älter als X Tage. `0` = aus. D1-`runs` bleiben; `report_bytes` wird auf `NULL` gesetzt. Läuft beim Worker-Cron (unabhängig von Projekt-Cron).
 
 Upstream-Felder (optional, Defaults `platomat` / `page-speed-tester-demo` / `main`): Quelle für **Upstream sync** im Admin.
 

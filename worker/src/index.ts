@@ -40,6 +40,7 @@ import {
   listAnnotations,
   updateAnnotation,
 } from "./annotations";
+import { purgeExpiredReports } from "./report-retention";
 import { runScheduledProjects } from "./scheduler";
 import {
   getRunStatus,
@@ -319,6 +320,11 @@ export default {
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runScheduledProjects(env));
+    ctx.waitUntil(
+      (async () => {
+        await runScheduledProjects(env);
+        await purgeExpiredReports(env);
+      })()
+    );
   },
 };

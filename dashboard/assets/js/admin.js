@@ -45,6 +45,10 @@ function collectSettingsFromForm() {
   return {
     timezone: document.getElementById("instance-timezone").value.trim(),
     cron_enabled: document.getElementById("instance-cron-enabled").checked,
+    report_retention_days: Number.parseInt(
+      document.getElementById("instance-report-retention-days").value,
+      10
+    ),
     gh_owner: document.getElementById("instance-gh-owner").value.trim(),
     gh_repo: document.getElementById("instance-gh-repo").value.trim(),
     upstream_owner: document.getElementById("instance-upstream-owner").value.trim(),
@@ -260,6 +264,9 @@ async function loadSettingsForm() {
   instanceTimezone = data.timezone ?? "UTC";
   document.getElementById("instance-timezone").value = instanceTimezone;
   document.getElementById("instance-cron-enabled").checked = data.cron_enabled !== false;
+  document.getElementById("instance-report-retention-days").value = String(
+    data.report_retention_days ?? 0
+  );
   document.getElementById("instance-gh-owner").value = data.gh_owner ?? "";
   document.getElementById("instance-gh-repo").value = data.gh_repo ?? "";
   document.getElementById("instance-upstream-owner").value = data.upstream_owner ?? "platomat";

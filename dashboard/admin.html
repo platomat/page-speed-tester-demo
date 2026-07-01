@@ -237,6 +237,23 @@
                 due and triggers GitHub Actions. Manual <strong>Run test</strong> still works when
                 disabled.
               </p>
+
+              <label for="instance-report-retention-days" class="settings-label">Report retention</label>
+              <input
+                type="number"
+                id="instance-report-retention-days"
+                class="settings-control-input"
+                name="report_retention_days"
+                min="0"
+                max="3650"
+                step="1"
+                value="0"
+              />
+              <p class="settings-field-hint">
+                Delete Lighthouse JSON files in R2 when older than this many days (by
+                <code>run_at</code>). D1 run metrics are kept; file size in the table is cleared.
+                <code>0</code> disables automatic cleanup (runs on the Worker cron).
+              </p>
             </div>
           </fieldset>
 

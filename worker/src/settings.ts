@@ -1,6 +1,11 @@
 import type { Env } from "./env";
 import { requireAdmin, requireUser } from "./auth";
 import { json } from "./http";
+import {
+  MAX_RETENTION_DAYS,
+  REPORT_RETENTION_DAYS_KEY,
+  getReportRetentionDays,
+} from "./report-retention";
 
 const TIMEZONE_KEY = "timezone";
 const CRON_ENABLED_KEY = "cron_enabled";
@@ -118,6 +123,7 @@ export async function getSettings(request: Request, env: Env): Promise<Response>
 async function buildSettingsPayload(env: Env) {
   const timezone = await getTimezone(env);
   const cron_enabled = await getCronEnabled(env);
+  const report_retention_days = await getReportRetentionDays(env);
   const gh_owner = await getSettingValue(env, GH_OWNER_KEY);
   const gh_repo = await getSettingValue(env, GH_REPO_KEY);
   const cookie_domain = await getSettingValue(env, COOKIE_DOMAIN_KEY);
@@ -125,6 +131,7 @@ async function buildSettingsPayload(env: Env) {
   return {
     timezone,
     cron_enabled,
+    report_retention_days,
     gh_owner,
     gh_repo,
     cookie_domain,
@@ -164,6 +171,28 @@ export async function updateSettings(request: Request, env: Env): Promise<Respon
 
   if (body.cron_enabled !== undefined) {
     updates[CRON_ENABLED_KEY] = body.cron_enabled ? "1" : "0";
+  }
+
+  if (body.report_retention_days !== undefined) {
+    const str = String(body.report_retention_days ?? "").trim();
+    if (!/^\d+$/.test(str)) {
+      return json(
+        request,
+        env,
+        { error: `report_retention_days must be an integer from 0 to ${MAX_RETENTION_DAYS}` },
+        400
+      );
+    }
+    const n = Number.parseInt(str, 10);
+    if (n > MAX_RETENTION_DAYS) {
+      return json(
+        request,
+        env,
+        { error: `report_retention_days must be an integer from 0 to ${MAX_RETENTION_DAYS}` },
+        400
+      );
+    }
+    updates[REPORT_RETENTION_DAYS_KEY] = str;
   }
 
   if (body.gh_owner !== undefined || body.gh_repo !== undefined) {
