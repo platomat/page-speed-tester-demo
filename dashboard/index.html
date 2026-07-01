@@ -23,6 +23,28 @@
         <button id="run-btn" type="button">Run test</button>
       </section>
 
+      <div id="device-toggles" class="device-toggles hidden" role="group" aria-label="Devices to show">
+        <span class="device-toggles-label">Devices</span>
+        <button
+          type="button"
+          id="device-toggle-desktop"
+          class="device-toggle"
+          data-device-toggle="desktop"
+          aria-pressed="true"
+        >
+          Desktop
+        </button>
+        <button
+          type="button"
+          id="device-toggle-mobile"
+          class="device-toggle"
+          data-device-toggle="mobile"
+          aria-pressed="true"
+        >
+          Mobile
+        </button>
+      </div>
+
       <div id="run-status" class="status-hint hidden" role="status" aria-live="polite"></div>
       <div id="project-scope-panel" class="status-hint hidden" role="status" aria-live="polite"></div>
 

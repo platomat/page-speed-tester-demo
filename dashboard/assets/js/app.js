@@ -322,6 +322,8 @@ const METRICS = [
 
 let currentUser = null;
 let projects = [];
+/** @type {{ desktop: boolean; mobile: boolean }} */
+const deviceFilters = { desktop: true, mobile: true };
 /** @type {Map<string, Array<{id: string, name: string, url: string}>>} */
 const projectUrls = new Map();
 
@@ -607,15 +609,16 @@ function renderLatest(desktopRuns, mobileRuns) {
   }
   container.innerHTML = `
     <div class="latest-row">
-      <div class="latest-group">
+      <div class="latest-group" data-device="desktop">
         ${latestHeading("Desktop", desktopRuns)}
         ${renderMetricCards(desktopRuns, "Desktop")}
       </div>
-      <div class="latest-group">
+      <div class="latest-group" data-device="mobile">
         ${latestHeading("Mobile", mobileRuns)}
         ${renderMetricCards(mobileRuns, "Mobile")}
       </div>
     </div>`;
+  applyDeviceVisibility();
 }
 
 function runTimeMs(run) {
@@ -922,6 +925,55 @@ function setUrlMetricsPanelsVisible(visible) {
   document.querySelectorAll(".url-metrics-panel").forEach((el) => {
     el.classList.toggle("hidden", !visible);
   });
+  updateDeviceTogglesVisibility();
+}
+
+function updateDeviceTogglesVisibility() {
+  const bar = document.getElementById("device-toggles");
+  if (!bar) return;
+  const { urlId } = getScope();
+  const panelsVisible = !document.getElementById("latest")?.classList.contains("hidden");
+  bar.classList.toggle("hidden", !urlId || !panelsVisible);
+}
+
+function applyDeviceVisibility() {
+  const main = document.querySelector("main");
+  if (main) {
+    main.dataset.showDesktop = deviceFilters.desktop ? "true" : "false";
+    main.dataset.showMobile = deviceFilters.mobile ? "true" : "false";
+  }
+  for (const device of ["desktop", "mobile"]) {
+    const btn = document.getElementById(`device-toggle-${device}`);
+    if (!btn) continue;
+    const on = deviceFilters[device];
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+  const grid = document.getElementById("reports-grid");
+  if (grid) {
+    grid.classList.toggle("reports-grid--hide-desktop", !deviceFilters.desktop);
+    grid.classList.toggle("reports-grid--hide-mobile", !deviceFilters.mobile);
+  }
+  resizeAllCharts();
+}
+
+function toggleDeviceFilter(device) {
+  if (device !== "desktop" && device !== "mobile") return;
+  const other = device === "desktop" ? "mobile" : "desktop";
+  const next = !deviceFilters[device];
+  if (!next && !deviceFilters[other]) return;
+  deviceFilters[device] = next;
+  applyDeviceVisibility();
+}
+
+function initDeviceToggles() {
+  const bar = document.getElementById("device-toggles");
+  if (!bar) return;
+  bar.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-device-toggle]");
+    if (!btn) return;
+    toggleDeviceFilter(btn.dataset.deviceToggle);
+  });
+  applyDeviceVisibility();
 }
 
 function showUrlScopeView(desktopRuns, mobileRuns) {
@@ -934,6 +986,8 @@ function showUrlScopeView(desktopRuns, mobileRuns) {
   document.querySelector(".charts")?.classList.toggle("hidden", !hasData);
   document.querySelector(".annotations-section")?.classList.toggle("hidden", !hasData);
   document.querySelector(".reports-section")?.classList.toggle("hidden", !hasData);
+  updateDeviceTogglesVisibility();
+  applyDeviceVisibility();
 }
 
 function githubRunLinkHtml(status) {
@@ -1038,6 +1092,7 @@ async function loadData() {
       renderAnnotationsList(currentAnnotations);
       renderReportsTable(reportsData.reports ?? [], projectId, urlId);
     }
+    applyDeviceVisibility();
     return;
   }
 
@@ -1075,6 +1130,7 @@ async function loadData() {
     renderAnnotationsList(currentAnnotations);
     renderReportsTable(reportsData.reports ?? [], projectId, urlId);
   }
+  applyDeviceVisibility();
 }
 
 function stopRunStatusPolling() {
@@ -1248,6 +1304,7 @@ async function initShareDashboard(ctx) {
   }
 
   renderScopeSelect(undefined, { focus: true });
+  initDeviceToggles();
   showUrlScopeView([], []);
   document.getElementById("scope-select").addEventListener("change", () => {
     void loadData();
@@ -1271,6 +1328,7 @@ async function init() {
 
   await loadAllProjectUrls();
   renderScopeSelect(undefined, { focus: true });
+  initDeviceToggles();
 
   document.getElementById("scope-select").addEventListener("change", () => {
     void onScopeChange();
