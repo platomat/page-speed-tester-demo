@@ -23,35 +23,46 @@
         <button id="run-btn" type="button">Run test</button>
       </section>
 
-      <div id="device-toggles" class="device-scope hidden" role="group" aria-label="Devices to show">
-        <span class="device-scope-label">View</span>
-        <div class="device-scope-segmented" data-active="both">
-          <span class="device-scope-thumb" aria-hidden="true"></span>
-          <button
-            type="button"
-            class="device-scope-btn"
-            data-device-scope="desktop"
-            aria-pressed="false"
-          >
-            Desktop
-          </button>
-          <button
-            type="button"
-            class="device-scope-btn"
-            data-device-scope="both"
-            aria-pressed="true"
-          >
-            Both
-          </button>
-          <button
-            type="button"
-            class="device-scope-btn"
-            data-device-scope="mobile"
-            aria-pressed="false"
-          >
-            Mobile
-          </button>
+      <div id="device-toolbar" class="device-toolbar hidden">
+        <div id="device-toggles" class="device-scope" role="group" aria-label="Devices to show">
+          <span class="device-scope-label">View</span>
+          <div class="device-scope-segmented" data-active="both">
+            <span class="device-scope-thumb" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="device-scope-btn"
+              data-device-scope="desktop"
+              aria-pressed="false"
+            >
+              Desktop
+            </button>
+            <button
+              type="button"
+              class="device-scope-btn"
+              data-device-scope="both"
+              aria-pressed="true"
+            >
+              Both
+            </button>
+            <button
+              type="button"
+              class="device-scope-btn"
+              data-device-scope="mobile"
+              aria-pressed="false"
+            >
+              Mobile
+            </button>
+          </div>
         </div>
+        <a
+          id="project-edit-btn"
+          class="icon-btn device-toolbar-edit hidden"
+          href="/projects/edit.html"
+          title="Edit project"
+          aria-label="Edit project"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </a>
       </div>
 
       <div id="run-status" class="status-hint hidden" role="status" aria-live="polite"></div>

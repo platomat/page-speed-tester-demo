@@ -19,6 +19,27 @@
   max-width: 32rem;
 }
 
+.device-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+}
+
+.device-toolbar.hidden {
+  display: none;
+}
+
+.device-toolbar .device-scope {
+  margin: 0;
+}
+
+.device-toolbar-edit.hidden {
+  display: none;
+}
+
 .device-scope {
   display: flex;
   flex-wrap: wrap;

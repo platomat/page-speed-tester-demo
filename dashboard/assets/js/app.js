@@ -928,12 +928,27 @@ function setUrlMetricsPanelsVisible(visible) {
   updateDeviceTogglesVisibility();
 }
 
+function updateProjectEditLink() {
+  const btn = document.getElementById("project-edit-btn");
+  if (!btn) return;
+  const { projectId } = getScope();
+  const isAdmin = currentUser?.role === "admin";
+  btn.classList.toggle("hidden", !isAdmin || !projectId);
+  if (projectId) {
+    btn.href = `/projects/edit.html?id=${encodeURIComponent(projectId)}`;
+  }
+}
+
 function updateDeviceTogglesVisibility() {
+  const toolbar = document.getElementById("device-toolbar");
   const bar = document.getElementById("device-toggles");
-  if (!bar) return;
+  const target = toolbar ?? bar;
+  if (!target) return;
   const { urlId } = getScope();
   const panelsVisible = !document.getElementById("latest")?.classList.contains("hidden");
-  bar.classList.toggle("hidden", !urlId || !panelsVisible);
+  const visible = Boolean(urlId && panelsVisible);
+  target.classList.toggle("hidden", !visible);
+  if (toolbar) updateProjectEditLink();
 }
 
 function applyDeviceVisibility() {

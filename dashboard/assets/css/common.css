@@ -142,6 +142,26 @@ header h1 {
   white-space: nowrap;
 }
 
+.header-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.header-nav-btn svg {
+  flex-shrink: 0;
+}
+
+.header-nav-btn.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 input[type="text"],
 input[type="password"],
 input[type="email"],
@@ -198,7 +218,16 @@ button[disabled] {
   color: var(--text);
 }
 
-.btn-secondary:hover {
+a.btn-secondary {
+  font-family: inherit;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent-button);
+  cursor: pointer;
+}
+
+.btn-secondary:hover,
+a.btn-secondary:hover {
   background: var(--border);
 }
 
