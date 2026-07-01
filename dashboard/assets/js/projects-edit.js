@@ -122,7 +122,7 @@ async function loadUrls() {
     .map(
       (u) => `
     <tr data-url-id="${escapeHtml(u.id)}">
-      <td><code>${escapeHtml(u.id)}</code></td>
+      <td class="entity-id"><code>${escapeHtml(u.id)}</code></td>
       <td><input type="text" class="name-input" value="${escapeHtml(u.name)}" data-field="name" /></td>
       <td><input type="url" class="url-input" value="${escapeHtml(u.url)}" data-field="url" /></td>
       <td><input type="checkbox" ${u.enabled ? "checked" : ""} data-field="enabled" /></td>
@@ -166,6 +166,10 @@ async function init() {
     showMessage(err.message, true);
     return;
   }
+
+  document.getElementById("cancel-project-edit")?.addEventListener("click", () => {
+    window.location.href = "/projects/";
+  });
 
   document.getElementById("project-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();

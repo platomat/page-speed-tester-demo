@@ -219,11 +219,21 @@ button[disabled] {
 }
 
 a.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   border: 1px solid var(--accent-button);
+  background: var(--surface);
+  color: var(--text);
   cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .btn-secondary:hover,

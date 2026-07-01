@@ -174,6 +174,11 @@ input[type="checkbox"] {
   color: var(--text);
 }
 
+.settings-control-input:read-only {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .settings-control-input,
 .settings-grid select {
   font: inherit;

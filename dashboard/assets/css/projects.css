@@ -90,8 +90,8 @@
   white-space: nowrap;
 }
 
-.project-card-id {
-  margin: 0.25rem 0 0;
+.project-card-id,
+.entity-id {
   font-size: 0.75rem;
   color: var(--muted);
   overflow: hidden;
@@ -99,8 +99,13 @@
   white-space: nowrap;
 }
 
-.project-card-id code {
+.project-card-id code,
+.entity-id code {
   font-size: 0.85em;
+}
+
+.project-card-id {
+  margin: 0.25rem 0 0;
 }
 
 .project-card-actions {
