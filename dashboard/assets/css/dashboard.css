@@ -25,7 +25,51 @@
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
+}
+
+.metrics-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem 1.25rem;
   margin: 0 0 1rem;
+}
+
+.metrics-toolbar.hidden {
+  display: none;
+}
+
+.date-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.65rem;
+}
+
+.date-range-label {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.date-range input[type="date"] {
+  font: inherit;
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.date-range-sep {
+  color: var(--muted);
+}
+
+.date-range-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .device-toolbar.hidden {

@@ -324,6 +324,11 @@ let currentUser = null;
 let projects = [];
 /** @type {"desktop" | "both" | "mobile"} */
 let deviceScope = "both";
+const DEFAULT_RANGE_DAYS = 7;
+/** @type {Date | null} */
+let dateRangeFrom = null;
+/** @type {Date | null} */
+let dateRangeTo = null;
 /** @type {Map<string, Array<{id: string, name: string, url: string}>>} */
 const projectUrls = new Map();
 
@@ -551,7 +556,7 @@ function upsertChart(id, labels, data, metricKey, runTimes = []) {
     charts[id].data.datasets = buildChartDatasets(data, metricKey);
     charts[id].options = chartOptions(metricKey);
     charts[id].$runTimes = runTimes;
-    charts[id].$annotations = currentAnnotations;
+    charts[id].$annotations = annotationsInDateRange(currentAnnotations);
     charts[id].update();
     resizeAllCharts();
     return;
@@ -565,7 +570,7 @@ function upsertChart(id, labels, data, metricKey, runTimes = []) {
     options: chartOptions(metricKey),
   });
   charts[id].$runTimes = runTimes;
-  charts[id].$annotations = currentAnnotations;
+  charts[id].$annotations = annotationsInDateRange(currentAnnotations);
   attachAnnotationTooltip(charts[id]);
   charts[id].update();
 }
@@ -657,7 +662,7 @@ function normalizeAnnotations(list) {
 
 function refreshChartAnnotations() {
   for (const chart of Object.values(charts)) {
-    chart.$annotations = currentAnnotations;
+    chart.$annotations = annotationsInDateRange(currentAnnotations);
     chart.update();
   }
 }
@@ -743,7 +748,7 @@ async function reloadAnnotations(projectId) {
   } catch {
     currentAnnotations = [];
   }
-  renderAnnotationsList(currentAnnotations);
+  renderAnnotationsList(annotationsInDateRange(currentAnnotations));
   refreshChartAnnotations();
 }
 
@@ -921,6 +926,82 @@ function renderScopeSelect(selectedValue, { focus = false } = {}) {
   if (focus && select.options.length) select.focus();
 }
 
+function formatDateInputValue(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function setDateRange(from, to) {
+  dateRangeFrom = from;
+  dateRangeTo = to;
+  syncDateRangeInputs();
+}
+
+function setRollingDateRange(days) {
+  const to = new Date();
+  const from = new Date(to.getTime() - days * 86_400_000);
+  setDateRange(from, to);
+}
+
+function syncDateRangeInputs() {
+  const fromEl = document.getElementById("date-range-from");
+  const toEl = document.getElementById("date-range-to");
+  if (!fromEl || !toEl || !dateRangeFrom || !dateRangeTo) return;
+  fromEl.value = formatDateInputValue(dateRangeFrom);
+  toEl.value = formatDateInputValue(dateRangeTo);
+}
+
+function readDateRangeFromInputs() {
+  const fromEl = document.getElementById("date-range-from");
+  const toEl = document.getElementById("date-range-to");
+  if (!fromEl?.value || !toEl?.value) return false;
+  const from = new Date(`${fromEl.value}T00:00:00`);
+  const to = new Date(`${toEl.value}T23:59:59.999`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+    return false;
+  }
+  dateRangeFrom = from;
+  dateRangeTo = to;
+  return true;
+}
+
+function dateRangeQueryString() {
+  if (!dateRangeFrom || !dateRangeTo) return "";
+  return `&from=${encodeURIComponent(dateRangeFrom.toISOString())}&to=${encodeURIComponent(dateRangeTo.toISOString())}`;
+}
+
+function annotationsInDateRange(annotations) {
+  if (!dateRangeFrom || !dateRangeTo) return annotations;
+  const fromMs = dateRangeFrom.getTime();
+  const toMs = dateRangeTo.getTime();
+  return annotations.filter((annotation) => {
+    const time = Date.parse(annotation.annotated_at ?? annotation.time);
+    return !Number.isNaN(time) && time >= fromMs && time <= toMs;
+  });
+}
+
+function initDateRange() {
+  if (!document.getElementById("date-range-from")) return;
+  setRollingDateRange(DEFAULT_RANGE_DAYS);
+
+  document.getElementById("date-range-from")?.addEventListener("change", () => {
+    if (readDateRangeFromInputs()) void loadData();
+  });
+  document.getElementById("date-range-to")?.addEventListener("change", () => {
+    if (readDateRangeFromInputs()) void loadData();
+  });
+  document.querySelector(".date-range-presets")?.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-range-days]");
+    if (!btn) return;
+    const days = Number.parseInt(btn.dataset.rangeDays, 10);
+    if (!Number.isFinite(days) || days < 1) return;
+    setRollingDateRange(days);
+    void loadData();
+  });
+}
+
 function setUrlMetricsPanelsVisible(visible) {
   document.querySelectorAll(".url-metrics-panel").forEach((el) => {
     el.classList.toggle("hidden", !visible);
@@ -940,9 +1021,10 @@ function updateProjectEditLink() {
 }
 
 function updateDeviceTogglesVisibility() {
+  const metricsToolbar = document.getElementById("metrics-toolbar");
   const toolbar = document.getElementById("device-toolbar");
   const bar = document.getElementById("device-toggles");
-  const target = toolbar ?? bar;
+  const target = metricsToolbar ?? toolbar ?? bar;
   if (!target) return;
   const { urlId } = getScope();
   const panelsVisible = !document.getElementById("latest")?.classList.contains("hidden");
@@ -1090,11 +1172,12 @@ async function loadData() {
     }
 
     showUrlMetricsView();
+    const rangeQs = dateRangeQueryString();
     const base = `/api/public/share/${encodeURIComponent(projectId)}`;
     const [desktopData, mobileData, reportsData, annotationsData] = await Promise.all([
-      apiPublic(`${base}/metrics?url_id=${encodeURIComponent(urlId)}&strategy=desktop`),
-      apiPublic(`${base}/metrics?url_id=${encodeURIComponent(urlId)}&strategy=mobile`),
-      apiPublic(`${base}/reports?url_id=${encodeURIComponent(urlId)}`),
+      apiPublic(`${base}/metrics?url_id=${encodeURIComponent(urlId)}&strategy=desktop${rangeQs}`),
+      apiPublic(`${base}/metrics?url_id=${encodeURIComponent(urlId)}&strategy=mobile${rangeQs}`),
+      apiPublic(`${base}/reports?url_id=${encodeURIComponent(urlId)}${rangeQs}`),
       apiPublic(`${base}/annotations`).catch(() => ({ annotations: [] })),
     ]);
 
@@ -1106,7 +1189,7 @@ async function loadData() {
     showUrlScopeView(desktopRuns, mobileRuns);
     if (desktopRuns.length > 0 || mobileRuns.length > 0) {
       renderCharts(desktopRuns, mobileRuns);
-      renderAnnotationsList(currentAnnotations);
+      renderAnnotationsList(annotationsInDateRange(currentAnnotations));
       renderReportsTable(reportsData.reports ?? [], projectId, urlId);
     }
     applyDeviceVisibility();
@@ -1128,11 +1211,12 @@ async function loadData() {
   }
 
   showUrlMetricsView();
+  const rangeQs = dateRangeQueryString();
   const base = `/api/metrics?project_id=${encodeURIComponent(projectId)}&url_id=${encodeURIComponent(urlId)}`;
   const [desktopData, mobileData, reportsData, annotationsData] = await Promise.all([
-    api(`${base}&strategy=desktop`),
-    api(`${base}&strategy=mobile`),
-    api(`/api/reports?project_id=${encodeURIComponent(projectId)}&url_id=${encodeURIComponent(urlId)}`),
+    api(`${base}&strategy=desktop${rangeQs}`),
+    api(`${base}&strategy=mobile${rangeQs}`),
+    api(`/api/reports?project_id=${encodeURIComponent(projectId)}&url_id=${encodeURIComponent(urlId)}${rangeQs}`),
     api(`/api/projects/${encodeURIComponent(projectId)}/annotations`).catch(() => ({ annotations: [] })),
   ]);
 
@@ -1144,7 +1228,7 @@ async function loadData() {
   showUrlScopeView(desktopRuns, mobileRuns);
   if (desktopRuns.length > 0 || mobileRuns.length > 0) {
     renderCharts(desktopRuns, mobileRuns);
-    renderAnnotationsList(currentAnnotations);
+    renderAnnotationsList(annotationsInDateRange(currentAnnotations));
     renderReportsTable(reportsData.reports ?? [], projectId, urlId);
   }
   applyDeviceVisibility();
@@ -1322,6 +1406,7 @@ async function initShareDashboard(ctx) {
 
   renderScopeSelect(undefined, { focus: true });
   initDeviceToggles();
+  initDateRange();
   showUrlScopeView([], []);
   document.getElementById("scope-select").addEventListener("change", () => {
     void loadData();
@@ -1346,6 +1431,7 @@ async function init() {
   await loadAllProjectUrls();
   renderScopeSelect(undefined, { focus: true });
   initDeviceToggles();
+  initDateRange();
 
   document.getElementById("scope-select").addEventListener("change", () => {
     void onScopeChange();
@@ -1431,14 +1517,14 @@ function initAnnotationForm() {
     const editBtn = event.target.closest("[data-annotation-edit]");
     if (editBtn && !editBtn.matches("form")) {
       editingAnnotationId = Number(editBtn.dataset.annotationEdit);
-      renderAnnotationsList(currentAnnotations);
+      renderAnnotationsList(annotationsInDateRange(currentAnnotations));
       return;
     }
 
     const cancelBtn = event.target.closest("[data-annotation-edit-cancel]");
     if (cancelBtn) {
       editingAnnotationId = null;
-      renderAnnotationsList(currentAnnotations);
+      renderAnnotationsList(annotationsInDateRange(currentAnnotations));
       return;
     }
 

@@ -7,6 +7,7 @@ import {
   resolveReportObject,
 } from "./report-storage";
 import { listShareAnnotations } from "./annotations";
+import { appendRunAtRange, parseRunDateRange } from "./date-range";
 
 async function resolveShareProject(
   env: Env,
@@ -108,15 +109,22 @@ export async function publicShareMetrics(
     return json(request, env, { error: "URL not found" }, 404);
   }
 
-  const { results } = await env.DB.prepare(
-    `SELECT r.id, r.project_id, r.url_id, u.name AS url_name, u.url, r.strategy, r.run_at,
+  const rangeParsed = parseRunDateRange(url);
+  if (!rangeParsed.ok) {
+    return json(request, env, { error: rangeParsed.error }, rangeParsed.status);
+  }
+
+  const bindings: unknown[] = [projectId, urlId, strategy];
+  let sql = `SELECT r.id, r.project_id, r.url_id, u.name AS url_name, u.url, r.strategy, r.run_at,
             r.performance, r.lcp_ms, r.cls, r.fcp_ms, r.tbt_ms, r.speed_index, r.report_key
      FROM runs r
      JOIN urls u ON u.id = r.url_id
-     WHERE r.project_id = ? AND r.url_id = ? AND r.strategy = ?
-     ORDER BY r.run_at ASC`
-  )
-    .bind(projectId, urlId, strategy)
+     WHERE r.project_id = ? AND r.url_id = ? AND r.strategy = ?`;
+  sql = appendRunAtRange(sql, rangeParsed, bindings, "r.run_at");
+  sql += ` ORDER BY r.run_at ASC`;
+
+  const { results } = await env.DB.prepare(sql)
+    .bind(...bindings)
     .all();
 
   return json(request, env, { project_id: projectId, url_id: urlId, strategy, runs: results ?? [] });
@@ -169,13 +177,20 @@ export async function publicShareReports(
     return json(request, env, { error: "URL not found" }, 404);
   }
 
-  const { results } = await env.DB.prepare(
-    `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source,
+  const rangeParsed = parseRunDateRange(url);
+  if (!rangeParsed.ok) {
+    return json(request, env, { error: rangeParsed.error }, rangeParsed.status);
+  }
+
+  const bindings: unknown[] = [projectId, urlId];
+  let sql = `SELECT id, project_id, url_id, strategy, run_at, report_key, performance, trigger_source,
             report_bytes, has_fullpage_screenshots, has_timing_screenshots, lh_warmup
-     FROM runs WHERE project_id = ? AND url_id = ?
-     ORDER BY run_at DESC LIMIT 50`
-  )
-    .bind(projectId, urlId)
+     FROM runs WHERE project_id = ? AND url_id = ?`;
+  sql = appendRunAtRange(sql, rangeParsed, bindings);
+  sql += ` ORDER BY run_at DESC LIMIT 100`;
+
+  const { results } = await env.DB.prepare(sql)
+    .bind(...bindings)
     .all();
 
   return json(request, env, { project_id: projectId, url_id: urlId, reports: results ?? [] });
