@@ -583,6 +583,15 @@ Der Workflow muss im **Default-Branch deines Ziel-Repos** liegen, damit der Disp
 
 Bei **Merge-Konflikten** zeigt der Button eine Fehlermeldung — dann auf GitHub oder per git lösen.
 
+##### Fehler: `refusing to merge unrelated histories`
+
+**Ursache:** Repos aus **Use this template** haben **keine gemeinsame Git-Historie** mit dem Upstream (ein frischer Initial-Commit statt Fork-Kette). Der Sync-Workflow ab Template-Stand **2026-06** erkennt das automatisch:
+
+1. **Gleicher Dateibaum** → `git reset --hard` auf Upstream (verknüpft die Historie, einmalig ggf. `--force-with-lease` Push)
+2. **Abweichende Dateien** → Merge mit `--allow-unrelated-histories` (Upstream gewinnt bei „both added“-Konflikten)
+
+**Erster Sync nach dem Fix:** Der aktualisierte Workflow muss einmal im Kunden-Repo landen. Scheitert der Sync noch mit „unrelated histories“, die Datei `.github/workflows/upstream-sync.yml` **einmal** vom Upstream kopieren (GitHub Web → Datei ersetzen) und **Sync from upstream** erneut klicken — danach laufen alle weiteren Syncs über den Admin-Button.
+
 API-Antwort `GET /api/settings` enthält `upstream_sync_enabled: false`, wenn `PST_INSTANCE_ROLE=upstream` (vom Build in `wrangler.toml` `[vars]`).
 
 ---

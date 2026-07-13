@@ -99,19 +99,55 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-          if git merge --no-edit -F /tmp/merge-msg.txt "$UPSTREAM_REF"; then
+          MERGE_OK=false
+          FORCE_PUSH=false
+
+          if ! git merge-base HEAD "$UPSTREAM_REF" >/dev/null 2>&1; then
+            echo "No common ancestor (typical for GitHub template copies)."
+            if git diff --quiet HEAD "$UPSTREAM_REF"; then
+              echo "Identical file tree — linking histories via reset to upstream."
+              git reset --hard "$UPSTREAM_REF"
+              MERGE_OK=true
+              FORCE_PUSH=true
+              {
+                echo 'sync_message<<EOF'
+                echo "Linked template copy to ${UPSTREAM_OWNER}/${UPSTREAM_REPO}@${UPSTREAM_BRANCH}"
+                echo 'EOF'
+              } >> "$GITHUB_OUTPUT"
+            elif git merge --no-edit --allow-unrelated-histories -X theirs -F /tmp/merge-msg.txt "$UPSTREAM_REF"; then
+              echo "Merged unrelated histories."
+              MERGE_OK=true
+            fi
+          elif git merge --no-edit -F /tmp/merge-msg.txt "$UPSTREAM_REF"; then
+            MERGE_OK=true
+          fi
+
+          if [ "$MERGE_OK" = true ]; then
             SHA="$(git rev-parse HEAD)"
             echo "Merge succeeded ($SHA). Pushing to origin/${TARGET_BRANCH}…"
-            git push origin "HEAD:${TARGET_BRANCH}"
+            if [ "$FORCE_PUSH" = true ]; then
+              git push --force-with-lease origin "HEAD:${TARGET_BRANCH}"
+            else
+              git push origin "HEAD:${TARGET_BRANCH}"
+            fi
             echo "sync_status=success" >> "$GITHUB_OUTPUT"
             echo "sync_sha=$SHA" >> "$GITHUB_OUTPUT"
-          else
+          elif [ -f .git/MERGE_HEAD ]; then
             echo "Merge conflict — aborting."
             git merge --abort || true
             echo "sync_status=conflict" >> "$GITHUB_OUTPUT"
             {
               echo 'sync_message<<EOF'
               echo "Merge conflict — resolve manually with git"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+            exit 1
+          else
+            echo "Merge failed — see log above."
+            echo "sync_status=error" >> "$GITHUB_OUTPUT"
+            {
+              echo 'sync_message<<EOF'
+              echo "Upstream merge failed (see Action log)"
               echo 'EOF'
             } >> "$GITHUB_OUTPUT"
             exit 1
