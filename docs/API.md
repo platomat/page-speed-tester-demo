@@ -236,6 +236,15 @@ curl "https://api.example.com/api/public/share/my-project/reports\
 ?share_key=TOKEN&url_id=homepage&last_days=30"
 ```
 
+Einzelner Bericht (Lighthouse-JSON) — `report_key` aus der Berichtsliste (`reports[].report_key`):
+
+```bash
+curl "https://api.example.com/api/public/share/report\
+?share_key=TOKEN&report_key=reports/my-project/2026-06-23T143052Z-desktop-homepage.json"
+```
+
+Antwort: `{ lighthouse, run, timezone }` — `lighthouse` ist das vollständige Lighthouse-JSON aus R2.
+
 Share-Key leer oder ungültig → `403 Invalid project or share key` (kein Leak, ob das Projekt existiert).
 
 ---
