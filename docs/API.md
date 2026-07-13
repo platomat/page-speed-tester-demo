@@ -115,11 +115,24 @@ Dispatch/CI: `store_fullpage_screenshots` → `STORE_FULLPAGE_SCREENSHOTS`, `sto
 
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/metrics?project_id=&url_id=&strategy=` | Session + Zugriff | Metriken-Zeitreihe (`strategy`: `desktop` \| `mobile`) |
+| `GET` | `/api/metrics?project_id=&url_id=&strategy=` | Session + Zugriff | Metriken-Zeitreihe |
 | `GET` | `/api/reports?project_id=&url_id=` | Session + Zugriff | Berichtsliste |
 | `GET` | `/api/reports?key=` | Session + Zugriff | Lighthouse-JSON zu `report_key`. Session auch per Query `session_token` (GET, z. B. neuer Tab für Raw JSON). |
 | `GET` | `/api/reports/:project_id/:filename` | Session + Zugriff | Lighthouse-JSON (Pfad aus R2-Key) |
 | `DELETE` | `/api/reports` | Session + Zugriff | Ausgewählte Berichte löschen (Body mit Keys) |
+
+**Query-Parameter (Metriken & Berichtsliste):**
+
+| Parameter | Pflicht | Beschreibung |
+| --------- | ------- | ------------ |
+| `project_id` | ✅ | Projekt-ID |
+| `url_id` | ✅ | URL-ID innerhalb des Projekts |
+| `strategy` | Metriken | `desktop` (Default), `mobile`, oder `both` — bei `both` zwei getrennte `runs`-Arrays (siehe Share-Beispiel) |
+| `from` | optional | ISO-8601 — untere Grenze für `run_at` (inklusive) |
+| `to` | optional | ISO-8601 — obere Grenze für `run_at` (inklusive) |
+| `last_days` | optional | Rollierendes Fenster (Integer 1–366), z. B. `7` = letzte 7 Tage. **Nicht** zusammen mit `from`/`to` |
+
+Ohne Datumsfilter werden alle Runs zurückgegeben (Metriken aufsteigend, Berichte absteigend, max. 100).
 
 ---
 
@@ -151,13 +164,79 @@ Rate-Limit: max. 1 manueller Lauf alle 5 Minuten pro Projekt (KV).
 
 ## Share (Gast, schreibgeschützt)
 
+Read-only API für externe Clients (Monitoring, Skripte, eingebettete Views). **Gleicher Share-Key** wie das Share-Dashboard — kein separates API-Token, kein Login.
+
 | Methode | Pfad | Auth | Beschreibung |
 | ------- | ---- | ---- | ------------ |
-| `GET` | `/api/public/share/:project_id?share_key=` | Share key | Projekt-Metadaten für `/share` |
-| `GET` | `/api/public/share/:project_id/metrics?share_key=` | Share key | Metriken (Query wie `/api/metrics`) |
+| `GET` | `/api/public/share/:project_id?share_key=` | Share key | Projekt-Metadaten + aktive URLs |
+| `GET` | `/api/public/share/:project_id/metrics?share_key=` | Share key | Metriken-Zeitreihe |
 | `GET` | `/api/public/share/:project_id/reports?share_key=` | Share key | Berichtsliste |
-| `GET` | `/api/public/share/:project_id/annotations?share_key=` | Share key | Annotations (schreibgeschützt, ohne `created_by`) |
+| `GET` | `/api/public/share/:project_id/annotations?share_key=` | Share key | Annotations (ohne `created_by`) |
 | `GET` | `/api/public/share/report?share_key=&report_key=` | Share key | Lighthouse-JSON |
+
+**Auth-Parameter** (Query, alle gleichwertig):
+
+| Parameter | Verwendung |
+| --------- | ---------- |
+| `share_key` | Bevorzugt für API-Clients |
+| `key` | Wie im Share-Link `/share/?project=…&key=…` |
+| `share` | Alternative (z. B. Report-Detail-Links) |
+
+**Query-Parameter (Metriken & Berichte):**
+
+| Parameter | Pflicht | Beschreibung |
+| --------- | ------- | ------------ |
+| `url_id` | ✅ | URL-ID innerhalb des Projekts |
+| `strategy` | Metriken | `desktop` (Default), `mobile`, oder `both` |
+| `from` / `to` | optional | ISO-8601 Datumsfilter auf `run_at` |
+| `last_days` | optional | Rollierendes Fenster, z. B. `7` — entspricht UI-Presets; nicht kombinierbar mit `from`/`to` |
+| `report_key` | Report-JSON | R2-Key des Berichts (z. B. `reports/my-project/…`) |
+
+**Antwort `strategy=both` (Metriken):**
+
+```json
+{
+  "project_id": "my-project",
+  "url_id": "homepage",
+  "strategy": "both",
+  "desktop": { "runs": [ … ] },
+  "mobile": { "runs": [ … ] }
+}
+```
+
+Bei `strategy=desktop` oder `strategy=mobile` bleibt die Antwort `{ project_id, url_id, strategy, runs: [ … ] }`.
+
+### Beispiele
+
+Projekt + URLs:
+
+```bash
+curl "https://api.example.com/api/public/share/my-project?share_key=TOKEN"
+```
+
+Metriken (Desktop, letzte 7 Tage):
+
+```bash
+curl "https://api.example.com/api/public/share/my-project/metrics\
+?share_key=TOKEN&url_id=homepage&strategy=desktop&last_days=7"
+```
+
+Metriken (beide Devices, expliziter Zeitraum):
+
+```bash
+curl "https://api.example.com/api/public/share/my-project/metrics\
+?share_key=TOKEN&url_id=homepage&strategy=both\
+&from=2026-07-01T00:00:00.000Z&to=2026-07-13T23:59:59.999Z"
+```
+
+Berichtsliste:
+
+```bash
+curl "https://api.example.com/api/public/share/my-project/reports\
+?share_key=TOKEN&url_id=homepage&last_days=30"
+```
+
+Share-Key leer oder ungültig → `403 Invalid project or share key` (kein Leak, ob das Projekt existiert).
 
 ---
 

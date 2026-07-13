@@ -8,6 +8,7 @@ import {
 } from "./report-storage";
 import { listShareAnnotations } from "./annotations";
 import { appendRunAtRange, parseRunDateRange } from "./date-range";
+import { fetchMetricsPayload, isMetricStrategy } from "./metrics-runs";
 
 async function resolveShareProject(
   env: Env,
@@ -94,6 +95,14 @@ export async function publicShareMetrics(
   if (!urlId) {
     return json(request, env, { error: "url_id required" }, 400);
   }
+  if (!isMetricStrategy(strategy)) {
+    return json(
+      request,
+      env,
+      { error: "strategy must be desktop, mobile, or both" },
+      400
+    );
+  }
 
   const project = await resolveShareProject(env, projectId, token);
   if (!project) {
@@ -114,20 +123,14 @@ export async function publicShareMetrics(
     return json(request, env, { error: rangeParsed.error }, rangeParsed.status);
   }
 
-  const bindings: unknown[] = [projectId, urlId, strategy];
-  let sql = `SELECT r.id, r.project_id, r.url_id, u.name AS url_name, u.url, r.strategy, r.run_at,
-            r.performance, r.lcp_ms, r.cls, r.fcp_ms, r.tbt_ms, r.speed_index, r.report_key
-     FROM runs r
-     JOIN urls u ON u.id = r.url_id
-     WHERE r.project_id = ? AND r.url_id = ? AND r.strategy = ?`;
-  sql = appendRunAtRange(sql, rangeParsed, bindings, "r.run_at");
-  sql += ` ORDER BY r.run_at ASC`;
-
-  const { results } = await env.DB.prepare(sql)
-    .bind(...bindings)
-    .all();
-
-  return json(request, env, { project_id: projectId, url_id: urlId, strategy, runs: results ?? [] });
+  const payload = await fetchMetricsPayload(
+    env,
+    projectId,
+    urlId,
+    strategy,
+    rangeParsed
+  );
+  return json(request, env, payload);
 }
 
 export async function publicShareAnnotations(

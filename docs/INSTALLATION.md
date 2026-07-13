@@ -135,6 +135,9 @@ In Schritt 8 trägt der Kunde `**meine-firma`** und `**page-speed-tester`** ein 
 | **Clone + Push**                | Repo klonen, als neues Repo unter Kunden-Org pushen                                                                                                          |
 | **ZIP / Import**                | Archiv entpacken, in neues Repo committen                                                                                                                    |
 
+> **Hinweis:** Ist der Button **Use this template** auf GitHub nicht sichtbar, kann das Repo direkt über diese URL angelegt werden:
+> `https://github.com/new?template_name=page-speed-tester-demo&template_owner=platomat`
+
 
 **Nicht ausreichend:** leeres Repo, nur Workflow-Datei ohne `package-lock.json`, oder ein Repo ohne Verbindung zu den Cloudflare-Ressourcen des Kunden.
 
