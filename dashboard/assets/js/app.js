@@ -325,6 +325,11 @@ let projects = [];
 /** @type {"desktop" | "both" | "mobile"} */
 let deviceScope = "both";
 const DEFAULT_RANGE_DAYS = 7;
+/** Rolling preset length, or null when from/to were set manually. */
+/** @type {number | null} */
+let lastDaysPreset = DEFAULT_RANGE_DAYS;
+/** Skip history writes while applying URL → UI. */
+let applyingUrlFilters = false;
 /** @type {Date | null} */
 let dateRangeFrom = null;
 /** @type {Date | null} */
@@ -355,6 +360,167 @@ function parseShareContext() {
   const shareKey = params.get("key")?.trim();
   if (!projectId || !shareKey) return null;
   return { projectId, shareKey };
+}
+
+function parseDateParam(value) {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const d = new Date(`${value}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function endOfLocalDay(date) {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+}
+
+/** Read dashboard filters from the current URL (share keeps project/key separately). */
+function parseDashboardUrlFilters() {
+  const params = new URLSearchParams(window.location.search);
+  const project = params.get("project")?.trim() || null;
+  const url = params.get("url")?.trim() || null;
+  const deviceRaw = params.get("device")?.trim();
+  const device =
+    deviceRaw === "desktop" || deviceRaw === "mobile" || deviceRaw === "both"
+      ? deviceRaw
+      : null;
+
+  const fromRaw = params.get("from")?.trim();
+  const toRaw = params.get("to")?.trim();
+  const lastDaysRaw = params.get("last_days")?.trim();
+
+  /** @type {Date | null} */
+  let from = null;
+  /** @type {Date | null} */
+  let to = null;
+  /** @type {number | null} */
+  let lastDays = null;
+
+  if (fromRaw || toRaw) {
+    from = parseDateParam(fromRaw);
+    to = parseDateParam(toRaw);
+    if (from && !to) to = endOfLocalDay(from);
+    if (to && !from) from = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+    if (from && to) {
+      from = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+      to = endOfLocalDay(to);
+      if (from > to) {
+        from = null;
+        to = null;
+      }
+    } else {
+      from = null;
+      to = null;
+    }
+  } else if (lastDaysRaw) {
+    const days = Number.parseInt(lastDaysRaw, 10);
+    if (Number.isFinite(days) && days >= 1 && days <= 366) lastDays = days;
+  }
+
+  return { project, url, device, lastDays, from, to };
+}
+
+function scopeValueFromUrlFilters(filters) {
+  if (shareContext) {
+    if (filters.url) return scopeValue(shareContext.projectId, filters.url);
+    return null;
+  }
+  if (!filters.project) return null;
+  return filters.url
+    ? scopeValue(filters.project, filters.url)
+    : scopeValue(filters.project);
+}
+
+function applyDashboardUrlFilters(filters) {
+  applyingUrlFilters = true;
+  try {
+    setDeviceScope(filters.device ?? "both", { syncUrl: false });
+
+    if (filters.from && filters.to) {
+      lastDaysPreset = null;
+      setDateRange(filters.from, filters.to);
+    } else if (filters.lastDays) {
+      setRollingDateRange(filters.lastDays);
+    } else {
+      setRollingDateRange(DEFAULT_RANGE_DAYS);
+    }
+
+    const selected = scopeValueFromUrlFilters(filters);
+    if (selected) renderScopeSelect(selected);
+  } finally {
+    applyingUrlFilters = false;
+  }
+}
+
+function syncDashboardUrl({ replace = false } = {}) {
+  if (applyingUrlFilters) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const { projectId, urlId } = getScope();
+
+  if (shareContext) {
+    params.set("project", shareContext.projectId);
+    params.set("key", shareContext.shareKey);
+  } else if (projectId) {
+    params.set("project", projectId);
+  } else {
+    params.delete("project");
+  }
+
+  if (urlId) params.set("url", urlId);
+  else params.delete("url");
+
+  if (deviceScope === "both") params.delete("device");
+  else params.set("device", deviceScope);
+
+  if (lastDaysPreset != null) {
+    if (lastDaysPreset === DEFAULT_RANGE_DAYS) params.delete("last_days");
+    else params.set("last_days", String(lastDaysPreset));
+    params.delete("from");
+    params.delete("to");
+  } else if (dateRangeFrom && dateRangeTo) {
+    params.delete("last_days");
+    params.set("from", formatDateInputValue(dateRangeFrom));
+    params.set("to", formatDateInputValue(dateRangeTo));
+  }
+
+  // Drop legacy/unused auth aliases from share links when rewriting.
+  if (shareContext) {
+    params.delete("share_key");
+    params.delete("share");
+  }
+
+  const qs = params.toString();
+  const next = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next === current) return;
+
+  if (replace) history.replaceState(null, "", next);
+  else history.pushState(null, "", next);
+}
+
+function initDashboardUrlSync() {
+  window.addEventListener("popstate", () => {
+    const filters = parseDashboardUrlFilters();
+    applyDashboardUrlFilters(filters);
+    if (shareContext) {
+      const { urlId } = getScope();
+      if (urlId) void loadData();
+      else showUrlScopeView([], []);
+      return;
+    }
+    void onScopeChange();
+  });
 }
 
 function scopeValue(projectId, urlId = null) {
@@ -940,6 +1106,7 @@ function setDateRange(from, to) {
 }
 
 function setRollingDateRange(days) {
+  lastDaysPreset = days;
   const to = new Date();
   const from = new Date(to.getTime() - days * 86_400_000);
   setDateRange(from, to);
@@ -962,6 +1129,7 @@ function readDateRangeFromInputs() {
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
     return false;
   }
+  lastDaysPreset = null;
   dateRangeFrom = from;
   dateRangeTo = to;
   return true;
@@ -984,13 +1152,16 @@ function annotationsInDateRange(annotations) {
 
 function initDateRange() {
   if (!document.getElementById("date-range-from")) return;
-  setRollingDateRange(DEFAULT_RANGE_DAYS);
 
   document.getElementById("date-range-from")?.addEventListener("change", () => {
-    if (readDateRangeFromInputs()) void loadData();
+    if (!readDateRangeFromInputs()) return;
+    syncDashboardUrl();
+    void loadData();
   });
   document.getElementById("date-range-to")?.addEventListener("change", () => {
-    if (readDateRangeFromInputs()) void loadData();
+    if (!readDateRangeFromInputs()) return;
+    syncDashboardUrl();
+    void loadData();
   });
   document.querySelector(".date-range-presets")?.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-range-days]");
@@ -998,6 +1169,7 @@ function initDateRange() {
     const days = Number.parseInt(btn.dataset.rangeDays, 10);
     if (!Number.isFinite(days) || days < 1) return;
     setRollingDateRange(days);
+    syncDashboardUrl();
     void loadData();
   });
 }
@@ -1058,10 +1230,11 @@ function applyDeviceVisibility() {
   resizeAllCharts();
 }
 
-function setDeviceScope(scope) {
+function setDeviceScope(scope, { syncUrl = true } = {}) {
   if (scope !== "desktop" && scope !== "both" && scope !== "mobile") return;
   deviceScope = scope;
   applyDeviceVisibility();
+  if (syncUrl) syncDashboardUrl();
 }
 
 function initDeviceToggles() {
@@ -1407,8 +1580,12 @@ async function initShareDashboard(ctx) {
   renderScopeSelect(undefined, { focus: true });
   initDeviceToggles();
   initDateRange();
+  initDashboardUrlSync();
+  applyDashboardUrlFilters(parseDashboardUrlFilters());
+  syncDashboardUrl({ replace: true });
   showUrlScopeView([], []);
   document.getElementById("scope-select").addEventListener("change", () => {
+    syncDashboardUrl();
     void loadData();
   });
 
@@ -1432,8 +1609,12 @@ async function init() {
   renderScopeSelect(undefined, { focus: true });
   initDeviceToggles();
   initDateRange();
+  initDashboardUrlSync();
+  applyDashboardUrlFilters(parseDashboardUrlFilters());
+  syncDashboardUrl({ replace: true });
 
   document.getElementById("scope-select").addEventListener("change", () => {
+    syncDashboardUrl();
     void onScopeChange();
   });
 
