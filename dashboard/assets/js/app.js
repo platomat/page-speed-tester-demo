@@ -248,6 +248,27 @@ function ensureAnnotationTooltip() {
   return el;
 }
 
+/** Keep fixed tooltip inside the viewport (flip/clamp near edges). */
+function positionAnnotationTooltip(tip, clientX, clientY) {
+  const pad = 8;
+  const offset = 12;
+  tip.style.left = "0px";
+  tip.style.top = "0px";
+  const { width, height } = tip.getBoundingClientRect();
+  let left = clientX + offset;
+  let top = clientY + offset;
+  if (left + width > window.innerWidth - pad) {
+    left = clientX - width - offset;
+  }
+  if (left < pad) left = pad;
+  if (top + height > window.innerHeight - pad) {
+    top = clientY - height - offset;
+  }
+  if (top < pad) top = pad;
+  tip.style.left = `${Math.round(left)}px`;
+  tip.style.top = `${Math.round(top)}px`;
+}
+
 function annotationTooltipHtml(anns) {
   return anns
     .map((ann) => {
@@ -276,8 +297,7 @@ function attachAnnotationTooltip(chart) {
     }
     tip.innerHTML = annotationTooltipHtml(found.anns);
     tip.classList.remove("hidden");
-    tip.style.left = `${event.clientX + 12}px`;
-    tip.style.top = `${event.clientY + 12}px`;
+    positionAnnotationTooltip(tip, event.clientX, event.clientY);
     canvas.style.cursor = "pointer";
   });
 
