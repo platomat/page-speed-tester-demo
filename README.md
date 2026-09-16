@@ -95,7 +95,7 @@ So siehst du Charts und Berichte, bevor du eine eigene Instanz aufsetzt.
 | [docs/INSTALLATION.md](docs/INSTALLATION.md) | Einrichtung Cloudflare + GitHub, Env-Variablen, FAQ, Checkliste            |
 | [docs/API.md](docs/API.md)                   | Worker-REST-Endpunkte (Auth, Projekte, Trigger, Share, intern für Actions) |
 | [migrations/](migrations/)                   | D1-Schema & Migrationen (Wrangler D1 migrations); siehe `migrations/README.md` |
-| [docs/TODOs.md](docs/TODOs.md)               | Geplante Verbesserungen im Repo                                            |
+| [GitHub Issues](https://github.com/platomat/page-speed-tester-demo/issues) | Offene und erledigte Aufgaben (vormals `docs/TODOs.md`) |
 
 
 ---
