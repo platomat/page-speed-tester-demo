@@ -24,7 +24,56 @@ const chartDefaults = {
   },
 };
 
-function chartOptions(metricKey) {
+/**
+ * Shared Y-axis for a desktop/mobile metric pair so side-by-side charts
+ * are visually comparable (same height = same absolute value).
+ * @param {string} metricKey
+ * @param {...(Array<number|null|undefined>)} series
+ * @returns {{ min: number, max: number }}
+ */
+function sharedMetricYScale(metricKey, ...series) {
+  const values = [];
+  for (const seriesValues of series) {
+    for (const v of seriesValues ?? []) {
+      if (v == null || Number.isNaN(Number(v))) continue;
+      values.push(Number(v));
+    }
+  }
+
+  if (metricKey === "performance") {
+    return { min: 0, max: 100 };
+  }
+
+  if (!values.length) {
+    if (metricKey === "cls") return { min: 0, max: 0.25 };
+    return { min: 0, max: 1 };
+  }
+
+  let max = Math.max(...values);
+  if (metricKey === "cls") {
+    max = Math.max(max * 1.1, 0.1);
+    return { min: 0, max };
+  }
+
+  if (max <= 0) return { min: 0, max: 1 };
+  return { min: 0, max: max * 1.08 };
+}
+
+function chartOptions(metricKey, yScale = null) {
+  const y = {
+    ...chartDefaults.scales.y,
+    beginAtZero: true,
+    ticks: {
+      ...chartDefaults.scales.y.ticks,
+      callback(value) {
+        return formatChartValue(metricKey, value);
+      },
+    },
+  };
+  if (yScale) {
+    y.min = yScale.min;
+    y.max = yScale.max;
+  }
   return {
     ...chartDefaults,
     plugins: {
@@ -34,23 +83,15 @@ function chartOptions(metricKey) {
         ...chartDefaults.plugins.tooltip,
         callbacks: {
           label(context) {
-            const y = context.parsed?.y;
-            return `${context.dataset.label}: ${formatChartValue(metricKey, y)}`;
+            const yVal = context.parsed?.y;
+            return `${context.dataset.label}: ${formatChartValue(metricKey, yVal)}`;
           },
         },
       },
     },
     scales: {
       ...chartDefaults.scales,
-      y: {
-        ...chartDefaults.scales.y,
-        ticks: {
-          ...chartDefaults.scales.y.ticks,
-          callback(value) {
-            return formatChartValue(metricKey, value);
-          },
-        },
-      },
+      y,
     },
   };
 }
@@ -734,13 +775,14 @@ function buildChartDatasets(data, metricKey) {
   return datasets;
 }
 
-function upsertChart(id, labels, data, metricKey, runTimes = []) {
+function upsertChart(id, labels, data, metricKey, runTimes = [], yScale = null) {
   const canvas = document.getElementById(id);
   if (!canvas) return;
+  const options = chartOptions(metricKey, yScale);
   if (charts[id]) {
     charts[id].data.labels = labels;
     charts[id].data.datasets = buildChartDatasets(data, metricKey);
-    charts[id].options = chartOptions(metricKey);
+    charts[id].options = options;
     charts[id].$runTimes = runTimes;
     charts[id].$annotations = annotationsInDateRange(currentAnnotations);
     charts[id].update();
@@ -753,7 +795,7 @@ function upsertChart(id, labels, data, metricKey, runTimes = []) {
       labels,
       datasets: buildChartDatasets(data, metricKey),
     },
-    options: chartOptions(metricKey),
+    options,
   });
   charts[id].$runTimes = runTimes;
   charts[id].$annotations = annotationsInDateRange(currentAnnotations);
@@ -822,19 +864,24 @@ function renderCharts(desktopRuns, mobileRuns) {
   const mobileTimes = mobileRuns.map(runTimeMs);
   for (const metric of METRICS) {
     if (!metric.chart) continue;
+    const desktopData = desktopRuns.map((r) => r[metric.key]);
+    const mobileData = mobileRuns.map((r) => r[metric.key]);
+    const yScale = sharedMetricYScale(metric.key, desktopData, mobileData);
     upsertChart(
       `chart-${metric.chart}-desktop`,
       desktopRuns.map((r) => formatDateTime(r)),
-      desktopRuns.map((r) => r[metric.key]),
+      desktopData,
       metric.key,
-      desktopTimes
+      desktopTimes,
+      yScale
     );
     upsertChart(
       `chart-${metric.chart}-mobile`,
       mobileRuns.map((r) => formatDateTime(r)),
-      mobileRuns.map((r) => r[metric.key]),
+      mobileData,
       metric.key,
-      mobileTimes
+      mobileTimes,
+      yScale
     );
   }
 }
