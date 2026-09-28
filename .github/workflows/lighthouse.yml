@@ -38,7 +38,7 @@ jobs:
           install-dependencies: true
 
       - name: Install Lighthouse
-        run: npm install -g lighthouse@12.8.2
+        run: npm install -g lighthouse@13.5.0
 
       - name: Fetch project URLs
         env:
