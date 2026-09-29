@@ -22,9 +22,9 @@ jobs:
       STORE_TIMING_SCREENSHOTS: ${{ github.event.client_payload.store_timing_screenshots == true && '1' || '0' }}
       LH_WARMUP: ${{ github.event.client_payload.lh_warmup == true && '1' || '0' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
 
@@ -154,7 +154,7 @@ jobs:
         run: node scripts/ci/upload-to-r2.mjs reports
 
       - name: Upload reports artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: lighthouse-reports

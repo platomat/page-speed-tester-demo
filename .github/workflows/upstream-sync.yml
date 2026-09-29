@@ -43,7 +43,7 @@ jobs:
       TARGET_BRANCH: ${{ github.event.client_payload.target_branch || github.event.inputs.target_branch || 'main' }}
     steps:
       - name: Checkout target repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.client_payload.target_branch || github.event.inputs.target_branch || 'main' }}
           fetch-depth: 0
