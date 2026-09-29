@@ -8,7 +8,7 @@ export function isMetricStrategy(value: string): value is MetricStrategy {
 }
 
 const METRICS_SELECT = `SELECT r.id, r.project_id, r.url_id, u.name AS url_name, u.url, r.strategy, r.run_at,
-            r.performance, r.lcp_ms, r.cls, r.fcp_ms, r.tbt_ms, r.speed_index, r.report_key
+            r.performance, r.agentic_browsing, r.lcp_ms, r.cls, r.fcp_ms, r.tbt_ms, r.speed_index, r.report_key
      FROM runs r
      JOIN urls u ON u.id = r.url_id`;
 

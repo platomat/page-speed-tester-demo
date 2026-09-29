@@ -258,6 +258,7 @@ function metricRating(metricKey, value) {
   const v = Number(value);
   switch (metricKey) {
     case "performance":
+    case "agentic_browsing":
       if (v >= 90) return "good";
       if (v >= 50) return "warn";
       return "bad";

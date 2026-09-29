@@ -134,6 +134,8 @@ Dispatch/CI: `store_fullpage_screenshots` → `STORE_FULLPAGE_SCREENSHOTS`, `sto
 
 Ohne Datumsfilter werden alle Runs zurückgegeben (Metriken aufsteigend, Berichte absteigend, max. 100).
 
+**Run-Felder in der Metriken-Antwort (`runs[]`):** `performance`, `agentic_browsing` (0–100, Lighthouse-Kategorie ab 13.5; sonst `null`), `lcp_ms`, `cls`, `fcp_ms`, `tbt_ms`, `speed_index`, `report_key`, `run_at`, `strategy`.
+
 ---
 
 ## Annotations (Deploys / Änderungen)

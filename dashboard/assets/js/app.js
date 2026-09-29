@@ -40,7 +40,7 @@ function sharedMetricYScale(metricKey, ...series) {
     }
   }
 
-  if (metricKey === "performance") {
+  if (metricKey === "performance" || metricKey === "agentic_browsing") {
     return { min: 0, max: 100 };
   }
 
@@ -374,6 +374,7 @@ function initChartResize() {
 
 const METRICS = [
   { key: "performance", label: "Performance", title: "Performance", chart: "performance", format: (v) => v },
+  { key: "agentic_browsing", label: "Agentic", title: "Agentic Browsing", chart: "agentic", format: (v) => v },
   { key: "fcp_ms", label: "FCP", title: "First Contentful Paint", chart: "fcp", format: (v) => formatMetric(v, "", "fcp_ms") },
   { key: "lcp_ms", label: "LCP", title: "Largest Contentful Paint", chart: "lcp", format: (v) => formatMetric(v, "", "lcp_ms") },
   { key: "tbt_ms", label: "TBT", title: "Total Blocking Time", chart: "tbt", format: (v) => formatMetric(v, "ms") },
@@ -644,6 +645,7 @@ function formatChartValue(metricKey, value) {
   const v = Number(value);
   switch (metricKey) {
     case "performance":
+    case "agentic_browsing":
       return String(Math.round(v));
     case "fcp_ms":
     case "lcp_ms":
@@ -814,7 +816,7 @@ function renderMetricCards(runs, deviceLabel) {
     <div class="metric-card">
       <div class="label" title="${escapeHtml(m.title)}">${escapeHtml(m.label)}</div>
       <div class="value ${metricScoreClass(m.key, value)}">
-        ${value != null ? (m.key === "performance" ? value : m.format(value)) : "—"}
+        ${value != null ? (m.key === "performance" || m.key === "agentic_browsing" ? value : m.format(value)) : "—"}
       </div>
     </div>`;
   }).join("")}</div>`;

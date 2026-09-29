@@ -34,6 +34,10 @@ function extractMetrics(lighthouseJson) {
       categories.performance?.score != null
         ? Math.round(categories.performance.score * 100)
         : null,
+    agentic_browsing:
+      categories["agentic-browsing"]?.score != null
+        ? Math.round(categories["agentic-browsing"].score * 100)
+        : null,
     lcp_ms: num("largest-contentful-paint"),
     cls: num("cumulative-layout-shift"),
     fcp_ms: num("first-contentful-paint"),

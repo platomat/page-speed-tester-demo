@@ -68,6 +68,7 @@ export interface RunPayload {
   strategy: string;
   run_at: string;
   performance: number | null;
+  agentic_browsing?: number | null;
   lcp_ms: number | null;
   cls: number | null;
   fcp_ms: number | null;
